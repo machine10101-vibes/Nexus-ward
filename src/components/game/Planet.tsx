@@ -1,16 +1,17 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useTexture } from "@react-three/drei";
-import { BackSide, Color, SRGBColorSpace, type Mesh, type ShaderMaterial, type Texture } from "three";
+import { BackSide, Color, Vector3, type Mesh, type ShaderMaterial } from "three";
 import type { MapId } from "@/game/types";
-import { asset } from "@/lib/asset";
+import { useWorldArt } from "./worldArt";
 
 const vert = /* glsl */ `
 varying vec3 vN;
 varying vec3 vP;
 varying vec2 vUv;
+varying vec3 vWorldN;
 void main() {
   vN = normalize(normalMatrix * normal);
+  vWorldN = normalize(mat3(modelMatrix) * normal);
   vP = position;
   vUv = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -23,10 +24,12 @@ uniform vec3 colorA;
 uniform vec3 colorB;
 uniform vec3 colorC;
 uniform vec3 atmo;
+uniform vec3 sunDir;
 uniform float time;
 varying vec3 vN;
 varying vec3 vP;
 varying vec2 vUv;
+varying vec3 vWorldN;
 float hash(vec3 p) {
   return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
 }
@@ -42,18 +45,52 @@ float noise(vec3 p) {
 }
 void main() {
   vec3 tex = texture2D(planetMap, vUv).rgb;
-  float n = noise(vP * 2.4);
-  n += 0.5 * noise(vP * 5.4 + time * 0.04);
-  vec3 proc = mix(colorA, colorB, smoothstep(0.32, 0.62, n));
-  proc = mix(proc, colorC, smoothstep(0.72, 0.9, n) * 0.65);
-  vec3 albedo = mix(tex, proc, 0.28);
-  albedo *= 0.72 + n * 0.38;
-  float ndv = pow(1.0 - abs(vN.z), 2.2);
-  albedo += atmo * ndv * 0.42;
-  float day = smoothstep(-0.15, 0.55, vN.z);
-  albedo *= 0.32 + 0.68 * day;
-  albedo += colorC * (1.0 - day) * 0.18 * step(0.55, n);
-  gl_FragColor = vec4(albedo, 1.0);
+  float n = noise(vP * 2.2);
+  n += 0.45 * noise(vP * 5.1 + time * 0.03);
+  vec3 proc = mix(colorA, colorB, smoothstep(0.3, 0.64, n));
+  proc = mix(proc, colorC, smoothstep(0.7, 0.9, n) * 0.55);
+  vec3 albedo = mix(proc, tex, 0.82);
+  float ndl = clamp(dot(normalize(vWorldN), normalize(sunDir)), 0.0, 1.0);
+  float day = smoothstep(-0.08, 0.55, ndl);
+  float dusk = smoothstep(-0.22, 0.12, ndl) * (1.0 - smoothstep(0.12, 0.55, ndl));
+  float vein = max(tex.b * 0.7 + tex.g * 0.35 - tex.r * 0.45 - 0.12, 0.0);
+  vein = max(vein, max(tex.r * 0.7 + tex.g * 0.2 - tex.b * 0.55 - 0.18, 0.0));
+  vec3 lit = albedo * (0.16 + 0.92 * day);
+  lit += albedo * dusk * 0.22;
+  lit += colorC * vein * mix(0.22, 1.15, 1.0 - day);
+  float fres = pow(1.0 - abs(dot(normalize(vN), vec3(0.0, 0.0, 1.0))), 2.4);
+  lit += atmo * fres * (0.28 + 0.55 * day);
+  lit += atmo * dusk * 0.18;
+  gl_FragColor = vec4(lit, 1.0);
+}
+`;
+
+const cloudFrag = /* glsl */ `
+uniform vec3 atmo;
+uniform float time;
+uniform float cover;
+varying vec3 vP;
+varying vec3 vN;
+float hash(vec3 p) {
+  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+float noise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x),
+        mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+    mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+        mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+void main() {
+  float n = noise(vP * 2.8 + vec3(time * 0.035, 0.0, time * 0.02));
+  n += 0.5 * noise(vP * 6.2 - vec3(time * 0.04, time * 0.01, 0.0));
+  float mask = smoothstep(cover, cover + 0.22, n);
+  float fres = pow(1.0 - abs(vN.z), 2.0);
+  float a = mask * (0.22 + fres * 0.18);
+  gl_FragColor = vec4(mix(vec3(0.82, 0.9, 0.92), atmo, 0.35), a);
 }
 `;
 
@@ -63,34 +100,12 @@ export const PLANET_PALETTE: Record<MapId, { a: string; b: string; c: string; at
   aegis: { a: "#0c141c", b: "#3a5860", c: "#8ec8d0", atmo: "#8ec8d0", ring: "#6aa8b0" },
 };
 
-const MAP_INDEX: Record<MapId, number> = { mycelion: 0, forge: 1, aegis: 2 };
-
-/** Derived from PLANET_PALETTE so the two can never drift apart. */
 const PALETTE_COLORS = Object.fromEntries(
   (Object.keys(PLANET_PALETTE) as MapId[]).map((id) => {
     const p = PLANET_PALETTE[id];
     return [id, { a: new Color(p.a), b: new Color(p.b), c: new Color(p.c), atmo: new Color(p.atmo) }];
   }),
 ) as Record<MapId, { a: Color; b: Color; c: Color; atmo: Color }>;
-
-function prep(tex: Texture) {
-  tex.colorSpace = SRGBColorSpace;
-  tex.anisotropy = 8;
-}
-
-export function usePlanetMaps() {
-  const [mycelion, forge, aegis] = useTexture([
-    asset("/textures/mycelion-planet.jpg"),
-    asset("/textures/forge-planet.jpg"),
-    asset("/textures/aegis-planet.jpg"),
-  ]) as Texture[];
-  useLayoutEffect(() => {
-    [mycelion, forge, aegis].forEach(prep);
-  }, [mycelion, forge, aegis]);
-  // `useTexture` hands back a new array every render; anything memoised against
-  // it would be rebuilt constantly, so re-key on the textures themselves.
-  return useMemo(() => [mycelion, forge, aegis], [mycelion, forge, aegis]);
-}
 
 export function PlanetGlobe({
   id,
@@ -101,25 +116,36 @@ export function PlanetGlobe({
   radius?: number;
   spin?: number;
 }) {
-  const maps = usePlanetMaps();
+  const art = useWorldArt(id);
   const planet = useRef<Mesh>(null);
-  // Rebuilt per world and paired with a keyed material below, so switching
-  // worlds swaps the sampler instead of leaving the previous planet bound.
+  const clouds = useRef<Mesh>(null);
   const uniforms = useMemo<ShaderMaterial["uniforms"]>(() => {
     const pal = PALETTE_COLORS[id];
     return {
-      planetMap: { value: maps[MAP_INDEX[id]] },
+      planetMap: { value: art.planet },
       colorA: { value: pal.a.clone() },
       colorB: { value: pal.b.clone() },
       colorC: { value: pal.c.clone() },
       atmo: { value: pal.atmo.clone() },
+      sunDir: { value: new Vector3(0.62, 0.48, 0.62) },
       time: { value: 0 },
     };
-  }, [id, maps]);
+  }, [id, art.planet]);
+
+  const cloudUniforms = useMemo<ShaderMaterial["uniforms"]>(
+    () => ({
+      atmo: { value: PALETTE_COLORS[id].atmo.clone() },
+      time: { value: 0 },
+      cover: { value: id === "forge" ? 0.62 : id === "aegis" ? 0.48 : 0.52 },
+    }),
+    [id],
+  );
 
   useFrame((state, dt) => {
     uniforms.time.value = state.clock.elapsedTime;
+    cloudUniforms.time.value = state.clock.elapsedTime;
     if (planet.current) planet.current.rotation.y += dt * spin;
+    if (clouds.current) clouds.current.rotation.y += dt * spin * 1.35;
   });
 
   const pal = PLANET_PALETTE[id];
@@ -127,22 +153,32 @@ export function PlanetGlobe({
   return (
     <group>
       <mesh ref={planet}>
-        <sphereGeometry args={[radius, 64, 48]} />
+        <sphereGeometry args={[radius, 80, 56]} />
+        <shaderMaterial key={id} vertexShader={vert} fragmentShader={frag} uniforms={uniforms} toneMapped={false} />
+      </mesh>
+      <mesh ref={clouds} scale={1.018}>
+        <sphereGeometry args={[radius, 48, 32]} />
         <shaderMaterial
-          key={id}
+          key={`${id}-cloud`}
           vertexShader={vert}
-          fragmentShader={frag}
-          uniforms={uniforms}
+          fragmentShader={cloudFrag}
+          uniforms={cloudUniforms}
+          transparent
+          depthWrite={false}
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.08}>
+      <mesh scale={1.055}>
         <sphereGeometry args={[radius, 32, 24]} />
-        <meshBasicMaterial color={pal.atmo} transparent opacity={0.12} side={BackSide} />
+        <meshBasicMaterial color={pal.atmo} transparent opacity={0.1} side={BackSide} depthWrite={false} />
       </mesh>
-      <mesh scale={1.16}>
+      <mesh scale={1.12}>
+        <sphereGeometry args={[radius, 28, 20]} />
+        <meshBasicMaterial color={pal.atmo} transparent opacity={0.045} side={BackSide} depthWrite={false} />
+      </mesh>
+      <mesh scale={1.2}>
         <sphereGeometry args={[radius, 24, 16]} />
-        <meshBasicMaterial color={pal.atmo} transparent opacity={0.05} side={BackSide} />
+        <meshBasicMaterial color={pal.atmo} transparent opacity={0.02} side={BackSide} depthWrite={false} />
       </mesh>
     </group>
   );

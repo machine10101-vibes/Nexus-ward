@@ -4,6 +4,7 @@ import { AdditiveBlending, DoubleSide, InstancedMesh, Object3D, type Group, type
 import type { EnemyId, MapId, TowerId } from "@/game/types";
 import { TOWERS } from "@/game/config";
 import { cellToWorld } from "@/game/maps";
+import { arenaMetrics, terrainElevation } from "./WorldGround";
 
 /** Set while rendering a placement preview so every material renders as a hologram. */
 const GhostContext = createContext(false);
@@ -865,7 +866,7 @@ export function HexField({
         roughness={0.9}
         metalness={0.08}
         transparent
-        opacity={0.24}
+        opacity={0.34}
       />
     </instancedMesh>
   );
@@ -875,7 +876,7 @@ type Scatter = { pos: Vec; a: number; k: number; j: number };
 
 /** Mycelion: wet moss beds and glowing spore stalks. Humid, soft, slow. */
 export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count), [seed, count]);
+  const items = useMemo(() => scatter(seed, count, "mycelion"), [seed, count]);
   return (
     <group>
       {items.map((it, i) => {
@@ -903,7 +904,7 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
           return (
             <mesh
               key={i}
-              position={[it.pos[0], 0.06 + it.k * 0.1, it.pos[2]]}
+              position={[it.pos[0], it.pos[1] + 0.06 + it.k * 0.1, it.pos[2]]}
               rotation={[it.j * 0.5, it.a, it.k * 0.4]}
               scale={[1, 0.52, 1]}
               castShadow
@@ -935,7 +936,7 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
 
 /** Kron Forge: plate stacks, slag heaps and cooling ember rails. */
 export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count), [seed, count]);
+  const items = useMemo(() => scatter(seed, count, "forge"), [seed, count]);
   return (
     <group>
       {items.map((it, i) => {
@@ -1006,7 +1007,7 @@ export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }
 
 /** Aegis Rift: ice shards fused to torn plate. Cold on one side, forged on the other. */
 export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count), [seed, count]);
+  const items = useMemo(() => scatter(seed, count, "aegis"), [seed, count]);
   return (
     <group>
       {items.map((it, i) => {
@@ -1143,19 +1144,21 @@ export function DecorField({ id, spots }: { id: MapId; spots: FieldSpot[] }) {
   );
 }
 
-function scatter(seed: number, n: number): Scatter[] {
+function scatter(seed: number, n: number, style: MapId): Scatter[] {
   const out: Scatter[] = [];
   let s = seed >>> 0;
   const rand = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 0xffffffff;
   };
+  const { arenaR, squash } = arenaMetrics(16, 11);
   for (let i = 0; i < n; i++) {
     const a = rand() * Math.PI * 2;
-    const r = 1 + rand() * 0.42;
-    // Elliptical band that hugs the arena rim without ever landing on the field.
+    const r = 1.06 + rand() * 0.38;
+    const x = Math.cos(a) * r * arenaR;
+    const z = Math.sin(a) * r * arenaR * squash;
     out.push({
-      pos: [Math.cos(a) * r * 17.6, 0, Math.sin(a) * r * 13.4],
+      pos: [x, terrainElevation(x, z, arenaR, squash, style), z],
       a: rand() * Math.PI * 2,
       k: rand(),
       j: rand() * 2 - 1,

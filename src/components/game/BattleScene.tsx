@@ -3,11 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import {
   AdditiveBlending,
-  BackSide,
   CatmullRomCurve3,
-  Color,
-  Float32BufferAttribute,
-  PlaneGeometry,
   TubeGeometry,
   Vector3,
   type Group,
@@ -47,6 +43,8 @@ import {
   TowerModel,
 } from "./models";
 import { PlanetGlobe } from "./Planet";
+import { WorldGround } from "./WorldGround";
+import { useWorldArt } from "./worldArt";
 import { cellToWorld } from "@/game/maps";
 import type { MapDef, MapId, TowerId } from "@/game/types";
 
@@ -138,7 +136,9 @@ export function BattleScene() {
 
   return (
     <>
-      <World mapId={mapId} quality={quality} />
+      <Suspense fallback={null}>
+        <World mapId={mapId} quality={quality} />
+      </Suspense>
       <Pads />
       <TowersLayer />
       <SynergyLinks />
@@ -191,6 +191,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const theme = PLANET_THEME[mapId];
   const tune = WORLD_TUNE[mapId];
   const map = engine.map;
+  const art = useWorldArt(mapId);
   const lives = useGameStore((s) => s.hud.lives);
   const leaked = useGameStore((s) => s.hud.leaked);
   const overclock = useGameStore((s) => s.hud.overclockOn);
@@ -205,12 +206,6 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   }, [map.id, engine.waypoints.length]);
 
   const skip = useMemo(() => new Set(map.path.map((p) => `${p.c},${p.r}`)), [map]);
-  // The arena floor is an ellipse around the whole play field, so the path ends
-  // (core and spawn gate) stand on flat ground instead of the outer hills.
-  const arenaR = (map.cols * 1.7) / 2 + 3.2;
-  const squash = ((map.rows * 1.7) / 2 + 3.2) / arenaR;
-  const groundW = map.cols * 1.7 + 18;
-  const groundD = map.rows * 1.7 + 18;
   const start = engine.startWorld();
   const end = engine.endWorld();
   const health = map.lives ? lives / map.lives : 1;
@@ -220,10 +215,6 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
     const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
     return { glow: new TubeGeometry(curve, 80, 0.62, 8, false) };
   }, [map.id, engine.waypoints.length]);
-  const terrain = useMemo(
-    () => makeTerrain(groundW, groundD, arenaR, squash, theme.ground, theme.groundHi, mapId),
-    [groundW, groundD, arenaR, squash, theme.ground, theme.groundHi, mapId],
-  );
   const fieldProps = useMemo(() => freeCellProps(map), [map]);
 
   return (
@@ -251,39 +242,23 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={theme.core} />
       <pointLight position={[start.x, 2.2, start.z]} intensity={28} distance={11} color={theme.pathEmissive} />
       {overclock ? <pointLight position={[0, 6, 0]} intensity={48} distance={34} color="#d7e6ee" /> : null}
-      {quality === "high" ? <Stars radius={90} depth={28} count={1400} factor={2.8} fade speed={0.16} /> : null}
-      <SkyDome zenith={theme.sky} horizon={theme.fog} nadir={theme.ground} accent={theme.pathEmissive} />
-      <Suspense fallback={null}>
-        <group position={[-20, 13, -34]} scale={0.72}>
-          <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
-        </group>
-      </Suspense>
-      <mesh geometry={terrain} receiveShadow>
-        <meshStandardMaterial
-          color={theme.ground}
-          roughness={tune.groundRough}
-          metalness={tune.groundMetal}
-          vertexColors
-        />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.0, 0]} receiveShadow>
-        <circleGeometry args={[arenaR, 72]} />
-        <meshStandardMaterial color={theme.groundHi} roughness={tune.groundRough * 0.9} metalness={tune.groundMetal + 0.08} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.025, 0]}>
-        <ringGeometry args={[arenaR - 0.5, arenaR, 88]} />
-        <meshStandardMaterial
-          color={theme.padEmi}
-          emissive={theme.padEmi}
-          emissiveIntensity={combat ? 0.55 : 0.28}
-          transparent
-          opacity={0.7}
-        />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.03, 0]}>
-        <torusGeometry args={[arenaR + 1.3, 0.035, 8, 96]} />
-        <meshStandardMaterial color={theme.padEmi} emissive={theme.padEmi} emissiveIntensity={0.45} metalness={0.5} roughness={0.3} />
-      </mesh>
+      {quality === "high" ? <Stars radius={90} depth={28} count={900} factor={2.4} fade speed={0.16} /> : null}
+      <WorldGround
+        mapId={mapId}
+        cols={map.cols}
+        rows={map.rows}
+        quality={quality}
+        ground={art.ground}
+        sky={art.sky}
+        fog={theme.fog}
+        emissive={theme.pathEmissive}
+        roughness={tune.groundRough}
+        metalness={tune.groundMetal}
+        combat={combat}
+      />
+      <group position={[-20, 13, -34]} scale={0.72}>
+        <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
+      </group>
       <OverclockWash color={theme.padEmi} on={overclock} />
       <HexField cols={map.cols} rows={map.rows} color={theme.pad} accent={theme.padEmi} skip={skip} />
       {glow ? (
@@ -357,52 +332,6 @@ function OverclockWash({ color, on }: { color: string; on: boolean }) {
   );
 }
 
-function SkyDome({
-  zenith,
-  horizon,
-  nadir,
-  accent,
-}: {
-  zenith: string;
-  horizon: string;
-  nadir: string;
-  accent: string;
-}) {
-  const uniforms = useMemo(
-    () => ({
-      zenith: { value: new Color(zenith) },
-      horizon: { value: new Color(horizon) },
-      nadir: { value: new Color(nadir) },
-      accent: { value: new Color(accent) },
-    }),
-    [zenith, horizon, nadir, accent],
-  );
-  return (
-    <mesh>
-      <sphereGeometry args={[64, 32, 20]} />
-      <shaderMaterial
-        side={BackSide}
-        depthWrite={false}
-        uniforms={uniforms}
-        vertexShader={`varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`}
-        fragmentShader={`
-          uniform vec3 zenith; uniform vec3 horizon; uniform vec3 nadir; uniform vec3 accent;
-          varying vec3 vP;
-          void main() {
-            vec3 n = normalize(vP);
-            float h = n.y;
-            vec3 col = mix(nadir, horizon, smoothstep(-0.4, 0.04, h));
-            col = mix(col, zenith, smoothstep(0.04, 0.78, h));
-            float rim = pow(1.0 - abs(h), 4.0);
-            col += accent * rim * 0.12;
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `}
-      />
-    </mesh>
-  );
-}
-
 /** Cells that hold neither path nor pad, thinned out so props never crowd the lanes. */
 function freeCellProps(map: MapDef) {
   const taken = new Set<string>();
@@ -426,48 +355,6 @@ function freeCellProps(map: MapDef) {
     }
   }
   return out;
-}
-
-/** Terrain outside the arena. Each world folds differently: mounds, plates, or ridges. */
-function makeTerrain(
-  w: number,
-  d: number,
-  arenaR: number,
-  squash: number,
-  low: string,
-  high: string,
-  style: MapId,
-) {
-  const g = new PlaneGeometry(w, d, 54, 40);
-  g.rotateX(-Math.PI / 2);
-  const pos = g.attributes.position;
-  const cols = new Float32Array(pos.count * 3);
-  const a = new Color(low);
-  const b = new Color(high);
-  const tmp = new Color();
-  const amp = style === "forge" ? 1.4 : style === "aegis" ? 2.3 : 1.9;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const z = pos.getZ(i);
-    // Elliptical distance: 1 at the arena rim, so the play field stays perfectly flat.
-    const inset = Math.hypot(x / arenaR, z / (arenaR * squash));
-    const edge = Math.max(0, (inset - 1) * 1.9);
-    let n =
-      Math.sin(x * 0.16) * Math.cos(z * 0.13) * 0.7 +
-      Math.sin(x * 0.41 + z * 0.28) * 0.28 +
-      Math.sin(x * 0.07 + z * 0.09) * 1.15;
-    if (style === "forge") n = Math.round(n * 1.7) / 1.7;
-    else if (style === "aegis") n = Math.abs(n) * 1.25 - 0.35;
-    pos.setY(i, n * edge * amp + edge * 0.75 - 0.05);
-    const t = Math.min(1, edge * 0.9);
-    tmp.copy(a).lerp(b, style === "aegis" ? t * (0.55 + Math.abs(n) * 0.45) : t);
-    cols[i * 3] = tmp.r;
-    cols[i * 3 + 1] = tmp.g;
-    cols[i * 3 + 2] = tmp.b;
-  }
-  g.setAttribute("color", new Float32BufferAttribute(cols, 3));
-  g.computeVertexNormals();
-  return g;
 }
 
 function PulseRail({ geometry, color, hot }: { geometry: TubeGeometry; color: string; hot: boolean }) {

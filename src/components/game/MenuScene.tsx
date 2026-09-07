@@ -1,15 +1,25 @@
-import { useRef } from "react";
+import { Suspense, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, Stars } from "@react-three/drei";
-import type { Mesh } from "three";
+import { BackSide, Color, type Mesh } from "three";
 import { useGameStore } from "@/game/store";
 import { PLANET_THEME } from "@/game/config";
 import { PlanetGlobe, PLANET_PALETTE } from "./Planet";
+import { useWorldArt } from "./worldArt";
 
 export function MenuScene() {
+  return (
+    <Suspense fallback={null}>
+      <MenuWorld />
+    </Suspense>
+  );
+}
+
+function MenuWorld() {
   const preview = useGameStore((s) => s.preview);
   const ring = useRef<Mesh>(null);
   const ring2 = useRef<Mesh>(null);
+  const art = useWorldArt(preview);
 
   useFrame((state, dt) => {
     if (ring.current) ring.current.rotation.z += dt * 0.04;
@@ -27,13 +37,14 @@ export function MenuScene() {
   return (
     <>
       <color attach="background" args={[theme.sky]} />
-      <fog attach="fog" args={[theme.fog, 10, 40]} />
-      <ambientLight intensity={0.22} />
-      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 0.75]} />
-      <directionalLight position={[6, 8, 4]} intensity={1.85} color={theme.dir} />
-      <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
-      <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
-      <Stars radius={70} depth={32} count={1600} factor={3.1} fade speed={0.45} />
+      <fog attach="fog" args={[theme.fog, 12, 48]} />
+      <ambientLight intensity={0.2} />
+      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 0.7]} />
+      <directionalLight position={[6, 8, 4]} intensity={2.05} color={theme.dir} />
+      <pointLight position={[-4, 2, 3]} intensity={24} distance={18} color={pal.atmo} />
+      <pointLight position={[5, -1, 2]} intensity={12} distance={14} color={pal.ring} />
+      <MenuSky key={preview} map={art.sky} fog={theme.fog} accent={pal.atmo} />
+      <Stars radius={70} depth={32} count={1200} factor={2.8} fade speed={0.45} />
       <Sparkles count={28} scale={12} size={2.4} speed={0.35} color={pal.atmo} opacity={0.55} />
       <PlanetGlobe id={preview} />
       <mesh ref={ring} rotation={[Math.PI / 2.6, 0.2, 0.3]}>
@@ -70,5 +81,37 @@ export function MenuScene() {
         <meshStandardMaterial color={pal.atmo} emissive={pal.atmo} emissiveIntensity={0.4} roughness={0.4} />
       </mesh>
     </>
+  );
+}
+
+function MenuSky({ map, fog, accent }: { map: ReturnType<typeof useWorldArt>["sky"]; fog: string; accent: string }) {
+  const uniforms = {
+    sky: { value: map },
+    fogCol: { value: new Color(fog) },
+    accent: { value: new Color(accent) },
+  };
+  return (
+    <mesh>
+      <sphereGeometry args={[42, 40, 24]} />
+      <shaderMaterial
+        side={BackSide}
+        depthWrite={false}
+        uniforms={uniforms}
+        vertexShader={`varying vec3 vP; varying vec2 vUv; void main(){ vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`}
+        fragmentShader={`
+          uniform sampler2D sky; uniform vec3 fogCol; uniform vec3 accent;
+          varying vec3 vP; varying vec2 vUv;
+          void main() {
+            vec3 n = normalize(vP);
+            vec3 tex = texture2D(sky, vUv).rgb;
+            float h = n.y;
+            vec3 col = mix(tex * 0.55, tex, smoothstep(-0.2, 0.55, h));
+            col = mix(col, fogCol, smoothstep(0.15, -0.35, h) * 0.55);
+            col += accent * pow(1.0 - abs(h), 6.0) * 0.08;
+            gl_FragColor = vec4(col, 1.0);
+          }
+        `}
+      />
+    </mesh>
   );
 }

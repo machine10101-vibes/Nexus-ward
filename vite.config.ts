@@ -171,18 +171,28 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart(pages ? { spa: { enabled: true } } : undefined),
+    tanstackStart(
+      pages
+        ? {
+            spa: {
+              enabled: true,
+              prerender: { enabled: true, outputPath: "/index.html", crawlLinks: false },
+            },
+          }
+        : undefined,
+    ),
     ...(command === "build" || isPreview
-      ? [
-          nitro({
-            preset: pages ? "github-pages" : "vercel",
-            // Auto-registers server/middleware/* (the PWA install page +
-            // manifest + head-tag middleware). Nitro v3 defaults serverDir to
-            // false, so removing this silently unwires /?install=1 on deploys.
-            // GitHub Pages is static — no server to mount that middleware on.
-            serverDir: pages ? false : "./server",
-          }),
-        ]
+      ? pages
+        ? []
+        : [
+            nitro({
+              preset: "vercel",
+              // Auto-registers server/middleware/* (the PWA install page +
+              // manifest + head-tag middleware). Nitro v3 defaults serverDir to
+              // false, so removing this silently unwires /?install=1 on deploys.
+              serverDir: "./server",
+            }),
+          ]
       : []),
     viteReact(),
   ],

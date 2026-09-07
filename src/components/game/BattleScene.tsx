@@ -72,8 +72,8 @@ const WORLD_TUNE: Record<
   }
 > = {
   mycelion: {
-    fogNear: 14,
-    fogFar: 50,
+    fogNear: 22,
+    fogFar: 78,
     key: 1.75,
     fill: 0.72,
     ambient: 0.26,
@@ -85,8 +85,8 @@ const WORLD_TUNE: Record<
     rimIntensity: 26,
   },
   forge: {
-    fogNear: 12,
-    fogFar: 42,
+    fogNear: 18,
+    fogFar: 70,
     key: 2.55,
     fill: 0.4,
     ambient: 0.14,
@@ -98,8 +98,8 @@ const WORLD_TUNE: Record<
     rimIntensity: 34,
   },
   aegis: {
-    fogNear: 17,
-    fogFar: 58,
+    fogNear: 24,
+    fogFar: 82,
     key: 2.0,
     fill: 0.66,
     ambient: 0.2,
@@ -256,7 +256,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         metalness={tune.groundMetal}
         combat={combat}
       />
-      <group position={[-20, 13, -34]} scale={0.72}>
+      <group position={[-11, 8.5, -22]} scale={1.05}>
         <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
       </group>
       <OverclockWash color={theme.padEmi} on={overclock} />

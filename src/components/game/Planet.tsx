@@ -89,8 +89,8 @@ void main() {
   n += 0.5 * noise(vP * 6.2 - vec3(time * 0.04, time * 0.01, 0.0));
   float mask = smoothstep(cover, cover + 0.22, n);
   float fres = pow(1.0 - abs(vN.z), 2.0);
-  float a = mask * (0.22 + fres * 0.18);
-  gl_FragColor = vec4(mix(vec3(0.82, 0.9, 0.92), atmo, 0.35), a);
+  float a = mask * (0.1 + fres * 0.12);
+  gl_FragColor = vec4(mix(vec3(0.62, 0.72, 0.74), atmo, 0.55), a);
 }
 `;
 
@@ -136,7 +136,7 @@ export function PlanetGlobe({
     () => ({
       atmo: { value: PALETTE_COLORS[id].atmo.clone() },
       time: { value: 0 },
-      cover: { value: id === "forge" ? 0.62 : id === "aegis" ? 0.48 : 0.52 },
+      cover: { value: id === "forge" ? 0.74 : id === "aegis" ? 0.7 : 0.72 },
     }),
     [id],
   );

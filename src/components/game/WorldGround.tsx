@@ -64,7 +64,7 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
     const z = pos.getZ(i);
     const y = terrainElevation(x, z, arenaR, squash, style);
     pos.setY(i, y);
-    const shade = clamp(0.62 + y * 0.045, 0.45, 1);
+    const shade = clamp(0.82 + y * 0.025, 0.7, 1);
     ao.setRGB(shade, shade, shade);
     cols[i * 3] = ao.r;
     cols[i * 3 + 1] = ao.g;
@@ -109,8 +109,9 @@ function glowPatch(shader: { fragmentShader: string }, strength: number) {
     "#include <emissivemap_fragment>",
     /* glsl */ `
     #include <emissivemap_fragment>
-    float teal = max(diffuseColor.b * 0.88 + diffuseColor.g * 0.32 - diffuseColor.r * 0.72 - 0.14, 0.0);
-    float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.16, 0.0);
+    diffuseColor.rgb = diffuseColor.rgb * 1.72 + 0.035;
+    float teal = max(diffuseColor.b * 0.88 + diffuseColor.g * 0.32 - diffuseColor.r * 0.72 - 0.18, 0.0);
+    float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
     float vein = max(teal, ember);
     totalEmissiveRadiance += emissive * vein * ${strength.toFixed(2)};
     `,
@@ -123,7 +124,7 @@ function GroundMat({
   metalness,
   emissive,
   glow,
-  tint = "#d5d8d4",
+  tint = "#f2f4f1",
 }: {
   map: Texture;
   roughness: number;
@@ -202,7 +203,7 @@ export function WorldGround({
           metalness={metalness + 0.06}
           emissive={emissive}
           glow={glow * 1.15}
-          tint="#e4e6e2"
+          tint="#ffffff"
         />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.028, 0]}>
@@ -248,13 +249,13 @@ function SkyShell({ map, fog, accent }: { map: Texture; fog: string; accent: str
           varying vec3 vP; varying vec2 vUv;
           void main() {
             vec3 n = normalize(vP);
-            vec3 tex = texture2D(sky, vUv).rgb;
+            vec3 tex = texture2D(sky, vec2(vUv.x + 0.12, vUv.y * 0.78 + 0.14)).rgb * 1.18;
             float h = n.y;
-            float haze = smoothstep(0.18, -0.12, h);
-            vec3 col = mix(tex, fogCol, haze * 0.92);
-            col = mix(col, fogCol * 0.35, smoothstep(0.02, -0.55, h));
+            float haze = smoothstep(0.06, -0.08, h);
+            vec3 col = mix(tex, fogCol, haze * 0.62);
+            col = mix(col, fogCol * 0.55, smoothstep(-0.05, -0.55, h));
             float rim = pow(1.0 - abs(h), 5.0);
-            col += accent * rim * 0.08;
+            col += accent * rim * 0.14;
             gl_FragColor = vec4(col, 1.0);
           }
         `}

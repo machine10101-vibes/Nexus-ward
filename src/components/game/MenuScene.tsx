@@ -103,10 +103,10 @@ function MenuSky({ map, fog, accent }: { map: ReturnType<typeof useWorldArt>["sk
           varying vec3 vP; varying vec2 vUv;
           void main() {
             vec3 n = normalize(vP);
-            vec3 tex = texture2D(sky, vUv).rgb;
+            vec3 tex = texture2D(sky, vec2(vUv.x + 0.08, vUv.y * 0.82 + 0.1)).rgb * 1.12;
             float h = n.y;
-            vec3 col = mix(tex * 0.55, tex, smoothstep(-0.2, 0.55, h));
-            col = mix(col, fogCol, smoothstep(0.15, -0.35, h) * 0.55);
+            vec3 col = mix(tex * 0.72, tex, smoothstep(-0.15, 0.5, h));
+            col = mix(col, fogCol, smoothstep(0.08, -0.35, h) * 0.4);
             col += accent * pow(1.0 - abs(h), 6.0) * 0.08;
             gl_FragColor = vec4(col, 1.0);
           }

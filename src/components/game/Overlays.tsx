@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { ArrowLeft, Check, Settings2 } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
+import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
 import { loadSave } from "@/game/save";
 import type { MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { asset } from "@/lib/asset";
 
 export function Overlays() {
   const screen = useGameStore((s) => s.screen);
@@ -124,12 +126,12 @@ function Select() {
               onFocus={() => useGameStore.getState().setPreview(id)}
               onClick={() => useGameStore.getState().startBriefing(id)}
               className={cn(
-                "overflow-hidden rounded-xl border text-left transition-colors duration-[var(--motion-fast)]",
+                "group overflow-hidden rounded-xl border p-2 text-left transition-colors duration-[var(--motion-fast)]",
                 on ? "border-accent bg-surface" : "border-border bg-surface/70 hover:border-border-strong",
               )}
             >
-              <PlanetSwatch id={id} />
-              <div className="p-4">
+              <PlanetSwatch id={id} active={on} />
+              <div className="px-2 pb-1 pt-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-display text-lg">{m.name}</p>
                   {done ? <Check className="size-4 text-ok" /> : null}
@@ -140,11 +142,11 @@ function Select() {
                   {m.lives} core · {m.startGold} cr · {m.waves.length} waves
                 </p>
                 {best[id] ? (
-                  <p className="mt-3 font-mono text-2xs tabular-nums text-subtle">
+                  <p className="mt-1 font-mono text-2xs tabular-nums text-subtle">
                     Best wave {best[id]!.wave} · cores {best[id]!.cores}
                   </p>
                 ) : (
-                  <p className="mt-3 font-mono text-2xs text-subtle">Uncharted</p>
+                  <p className="mt-1 font-mono text-2xs text-subtle">Uncharted</p>
                 )}
               </div>
             </button>
@@ -155,25 +157,38 @@ function Select() {
   );
 }
 
-function PlanetSwatch({ id }: { id: MapId }) {
+/**
+ * A framed world disc, not a landscape crop: blurred field, lit sphere, orbit line.
+ * The source art letterboxes each planet in black, so the disc oversamples to crop
+ * that margin away — otherwise every world shrinks into the same dark dot.
+ */
+function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
+  const src = `url(${asset(`/textures/${id}-planet.jpg`)})`;
+  const rim = PLANET_THEME[id].padEmi;
   return (
-    <div
-      className="relative h-28 overflow-hidden"
-      style={{
-        backgroundImage: `url(/textures/${id}-planet.jpg)`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent" />
+    <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
       <div
-        className="absolute left-1/2 top-1/2 size-[4.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full outline outline-1 outline-fg/20"
-        style={{
-          backgroundImage: `url(/textures/${id}-planet.jpg)`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        className="absolute inset-0 scale-125 opacity-30"
+        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(16px)" }}
       />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,transparent_28%,var(--color-bg)_78%)]" />
+      <span
+        className={cn(
+          "absolute left-1/2 top-1/2 h-[5.5rem] w-[8.5rem] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border transition-colors duration-[var(--motion-fast)]",
+          active ? "border-accent/35" : "border-fg/10",
+        )}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 size-[5.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
+        style={{
+          backgroundImage: src,
+          backgroundSize: "132%",
+          backgroundPosition: "center",
+          boxShadow: `inset -14px -8px 22px rgba(0,0,0,0.78), inset 6px 4px 14px rgba(255,255,255,0.06), 0 0 22px -6px ${rim}`,
+        }}
+      >
+        <span className="absolute inset-0 rounded-full outline outline-1 -outline-offset-1 outline-fg/15" />
+      </div>
     </div>
   );
 }
@@ -181,6 +196,9 @@ function PlanetSwatch({ id }: { id: MapId }) {
 function Briefing() {
   const id = useGameStore((s) => s.mapId) ?? "mycelion";
   const m = MAPS[id];
+  const first = m.waves[0].groups
+    .map((g) => `${ENEMIES[g.enemy].name} ×${g.count}`)
+    .join(", ");
   return (
     <Shell>
       <button
@@ -194,13 +212,21 @@ function Briefing() {
       <p className="font-display text-2xs uppercase tracking-label text-accent">{m.subtitle}</p>
       <h2 className="mt-2 font-display text-4xl tracking-display">{m.name}</h2>
       <p className="mt-4 text-base leading-relaxed text-muted">{m.lore}</p>
-      <p className="mt-3 text-sm text-fg">{m.hint}</p>
-      <p className="mt-4 font-mono text-xs tabular-nums text-subtle">
-        {m.lives} core integrity · {m.startGold} credits · {m.waves.length} incursions
-      </p>
+      <div className="mt-5 rounded-xl border border-border p-2">
+        <div className="rounded-lg bg-surface/60 p-3">
+          <p className="font-display text-2xs uppercase tracking-label text-muted">Drop prep</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-fg">{m.hint}</p>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-2xs tabular-nums text-subtle">
+            <span>{m.lives} core integrity</span>
+            <span>{m.startGold} opening credits</span>
+            <span>{m.waves.length} incursions</span>
+            <span>first contact · {first}</span>
+          </div>
+        </div>
+      </div>
       <button
         type="button"
-        className="mt-8 h-12 w-full rounded-xl bg-fg font-display text-sm text-bg transition-transform duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)] active:scale-[0.96] sm:w-auto sm:px-8"
+        className="mt-6 h-12 w-full rounded-xl bg-fg font-display text-sm text-bg transition-transform duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)] active:scale-[0.96] sm:w-auto sm:px-8"
         onClick={() => useGameStore.getState().dropIn()}
       >
         Drop in
@@ -209,10 +235,20 @@ function Briefing() {
   );
 }
 
+function Modal({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-bg/45 via-bg/65 to-bg/45 px-5 py-10 backdrop-blur-[1.5px]">
+      <div className="overlay-in w-full max-w-md rounded-xl border border-border bg-surface/95 p-2">
+        <div className="rounded-lg p-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function Paused() {
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg/70 px-5 backdrop-blur-[2px]">
-      <div className="overlay-in w-full max-w-sm rounded-xl border border-border bg-surface p-6">
+    <div className="flex min-h-full items-center justify-center bg-bg/55 px-5 backdrop-blur-[1.5px]">
+      <div className="overlay-in w-full max-w-sm rounded-xl border border-border bg-surface/95 p-6">
         <h2 className="font-display text-2xl tracking-[-0.03em]">Paused</h2>
         <p className="mt-2 text-sm text-muted">The grid holds. Resume when ready.</p>
         <div className="mt-6 flex flex-col gap-2">
@@ -248,74 +284,101 @@ function Result({ won }: { won: boolean }) {
     useGameStore.getState().noteResult(won);
   }, [won]);
   const m = engine.map;
+  const stats: [string, string][] = [
+    ["wave", `${engine.wave} / ${m.waves.length}`],
+    ["kills", `${engine.kills}`],
+    ["leaks", `${engine.leaked}`],
+    ["salvage", `${engine.goldEarned}`],
+  ];
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg/75 px-5 backdrop-blur-[2px]">
-      <div className="overlay-in w-full max-w-md rounded-xl border border-border bg-surface p-6">
-        <p className="font-display text-2xs uppercase tracking-label text-accent">{m.name}</p>
-        <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The core holds" : "Core collapsed"}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          {won
-            ? "The last incursion broke on the grid. The nexus still sings."
-            : "The lattice reached the heart. Salvage what you can and drop in again."}
-        </p>
-        <p className="mt-4 font-mono text-xs tabular-nums text-subtle">
-          Wave {engine.wave}/{m.waves.length} · {engine.kills} kills · {engine.leaked} leaks · {engine.goldEarned} salvage
-        </p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            className="h-11 flex-1 rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
-            onClick={() => useGameStore.getState().dropIn()}
-          >
-            Redeploy
-          </button>
-          <button
-            type="button"
-            className="h-11 flex-1 rounded-lg border border-border text-sm text-fg"
-            onClick={() => useGameStore.getState().abortToSelect()}
-          >
-            Other worlds
-          </button>
-        </div>
+    <Modal>
+      <p className="font-display text-2xs uppercase tracking-label text-accent">{m.name}</p>
+      <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The core holds" : "Core collapsed"}</h2>
+      <p className="mt-3 text-sm leading-relaxed text-muted">
+        {won
+          ? "The last incursion broke on the grid. The nexus still sings."
+          : "The lattice reached the heart. Salvage what you can and drop in again."}
+      </p>
+      <dl className="mt-5 grid grid-cols-4 gap-2">
+        {stats.map(([k, v]) => (
+          <div key={k} className="rounded-lg border border-border px-2 py-2">
+            <dd className="font-display text-base tabular-nums leading-none text-fg">{v}</dd>
+            <dt className="hud-label mt-1.5">{k}</dt>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          className="h-11 flex-1 rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+          onClick={() => useGameStore.getState().dropIn()}
+        >
+          Redeploy
+        </button>
+        <button
+          type="button"
+          className="h-11 flex-1 rounded-lg border border-border text-sm text-fg transition-colors duration-[var(--motion-quick)] hover:border-border-strong"
+          onClick={() => useGameStore.getState().abortToSelect()}
+        >
+          Other worlds
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
+const KEYS: [string, string][] = [
+  ["1 – 5", "Select battery"],
+  ["Space", "Deploy wave"],
+  ["Q / E", "Surge / Overclock"],
+  ["U / X", "Upgrade / Salvage"],
+  ["F / A", "Speed / Auto"],
+  ["Esc", "Cancel build, else pause"],
+];
+
 function Help() {
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg/80 px-5 py-10">
-      <div className="overlay-in w-full max-w-md rounded-xl border border-border bg-surface p-6">
-        <h2 className="font-display text-2xl tracking-[-0.03em]">How to hold</h2>
-        <ol className="mt-4 space-y-3 text-sm leading-relaxed text-muted">
-          <li>
-            <span className="text-fg">1. Choose a battery</span> from the tray, then tap a hex platform beside the path.
-          </li>
-          <li>
-            <span className="text-fg">2. Initialize the wave</span> when your line is ready. Starting fast pays an early-deploy bonus.
-          </li>
-          <li>
-            <span className="text-fg">3. Air units</span> ignore pulse and frost. Lance, tesla, and rail cover the sky.
-          </li>
-          <li>
-            <span className="text-fg">4. Linked batteries</span> of the same type within range deal more damage. Rank 3 unlocks a unique overdrive.
-          </li>
-          <li>
-            <span className="text-fg">5. Surge (Q)</span> slams every host on the grid. <span className="text-fg">Overclock (E)</span> haste-fires the line.
-          </li>
-          <li>
-            <span className="text-fg">6. Keys</span> 1–5 batteries · Space wave · F speed · A auto · U upgrade · Esc pause.
-          </li>
-        </ol>
-        <button
-          type="button"
-          className="mt-6 h-11 w-full rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
-          onClick={() => useGameStore.getState().closeOverlay()}
-        >
-          Understood
-        </button>
+    <Modal>
+      <h2 className="font-display text-2xl tracking-[-0.03em]">How to hold</h2>
+      <ol className="mt-4 space-y-3 text-sm leading-relaxed text-muted">
+        <li>
+          <span className="text-fg">1. Choose a battery</span> from the tray, then tap lit hex platforms beside the path. The
+          battery stays armed, so you can lay a whole line without re-picking it.
+        </li>
+        <li>
+          <span className="text-fg">2. Deploy the wave</span> when your line is ready. Deploying early pays a credit bonus
+          that shrinks the longer you build.
+        </li>
+        <li>
+          <span className="text-fg">3. Air units</span> ignore pulse and frost. Lance, tesla, and rail cover the sky.
+        </li>
+        <li>
+          <span className="text-fg">4. Linked batteries</span> of the same type within range deal 15% more damage. Rank 3
+          unlocks a unique overdrive per battery.
+        </li>
+        <li>
+          <span className="text-fg">5. Surge (Q)</span> slams every host on the grid.{" "}
+          <span className="text-fg">Overclock (E)</span> haste-fires the line.
+        </li>
+      </ol>
+      <div className="mt-5 rounded-lg border border-border p-2">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {KEYS.map(([k, v]) => (
+            <div key={k} className="flex items-baseline justify-between gap-2">
+              <dt className="font-mono text-2xs text-fg">{k}</dt>
+              <dd className="text-2xs text-muted">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
-    </div>
+      <button
+        type="button"
+        className="mt-6 h-11 w-full rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+        onClick={() => useGameStore.getState().closeOverlay()}
+      >
+        Understood
+      </button>
+    </Modal>
   );
 }
 
@@ -323,33 +386,27 @@ function Settings() {
   const s = useGameStore((s) => s.settings);
   const patch = useGameStore((st) => st.patchSettings);
   return (
-    <div className="flex min-h-full items-center justify-center bg-bg/80 px-5 py-10">
-      <div className="overlay-in w-full max-w-md rounded-xl border border-border bg-surface p-6">
-        <h2 className="font-display text-2xl tracking-[-0.03em]">Settings</h2>
-        <div className="mt-5 space-y-4">
-          <Slider label="Master" value={s.master} onChange={(v) => patch({ master: v })} />
-          <Slider label="Effects" value={s.sfx} onChange={(v) => patch({ sfx: v })} />
-          <Slider label="Drone" value={s.music} onChange={(v) => patch({ music: v })} />
-          <Row
-            label="Camera shake"
-            on={s.shake}
-            onClick={() => patch({ shake: !s.shake })}
-          />
-          <Row
-            label="High fidelity"
-            on={s.quality === "high"}
-            onClick={() => patch({ quality: s.quality === "high" ? "low" : "high" })}
-          />
-        </div>
-        <button
-          type="button"
-          className="mt-6 h-11 w-full rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
-          onClick={() => useGameStore.getState().closeOverlay()}
-        >
-          Close
-        </button>
+    <Modal>
+      <h2 className="font-display text-2xl tracking-[-0.03em]">Settings</h2>
+      <div className="mt-5 space-y-4">
+        <Slider label="Master" value={s.master} onChange={(v) => patch({ master: v })} />
+        <Slider label="Effects" value={s.sfx} onChange={(v) => patch({ sfx: v })} />
+        <Slider label="Drone" value={s.music} onChange={(v) => patch({ music: v })} />
+        <Row label="Camera shake" on={s.shake} onClick={() => patch({ shake: !s.shake })} />
+        <Row
+          label="High fidelity"
+          on={s.quality === "high"}
+          onClick={() => patch({ quality: s.quality === "high" ? "low" : "high" })}
+        />
       </div>
-    </div>
+      <button
+        type="button"
+        className="mt-6 h-11 w-full rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+        onClick={() => useGameStore.getState().closeOverlay()}
+      >
+        Close
+      </button>
+    </Modal>
   );
 }
 

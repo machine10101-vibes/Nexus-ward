@@ -182,6 +182,59 @@
     background: var(--color-accent);
     animation: phase-blink 1.2s var(--ease-smooth-out) infinite;
   }
+
+  .hud-critical {
+    outline: 1px solid color-mix(in oklab, var(--color-danger) 50%, transparent);
+  }
+
+  /* One-shot edge punch when a host reaches the core. */
+  .hud-leak::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    pointer-events: none;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 44px 6px color-mix(in oklab, var(--color-danger) 45%, transparent);
+    animation: hud-leak var(--motion-slow) var(--ease-smooth-out) forwards;
+  }
+
+  .hud-core-hit {
+    animation: hud-core-hit var(--motion-fast) var(--ease-smooth-out);
+  }
+
+  .hud-cost-deny {
+    animation: hud-cost-deny 320ms var(--ease-smooth-out);
+  }
+
+  .hud-pip-fill {
+    animation: hud-pip-fill 460ms var(--ease-smooth-out);
+  }
+
+  .ghost-tag {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    color: var(--color-muted);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .ghost-tag-cost {
+    color: var(--color-fg);
+  }
+
+  .ghost-tag-short {
+    color: var(--color-danger);
+  }
 }
 
 @keyframes hud-num-pop {
@@ -228,6 +281,54 @@
   }
   50% {
     opacity: 0.35;
+  }
+}
+
+@keyframes hud-leak {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes hud-core-hit {
+  0% {
+    transform: rotate(-90deg) scale(1);
+  }
+  40% {
+    transform: rotate(-90deg) scale(1.12);
+  }
+  100% {
+    transform: rotate(-90deg) scale(1);
+  }
+}
+
+@keyframes hud-cost-deny {
+  0%,
+  100% {
+    transform: translateX(0);
+    color: inherit;
+  }
+  25% {
+    transform: translateX(-2px);
+    color: var(--color-danger);
+  }
+  75% {
+    transform: translateX(2px);
+    color: var(--color-danger);
+  }
+}
+
+@keyframes hud-pip-fill {
+  from {
+    transform: scaleX(0.2);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
   }
 }
 

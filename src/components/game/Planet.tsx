@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { BackSide, Color, SRGBColorSpace, type Mesh, type ShaderMaterial, type Texture } from "three";
 import type { MapId } from "@/game/types";
+import { asset } from "@/lib/asset";
 
 const vert = /* glsl */ `
 varying vec3 vN;
@@ -64,26 +65,13 @@ export const PLANET_PALETTE: Record<MapId, { a: string; b: string; c: string; at
 
 const MAP_INDEX: Record<MapId, number> = { mycelion: 0, forge: 1, aegis: 2 };
 
-const PALETTE_COLORS = {
-  mycelion: {
-    a: new Color("#08241c"),
-    b: new Color("#1d6a4a"),
-    c: new Color("#3dcaa0"),
-    atmo: new Color("#5ad4b0"),
-  },
-  forge: {
-    a: new Color("#1a0c08"),
-    b: new Color("#6a3a28"),
-    c: new Color("#c46a3a"),
-    atmo: new Color("#e08848"),
-  },
-  aegis: {
-    a: new Color("#0c141c"),
-    b: new Color("#3a5860"),
-    c: new Color("#8ec8d0"),
-    atmo: new Color("#8ec8d0"),
-  },
-} as const;
+/** Derived from PLANET_PALETTE so the two can never drift apart. */
+const PALETTE_COLORS = Object.fromEntries(
+  (Object.keys(PLANET_PALETTE) as MapId[]).map((id) => {
+    const p = PLANET_PALETTE[id];
+    return [id, { a: new Color(p.a), b: new Color(p.b), c: new Color(p.c), atmo: new Color(p.atmo) }];
+  }),
+) as Record<MapId, { a: Color; b: Color; c: Color; atmo: Color }>;
 
 function prep(tex: Texture) {
   tex.colorSpace = SRGBColorSpace;
@@ -91,15 +79,17 @@ function prep(tex: Texture) {
 }
 
 export function usePlanetMaps() {
-  const maps = useTexture([
-    "/textures/mycelion-planet.jpg",
-    "/textures/forge-planet.jpg",
-    "/textures/aegis-planet.jpg",
+  const [mycelion, forge, aegis] = useTexture([
+    asset("/textures/mycelion-planet.jpg"),
+    asset("/textures/forge-planet.jpg"),
+    asset("/textures/aegis-planet.jpg"),
   ]) as Texture[];
   useLayoutEffect(() => {
-    maps.forEach(prep);
-  }, [maps]);
-  return maps;
+    [mycelion, forge, aegis].forEach(prep);
+  }, [mycelion, forge, aegis]);
+  // `useTexture` hands back a new array every render; anything memoised against
+  // it would be rebuilt constantly, so re-key on the textures themselves.
+  return useMemo(() => [mycelion, forge, aegis], [mycelion, forge, aegis]);
 }
 
 export function PlanetGlobe({
@@ -113,27 +103,22 @@ export function PlanetGlobe({
 }) {
   const maps = usePlanetMaps();
   const planet = useRef<Mesh>(null);
-  const uniforms = useMemo(
-    () => ({
-      planetMap: { value: maps[0] },
-      colorA: { value: new Color(PLANET_PALETTE.mycelion.a) },
-      colorB: { value: new Color(PLANET_PALETTE.mycelion.b) },
-      colorC: { value: new Color(PLANET_PALETTE.mycelion.c) },
-      atmo: { value: new Color(PLANET_PALETTE.mycelion.atmo) },
+  // Rebuilt per world and paired with a keyed material below, so switching
+  // worlds swaps the sampler instead of leaving the previous planet bound.
+  const uniforms = useMemo<ShaderMaterial["uniforms"]>(() => {
+    const pal = PALETTE_COLORS[id];
+    return {
+      planetMap: { value: maps[MAP_INDEX[id]] },
+      colorA: { value: pal.a.clone() },
+      colorB: { value: pal.b.clone() },
+      colorC: { value: pal.c.clone() },
+      atmo: { value: pal.atmo.clone() },
       time: { value: 0 },
-    }),
-    [maps],
-  );
+    };
+  }, [id, maps]);
 
   useFrame((state, dt) => {
-    const pal = PALETTE_COLORS[id];
-    const k = 1 - Math.exp(-dt * 3);
     uniforms.time.value = state.clock.elapsedTime;
-    uniforms.planetMap.value = maps[MAP_INDEX[id]];
-    uniforms.colorA.value.lerp(pal.a, k);
-    uniforms.colorB.value.lerp(pal.b, k);
-    uniforms.colorC.value.lerp(pal.c, k);
-    uniforms.atmo.value.lerp(pal.atmo, k);
     if (planet.current) planet.current.rotation.y += dt * spin;
   });
 
@@ -144,9 +129,10 @@ export function PlanetGlobe({
       <mesh ref={planet}>
         <sphereGeometry args={[radius, 64, 48]} />
         <shaderMaterial
+          key={id}
           vertexShader={vert}
           fragmentShader={frag}
-          uniforms={uniforms as unknown as ShaderMaterial["uniforms"]}
+          uniforms={uniforms}
           toneMapped={false}
         />
       </mesh>

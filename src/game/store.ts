@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { AUTO_WAVE_DELAY } from "./config";
 import { engine } from "./engine";
 import { loadSave, recordResult, saveSettings, type Settings } from "./save";
 import { audio } from "./audio";
@@ -27,6 +28,10 @@ export type HudSnap = {
   waveSize: number;
   bonus: number;
   leaked: number;
+  autoIn: number;
+  denyGen: number;
+  rankGen: number;
+  placeGen: number;
 };
 
 type GameStore = {
@@ -80,6 +85,10 @@ const emptyHud: HudSnap = {
   waveSize: 0,
   bonus: 0,
   leaked: 0,
+  autoIn: -1,
+  denyGen: 0,
+  rankGen: 0,
+  placeGen: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -149,7 +158,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.living === cur.living &&
       next.remaining === cur.remaining &&
       next.waveSize === cur.waveSize &&
-      next.bonus === cur.bonus
+      next.bonus === cur.bonus &&
+      next.leaked === cur.leaked &&
+      next.denyGen === cur.denyGen &&
+      next.rankGen === cur.rankGen &&
+      next.placeGen === cur.placeGen &&
+      Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
       return;
     }
@@ -199,15 +213,28 @@ function snapHud(): HudSnap {
     waveSize: engine.spawnQueue.length,
     bonus: engine.earlyBonus(),
     leaked: engine.leaked,
+    autoIn:
+      engine.autoWave && engine.phase === "build" && engine.wave > 0 && engine.wave < engine.map.waves.length
+        ? Math.max(0, AUTO_WAVE_DELAY - engine.autoT)
+        : -1,
+    denyGen: engine.denyGen,
+    rankGen: engine.rankGen,
+    placeGen: engine.placeGen,
   };
 }
 
-export function applyQualityHint() {
+/** First-run defaults taken from the device. Explicit settings always win afterwards. */
+export function applyEnvironmentDefaults() {
   if (typeof window === "undefined") return;
   const narrow = window.innerWidth < 720;
   const saveNow = loadSave();
   if (narrow && saveNow.settings.quality === "high" && !localStorage.getItem("nexus-ward-qset")) {
     useGameStore.getState().patchSettings({ quality: "low" });
     localStorage.setItem("nexus-ward-qset", "1");
+  }
+  const calmed = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (calmed && saveNow.settings.shake && !localStorage.getItem("nexus-ward-shakeset")) {
+    useGameStore.getState().patchSettings({ shake: false });
+    localStorage.setItem("nexus-ward-shakeset", "1");
   }
 }

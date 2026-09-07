@@ -2,9 +2,7 @@
 
 A 3D space tower defense game. Hold planetary cores on Mycelion, Kron Forge, and Aegis Rift against organic, mechanical, and hybrid incursions.
 
-## Play
-
-Open the live deployment and drop in. No account required. Progress is saved in the browser.
+**Play:** https://machine10101-vibes.github.io/Nexus-ward/
 
 ## How to hold
 

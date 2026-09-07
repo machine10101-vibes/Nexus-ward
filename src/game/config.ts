@@ -7,10 +7,13 @@ export const MAX_BOLTS = 80;
 export const MAX_BEAMS = 48;
 export const MAX_BURSTS = 48;
 export const MAX_FLOATERS = 24;
+export const MAX_DECALS = 20;
 export const SURGE_CD = 22;
 export const OVERCLOCK_CD = 20;
 export const OVERCLOCK_DUR = 6.5;
 export const SYN_RANGE = 3.45;
+export const AUTO_WAVE_DELAY = 2.8;
+export const SALVAGE_RATE = 0.6;
 export const SPEED_STEPS = [1, 2, 3] as const;
 
 export const TOWERS: Record<TowerId, TowerDef> = {
@@ -107,6 +110,35 @@ export const TOWERS: Record<TowerId, TowerDef> = {
 };
 
 export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail"];
+
+/** Copy for the inspector: what the next rank buys, and the name of the rank 3 overdrive. */
+export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: string }> = {
+  pulse: {
+    r2: "Heavier bolts, faster cycle, wider reach.",
+    overdrive: "Twin Pulse",
+    r3: "Fires two bolts every cycle.",
+  },
+  arc: {
+    r2: "Hotter lance, faster tick, longer reach.",
+    overdrive: "Wide Lance",
+    r3: "Beam thickens and splits to a second host.",
+  },
+  frost: {
+    r2: "Colder shell, wider burst, longer reach.",
+    overdrive: "Deep Freeze",
+    r3: "Bigger splash, deeper slow, longer hold.",
+  },
+  tesla: {
+    r2: "Stronger current and one more jump.",
+    overdrive: "Cascade",
+    r3: "One extra jump on top of the rank gain.",
+  },
+  rail: {
+    r2: "Denser slug, faster charge, longer line.",
+    overdrive: "Heavy Line",
+    r3: "Pierce corridor widens to catch packs.",
+  },
+};
 
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
   mite: {
@@ -285,50 +317,54 @@ export function towerStats(def: TowerDef, level: number) {
   };
 }
 
+/**
+ * Worlds separate on value first, hue second: near-black ground, a mid-value
+ * arena floor, and the path carrying the only saturated light on the field.
+ */
 export const PLANET_THEME = {
   mycelion: {
-    sky: "#07110e",
-    fog: "#0a1a16",
-    hemiSky: "#7aa898",
-    hemiGround: "#08140f",
-    dir: "#c8e6d8",
-    ground: "#0d1c16",
-    groundHi: "#163528",
-    path: "#1d4a3a",
-    pathEmissive: "#1f8a62",
-    pad: "#14241c",
-    padEmi: "#2a8f6a",
+    sky: "#050d0b",
+    fog: "#081411",
+    hemiSky: "#5d8a7c",
+    hemiGround: "#050c09",
+    dir: "#d4f0e2",
+    ground: "#080f0c",
+    groundHi: "#122a20",
+    path: "#17392c",
+    pathEmissive: "#35c894",
+    pad: "#33473f",
+    padEmi: "#3dcaa0",
     core: "#3dcaa0",
-    ambient: "#14352a",
+    ambient: "#0f2820",
   },
   forge: {
-    sky: "#0c0908",
-    fog: "#140e0c",
-    hemiSky: "#c4a090",
-    hemiGround: "#1a0c08",
-    dir: "#ffd8b8",
-    ground: "#161210",
-    groundHi: "#2a221c",
-    path: "#3a322c",
-    pathEmissive: "#c45a28",
-    pad: "#1c1816",
-    padEmi: "#c46a3a",
-    core: "#e08848",
-    ambient: "#2a1810",
+    sky: "#0a0706",
+    fog: "#130d0a",
+    hemiSky: "#a07868",
+    hemiGround: "#0f0705",
+    dir: "#ffd0a4",
+    ground: "#0f0c0a",
+    groundHi: "#241c17",
+    path: "#33291f",
+    pathEmissive: "#e2661c",
+    pad: "#4c3f36",
+    padEmi: "#e08848",
+    core: "#f09a52",
+    ambient: "#20120a",
   },
   aegis: {
-    sky: "#080b10",
-    fog: "#0c1218",
-    hemiSky: "#9ab0c4",
-    hemiGround: "#0c1014",
-    dir: "#dce6f0",
-    ground: "#12161c",
-    groundHi: "#1c2830",
-    path: "#2a3a40",
-    pathEmissive: "#5aa0a8",
-    pad: "#161c22",
-    padEmi: "#6aa8b0",
-    core: "#8ec8d0",
-    ambient: "#182028",
+    sky: "#06090e",
+    fog: "#0a1016",
+    hemiSky: "#8098ac",
+    hemiGround: "#080c10",
+    dir: "#e4eef8",
+    ground: "#0a0e13",
+    groundHi: "#18222b",
+    path: "#25333c",
+    pathEmissive: "#6cc4d0",
+    pad: "#3a4650",
+    padEmi: "#9fd8de",
+    core: "#a8dce4",
+    ambient: "#121a22",
   },
 } as const;

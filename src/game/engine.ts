@@ -1,12 +1,15 @@
 import {
+  AUTO_WAVE_DELAY,
   ENEMIES,
   MAX_BEAMS,
   MAX_BOLTS,
   MAX_BURSTS,
+  MAX_DECALS,
   MAX_ENEMIES,
   MAX_FLOATERS,
   OVERCLOCK_CD,
   OVERCLOCK_DUR,
+  SALVAGE_RATE,
   STEP,
   SURGE_CD,
   SYN_RANGE,
@@ -17,8 +20,11 @@ import {
 import { MAPS, cellToWorld } from "./maps";
 import type {
   Beam,
+  BeamStyle,
   Bolt,
   Burst,
+  Decal,
+  DecalKind,
   Enemy,
   EnemyId,
   Floater,
@@ -65,6 +71,7 @@ export class GameEngine {
   beams: Beam[] = [];
   bursts: Burst[] = [];
   floaters: Floater[] = [];
+  decals: Decal[] = [];
 
   spawnQueue: SpawnEvent[] = [];
   spawnT = 0;
@@ -75,7 +82,18 @@ export class GameEngine {
   hudDirty = true;
   lastEvent: string | null = null;
   spawnGen = 0;
-  sfx: "place" | "shoot" | "boom" | "leak" | "wave" | "ui" | "surge" | "overclock" | null = null;
+  sfx:
+    | "place"
+    | "shoot"
+    | "boom"
+    | "leak"
+    | "wave"
+    | "ui"
+    | "surge"
+    | "overclock"
+    | "rank"
+    | "deny"
+    | null = null;
   speed = 1;
   autoWave = false;
   autoT = 0;
@@ -89,6 +107,13 @@ export class GameEngine {
   lastBonus = 0;
   lastShooter: Tower | null = null;
   fireGen = 0;
+  /** Bumped whenever an action is refused for lack of credits, so the HUD can flash the cost. */
+  denyGen = 0;
+  denyType: TowerId | null = null;
+  denyShort = 0;
+  placeGen = 0;
+  rankGen = 0;
+  leakGen = 0;
 
   constructor() {
     this.resetPools();
@@ -100,6 +125,7 @@ export class GameEngine {
     this.beams = Array.from({ length: MAX_BEAMS }, (_, slot) => this.emptyBeam(slot));
     this.bursts = Array.from({ length: MAX_BURSTS }, (_, slot) => this.emptyBurst(slot));
     this.floaters = Array.from({ length: MAX_FLOATERS }, (_, slot) => this.emptyFloater(slot));
+    this.decals = Array.from({ length: MAX_DECALS }, (_, slot) => this.emptyDecal(slot));
   }
 
   emptyEnemy(slot: number): Enemy {
@@ -157,6 +183,7 @@ export class GameEngine {
     return {
       slot,
       alive: false,
+      style: "lance",
       x1: 0,
       y1: 0,
       z1: 0,
@@ -167,6 +194,7 @@ export class GameEngine {
       maxTtl: 0.12,
       color: "#fff",
       width: 0.08,
+      seed: 0,
     };
   }
 
@@ -186,6 +214,10 @@ export class GameEngine {
 
   emptyFloater(slot: number): Floater {
     return { slot, alive: false, x: 0, y: 0, z: 0, ttl: 0, text: "" };
+  }
+
+  emptyDecal(slot: number): Decal {
+    return { slot, alive: false, kind: "frost", x: 0, z: 0, ttl: 0, maxTtl: 1, size: 1, color: "#fff" };
   }
 
   load(id: MapId) {
@@ -232,6 +264,14 @@ export class GameEngine {
     this.overclockCd = 0;
     this.overclockUntil = 0;
     this.lastBonus = 0;
+    this.denyGen = 0;
+    this.denyType = null;
+    this.denyShort = 0;
+    this.placeGen = 0;
+    this.rankGen = 0;
+    this.leakGen = 0;
+    this.fireGen = 0;
+    this.lastShooter = null;
   }
 
   startWave() {
@@ -344,16 +384,10 @@ export class GameEngine {
     const type = this.buildType;
     if (!type) return false;
     if (pad < 0 || pad >= this.padWorld.length) return false;
-    if (this.occupied[pad] !== -1) {
-      this.selectedTower = this.occupied[pad];
-      this.buildType = null;
-      this.hudDirty = true;
-      return false;
-    }
+    if (this.occupied[pad] !== -1) return false;
     const def = TOWERS[type];
     if (this.gold < def.cost) {
-      this.lastEvent = "Insufficient credits";
-      this.hudDirty = true;
+      this.deny(def.cost - this.gold, type);
       return false;
     }
     this.gold -= def.cost;
@@ -371,14 +405,18 @@ export class GameEngine {
       targeting: "first",
       invested: def.cost,
       kills: 0,
+      aiming: false,
     };
     this.towers.push(tower);
     this.occupied[pad] = tower.id;
-    this.selectedTower = tower.id;
+    // Stay in build mode so a line can be laid without re-arming the tray each time.
+    this.selectedTower = null;
+    this.placeGen += 1;
     this.hudDirty = true;
-    this.lastEvent = `${def.name} deployed`;
+    this.lastEvent = `${def.name} deployed · ${this.gold} left`;
     this.addTrauma(0.08);
     this.sfx = "place";
+    this.spawnDecal(w.x, w.z, 1.05, def.color, "rank");
     return true;
   }
 
@@ -389,7 +427,34 @@ export class GameEngine {
       this.hudDirty = true;
       return;
     }
+    if (!this.buildType) {
+      this.selectedTower = null;
+      this.hudDirty = true;
+      return;
+    }
     this.placeOnPad(pad);
+  }
+
+  setBuildType(type: TowerId | null) {
+    this.buildType = type;
+    if (type) this.selectedTower = null;
+    this.hudDirty = true;
+  }
+
+  cancelBuild() {
+    if (!this.buildType) return false;
+    this.buildType = null;
+    this.hudDirty = true;
+    return true;
+  }
+
+  deny(short: number, type: TowerId | null) {
+    this.denyGen += 1;
+    this.denyType = type;
+    this.denyShort = Math.max(1, Math.round(short));
+    this.lastEvent = `Need ${this.denyShort} more credits`;
+    this.sfx = "deny";
+    this.hudDirty = true;
   }
 
   getSelected(): Tower | undefined {
@@ -403,30 +468,40 @@ export class GameEngine {
     const def = TOWERS[t.type];
     const cost = upgradeCost(def.cost, t.level);
     if (this.gold < cost) {
-      this.lastEvent = "Insufficient credits";
-      this.hudDirty = true;
+      this.deny(cost - this.gold, t.type);
       return false;
     }
     this.gold -= cost;
     t.level += 1;
     t.invested += cost;
+    this.rankGen += 1;
     this.hudDirty = true;
     this.lastEvent = `${def.name} · rank ${t.level}`;
     this.addTrauma(0.1);
+    this.sfx = "rank";
+    this.spawnDecal(t.x, t.z, t.level >= 3 ? 1.85 : 1.45, def.color, "rank");
+    this.spawnBurst(t.x, 0.9, t.z, t.level >= 3 ? 0.85 : 0.6, def.color);
     return true;
   }
 
   sellSelected() {
     const t = this.getSelected();
     if (!t) return false;
-    const refund = Math.floor(t.invested * 0.6);
+    const refund = this.refundFor(t);
     this.gold += refund;
     this.occupied[t.pad] = -1;
     this.towers = this.towers.filter((x) => x.id !== t.id);
     this.selectedTower = null;
     this.hudDirty = true;
-    this.lastEvent = `Salvaged +${refund}`;
+    this.lastEvent = `Salvaged +${refund} credits`;
+    this.spawnFloater(t.x, 1.1, t.z, `+${refund}`);
+    this.spawnBurst(t.x, 0.5, t.z, 0.7, "#8fb4c4");
+    this.sfx = "place";
     return true;
+  }
+
+  refundFor(t: Tower) {
+    return Math.floor(t.invested * SALVAGE_RATE);
   }
 
   cycleTargeting() {
@@ -472,6 +547,11 @@ export class GameEngine {
       f.y += d * 1.4;
       if (f.ttl <= 0) f.alive = false;
     }
+    for (const g of this.decals) {
+      if (!g.alive) continue;
+      g.ttl -= d;
+      if (g.ttl <= 0) g.alive = false;
+    }
     if (paused || this.phase === "won" || this.phase === "lost" || this.phase === "idle") return;
     this.acc += d;
     let steps = 0;
@@ -490,7 +570,7 @@ export class GameEngine {
       this.buildClock += dt;
       if (this.autoWave && this.wave > 0 && this.wave < this.map.waves.length) {
         this.autoT += dt;
-        if (this.autoT >= 1.6) this.startWave();
+        if (this.autoT >= AUTO_WAVE_DELAY) this.startWave();
       }
     } else {
       this.buildClock = 0;
@@ -599,11 +679,15 @@ export class GameEngine {
     e.alive = false;
     this.lives = Math.max(0, this.lives - e.leak);
     this.leaked += 1;
+    this.leakGen += 1;
     this.hudDirty = true;
-    this.lastEvent = "Core breached";
+    this.lastEvent = `Core breached · −${e.leak}`;
     this.addTrauma(0.55);
     this.sfx = "leak";
     this.spawnBurst(e.x, e.y + 0.4, e.z, 1.2, "#c45c5c");
+    const core = this.endWorld();
+    this.spawnBurst(core.x, 1.1, core.z, 2.1, "#c45c5c");
+    this.spawnDecal(core.x, core.z, 2.6, "#c45c5c", "scorch");
     if (this.lives <= 0) {
       this.phase = "lost";
       this.lastEvent = "Core collapsed";
@@ -617,6 +701,7 @@ export class GameEngine {
       const stats = towerStats(def, t.level);
       const haste = this.time < this.overclockUntil ? 1.55 : 1;
       const target = this.pickTarget(t, stats.range, def.hitsFlying);
+      t.aiming = !!target;
       if (!target) continue;
       const dx = target.x - t.x;
       const dz = target.z - t.z;
@@ -696,8 +781,28 @@ export class GameEngine {
         bolt.color = def.color;
       }
     } else if (def.kind === "beam") {
-      this.spawnBeam(t.x, muzzleY + 0.4, t.z, target.x, target.y + 0.2, target.z, def.color, 0.1, 0.05);
+      const wide = t.level >= 3;
+      this.spawnBeam(
+        t.x,
+        muzzleY + 0.4,
+        t.z,
+        target.x,
+        target.y + 0.2,
+        target.z,
+        def.color,
+        0.1,
+        wide ? 0.085 : 0.05,
+        "lance",
+      );
       this.hurt(target, dmg, "beam");
+      if (wide) {
+        // Wide Lance: the overcharged beam splits onto one neighbouring host.
+        const split = this.nearestEnemy(target.x, target.z, 1.35, new Set([target.slot]), def.hitsFlying);
+        if (split) {
+          this.spawnBeam(target.x, target.y + 0.2, target.z, split.x, split.y + 0.2, split.z, def.color, 0.09, 0.06, "lance");
+          this.hurt(split, dmg * 0.5, "beam");
+        }
+      }
     } else if (def.kind === "rail") {
       const dx = target.x - t.x;
       const dz = target.z - t.z;
@@ -706,8 +811,8 @@ export class GameEngine {
       const uz = dz / len;
       const endX = t.x + ux * stats.range;
       const endZ = t.z + uz * stats.range;
-      this.spawnBeam(t.x, muzzleY, t.z, endX, muzzleY, endZ, def.color, 0.16, 0.1);
       const width = t.level >= 3 ? 0.82 : 0.55;
+      this.spawnBeam(t.x, muzzleY, t.z, endX, muzzleY, endZ, def.color, 0.18, width * 0.34, "rail");
       for (const e of this.enemies) {
         if (!e.alive) continue;
         if (e.flying && !def.hitsFlying) continue;
@@ -729,7 +834,7 @@ export class GameEngine {
       const jumps = Math.max(1, stats.chain) + (t.level >= 3 ? 1 : 0);
       for (let i = 0; i < jumps && cur; i++) {
         hit.add(cur.slot);
-        this.spawnBeam(fromX, fromY, fromZ, cur.x, cur.y + 0.25, cur.z, def.color, 0.11, 0.045);
+        this.spawnBeam(fromX, fromY, fromZ, cur.x, cur.y + 0.25, cur.z, def.color, 0.14, 0.045, "chain");
         this.hurt(cur, dmg * (1 - i * 0.18), "chain");
         fromX = cur.x;
         fromY = cur.y + 0.25;
@@ -801,6 +906,7 @@ export class GameEngine {
   splashAt(x: number, y: number, z: number, b: Bolt) {
     const r2 = b.splash * b.splash;
     this.spawnBurst(x, y, z, b.splash * 0.7, b.color);
+    if (b.slow > 0) this.spawnDecal(x, z, b.splash, b.color, "frost");
     this.addTrauma(0.16);
     for (const e of this.enemies) {
       if (!e.alive || e.flying) continue;
@@ -853,10 +959,12 @@ export class GameEngine {
     color: string,
     ttl: number,
     width: number,
+    style: BeamStyle = "lance",
   ) {
     const b = this.beams.find((x) => !x.alive);
     if (!b) return;
     b.alive = true;
+    b.style = style;
     b.x1 = x1;
     b.y1 = y1;
     b.z1 = z1;
@@ -867,6 +975,21 @@ export class GameEngine {
     b.maxTtl = ttl;
     b.color = color;
     b.width = width;
+    b.seed = Math.random() * 100;
+  }
+
+  spawnDecal(x: number, z: number, size: number, color: string, kind: DecalKind = "frost") {
+    const d = this.decals.find((g) => !g.alive);
+    if (!d) return;
+    const life = kind === "frost" ? 2.6 : 0.55;
+    d.alive = true;
+    d.kind = kind;
+    d.x = x;
+    d.z = z;
+    d.size = size;
+    d.color = color;
+    d.ttl = life;
+    d.maxTtl = life;
   }
 
   spawnBurst(x: number, y: number, z: number, size: number, color: string) {

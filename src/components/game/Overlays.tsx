@@ -178,13 +178,13 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
           backgroundRepeat: "no-repeat",
           backgroundSize: "280%",
           backgroundPosition: "38% 32%",
-          boxShadow: `inset -16px -10px 22px rgba(0,0,0,0.8), inset 8px 6px 14px rgba(255,255,255,0.1), 0 0 22px -6px ${rim}`,
+          boxShadow: `inset -8px -6px 14px rgba(0,0,0,0.42), inset 5px 4px 10px rgba(255,255,255,0.08), 0 0 20px -6px ${rim}`,
         }}
       >
         <span
           className="absolute inset-0 rounded-full"
           style={{
-            background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 78% 72%, ${rim}33, transparent 48%)`,
+            background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.14), transparent 46%)`,
           }}
         />
         <span

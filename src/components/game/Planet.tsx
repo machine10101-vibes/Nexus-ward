@@ -124,9 +124,12 @@ void main() {
 `;
 
 const cloudFrag = /* glsl */ `
+uniform sampler2D skyMap;
 uniform vec3 atmo;
+uniform vec3 tint;
 uniform float time;
 uniform float cover;
+uniform float opacity;
 uniform vec3 sunDir;
 varying vec3 vP;
 varying vec3 vN;
@@ -149,47 +152,76 @@ float noise(vec3 p) {
 float fbm(vec3 p) {
   float a = 0.5;
   float t = 0.0;
-  t += noise(p) * a; p *= 2.1; a *= 0.5;
-  t += noise(p) * a; p *= 2.05; a *= 0.5;
+  t += noise(p) * a; p *= 2.07; a *= 0.5;
+  t += noise(p) * a; p *= 2.03; a *= 0.5;
+  t += noise(p) * a; p *= 2.11; a *= 0.5;
+  t += noise(p) * a; p *= 2.02; a *= 0.5;
   t += noise(p) * a;
   return t;
 }
 
 void main() {
   vec3 pn = normalize(vP);
-  float n = fbm(pn * 2.7 + vec3(time * 0.028, 0.04, time * 0.016));
-  n += 0.35 * noise(pn * 7.2 - vec3(time * 0.03, time * 0.01, 0.0));
-  float mask = smoothstep(cover, cover + 0.22, n);
-  float wisps = smoothstep(cover + 0.08, cover + 0.32, n);
-  float ndl = max(dot(normalize(vWorldN), normalize(sunDir)), 0.0);
-  float day = smoothstep(-0.12, 0.4, ndl);
-  float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vView))), 1.8);
-  vec3 col = mix(vec3(0.72, 0.78, 0.82), atmo, 0.28);
-  col = mix(col, atmo * 1.15, (1.0 - day) * 0.35);
-  float a = mask * (0.14 + wisps * 0.18) * (0.5 + day * 0.4);
-  a *= 0.55 + fres * 0.45;
+  vec3 Nw = normalize(vWorldN);
+  vec3 L = normalize(sunDir);
+  vec3 V = normalize(vView);
+  float n = fbm(pn * 2.55 + vec3(time * 0.022, 0.05, time * 0.014));
+  n += 0.28 * noise(pn * 8.4 - vec3(time * 0.03, time * 0.012, 0.0));
+  n += 0.08 * noise(pn * 18.0 + time * 0.01);
+  float bands = 0.08 * sin(pn.y * 9.0 + n * 4.0 + time * 0.2);
+  float mask = smoothstep(cover - 0.02, cover + 0.2, n + bands);
+  float heads = smoothstep(cover + 0.1, cover + 0.34, n);
+  float ndl = dot(Nw, L);
+  float day = smoothstep(-0.16, 0.42, ndl);
+  float dusk = exp(-ndl * ndl * 9.0);
+  float fres = pow(1.0 - abs(dot(normalize(vN), V)), 1.7);
+  vec2 skyUv = vec2(atan(pn.z, pn.x) * 0.1591549 + 0.5, pn.y * 0.46 + 0.52);
+  vec3 sky = texture2D(skyMap, skyUv).rgb;
+  vec3 col = mix(vec3(0.78, 0.82, 0.86), tint, 0.55);
+  col = mix(col, sky, 0.22);
+  col = mix(col, atmo, 0.2);
+  float lining = pow(max(ndl, 0.0), 3.4) * heads;
+  col += mix(vec3(1.0), atmo, 0.35) * lining * 0.38;
+  col = mix(col, atmo * vec3(1.2, 0.78, 0.48), dusk * 0.4);
+  col *= 0.55 + day * 0.5;
+  float a = mask * opacity * (0.22 + heads * 0.38) * (0.42 + day * 0.58);
+  a *= 0.5 + fres * 0.5;
   gl_FragColor = vec4(col, a);
 }
 `;
 
 const atmoFrag = /* glsl */ `
+uniform sampler2D skyMap;
 uniform vec3 atmo;
 uniform vec3 sunDir;
 uniform float density;
+uniform float mie;
 varying vec3 vN;
 varying vec3 vWorldN;
 varying vec3 vView;
+varying vec3 vP;
 void main() {
   vec3 Nv = normalize(vN);
+  vec3 Nw = normalize(vWorldN);
   vec3 V = normalize(vView);
-  float fres = pow(1.0 - abs(dot(Nv, V)), 2.4);
-  float ndl = dot(normalize(vWorldN), normalize(sunDir));
-  float dusk = exp(-ndl * ndl * 8.0);
-  float day = smoothstep(-0.2, 0.35, ndl);
-  vec3 col = atmo * (0.55 + day * 0.55);
-  col = mix(col, atmo * vec3(1.15, 0.85, 0.55), dusk * 0.55);
-  float a = fres * density * (0.55 + dusk * 0.7);
-  gl_FragColor = vec4(col, a);
+  vec3 L = normalize(sunDir);
+  vec3 pn = normalize(vP);
+  float fres = pow(1.0 - abs(dot(Nv, V)), 2.15);
+  float ndl = dot(Nw, L);
+  float dusk = exp(-ndl * ndl * 7.2);
+  float day = smoothstep(-0.3, 0.38, ndl);
+  vec2 skyUv = vec2(atan(pn.z, pn.x) * 0.1591549 + 0.5, pn.y * 0.48 + 0.5);
+  vec3 sky = texture2D(skyMap, skyUv).rgb;
+  vec3 scatter = mix(atmo * 0.52, atmo * 1.12, day);
+  scatter = mix(scatter, sky, 0.42);
+  float sunGlow = pow(max(ndl, 0.0), 2.2) * mie;
+  float mieLobe = pow(max(dot(reflect(-L, Nw), V), 0.0), 7.0) * mie;
+  vec3 col = mix(scatter, atmo * vec3(1.2, 0.8, 0.5), dusk * 0.58);
+  col += sky * sunGlow * 0.32;
+  col += atmo * mieLobe * 0.5;
+  float a = fres * density * (0.4 + dusk * 0.78 + sunGlow * 0.26);
+  a *= 0.82 + pow(fres, 2.2) * 0.4;
+  gl_FragColor = vec4(col, clamp(a, 0.0, 0.92));
 }
 `;
 
@@ -206,22 +238,34 @@ const PALETTE_COLORS = Object.fromEntries(
   }),
 ) as Record<MapId, { a: Color; b: Color; c: Color; atmo: Color }>;
 
-const WORLD_SHAPE: Record<MapId, { landBias: number; iceAmt: number; cover: number }> = {
-  mycelion: { landBias: 0.4, iceAmt: 0.16, cover: 0.62 },
-  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.74 },
-  aegis: { landBias: 0.44, iceAmt: 0.38, cover: 0.58 },
+const WORLD_SHAPE: Record<
+  MapId,
+  { landBias: number; iceAmt: number; cover: number; density: number; halo: number; mie: number; opacity: number }
+> = {
+  mycelion: { landBias: 0.4, iceAmt: 0.16, cover: 0.58, density: 0.64, halo: 0.36, mie: 1.05, opacity: 0.92 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.66, density: 0.72, halo: 0.42, mie: 1.35, opacity: 1.05 },
+  aegis: { landBias: 0.44, iceAmt: 0.38, cover: 0.5, density: 0.6, halo: 0.4, mie: 0.95, opacity: 0.82 },
 };
+
+const CLOUD_TINT: Record<MapId, Color> = {
+  mycelion: new Color("#c8f4e4"),
+  forge: new Color("#e8b090"),
+  aegis: new Color("#d4eef4"),
+};
+
+const SUN_DIR = new Vector3(6, 8, 4).normalize();
 
 function applyPalette(
   uniforms: ShaderMaterial["uniforms"],
   cloudUniforms: ShaderMaterial["uniforms"],
   atmoUniforms: ShaderMaterial["uniforms"],
+  haloUniforms: ShaderMaterial["uniforms"],
   id: MapId,
-  crust: ReturnType<typeof useWorldLibrary>[MapId]["ground"],
+  art: ReturnType<typeof useWorldLibrary>[MapId],
 ) {
   const pal = PALETTE_COLORS[id];
   const shape = WORLD_SHAPE[id];
-  uniforms.crustMap.value = crust;
+  uniforms.crustMap.value = art.ground;
   (uniforms.colorA.value as Color).copy(pal.a);
   (uniforms.colorB.value as Color).copy(pal.b);
   (uniforms.colorC.value as Color).copy(pal.c);
@@ -230,8 +274,17 @@ function applyPalette(
   uniforms.iceAmt.value = shape.iceAmt;
   uniforms.cloudCover.value = shape.cover;
   (cloudUniforms.atmo.value as Color).copy(pal.atmo);
+  (cloudUniforms.tint.value as Color).copy(CLOUD_TINT[id]);
   cloudUniforms.cover.value = shape.cover;
+  cloudUniforms.opacity.value = shape.opacity;
+  cloudUniforms.skyMap.value = art.sky;
   (atmoUniforms.atmo.value as Color).copy(pal.atmo);
+  atmoUniforms.density.value = shape.density;
+  atmoUniforms.mie.value = shape.mie;
+  atmoUniforms.skyMap.value = art.sky;
+  haloUniforms.density.value = shape.halo;
+  haloUniforms.mie.value = shape.mie * 0.7;
+  haloUniforms.skyMap.value = art.sky;
 }
 
 export function PlanetGlobe({
@@ -254,7 +307,7 @@ export function PlanetGlobe({
       colorB: { value: PALETTE_COLORS.mycelion.b.clone() },
       colorC: { value: PALETTE_COLORS.mycelion.c.clone() },
       atmo: { value: PALETTE_COLORS.mycelion.atmo.clone() },
-      sunDir: { value: new Vector3(0.64, 0.42, 0.58) },
+      sunDir: { value: SUN_DIR.clone() },
       time: { value: 0 },
       landBias: { value: WORLD_SHAPE.mycelion.landBias },
       iceAmt: { value: WORLD_SHAPE.mycelion.iceAmt },
@@ -265,35 +318,42 @@ export function PlanetGlobe({
 
   const cloudUniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
+      skyMap: { value: lib.mycelion.sky },
       atmo: { value: PALETTE_COLORS.mycelion.atmo.clone() },
+      tint: { value: CLOUD_TINT.mycelion.clone() },
       time: { value: 0 },
       cover: { value: WORLD_SHAPE.mycelion.cover },
-      sunDir: { value: new Vector3(0.64, 0.42, 0.58) },
+      opacity: { value: WORLD_SHAPE.mycelion.opacity },
+      sunDir: { value: SUN_DIR.clone() },
     }),
-    [],
+    [lib.mycelion.sky],
   );
 
   const atmoUniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
+      skyMap: { value: lib.mycelion.sky },
       atmo: { value: PALETTE_COLORS.mycelion.atmo.clone() },
-      sunDir: { value: new Vector3(0.64, 0.42, 0.58) },
-      density: { value: 0.52 },
+      sunDir: { value: SUN_DIR.clone() },
+      density: { value: WORLD_SHAPE.mycelion.density },
+      mie: { value: WORLD_SHAPE.mycelion.mie },
     }),
-    [],
+    [lib.mycelion.sky],
   );
 
   const haloUniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
+      skyMap: { value: lib.mycelion.sky },
       atmo: atmoUniforms.atmo,
       sunDir: atmoUniforms.sunDir,
-      density: { value: 0.26 },
+      density: { value: WORLD_SHAPE.mycelion.halo },
+      mie: { value: WORLD_SHAPE.mycelion.mie * 0.7 },
     }),
-    [atmoUniforms],
+    [atmoUniforms, lib.mycelion.sky],
   );
 
   useLayoutEffect(() => {
-    applyPalette(uniforms, cloudUniforms, atmoUniforms, id, lib[id].ground);
-  }, [id, lib, uniforms, cloudUniforms, atmoUniforms]);
+    applyPalette(uniforms, cloudUniforms, atmoUniforms, haloUniforms, id, lib[id]);
+  }, [id, lib, uniforms, cloudUniforms, atmoUniforms, haloUniforms]);
 
   useFrame((state, dt) => {
     uniforms.time.value = state.clock.elapsedTime;
@@ -308,8 +368,8 @@ export function PlanetGlobe({
         <sphereGeometry args={[radius, 80, 56]} />
         <shaderMaterial vertexShader={vert} fragmentShader={frag} uniforms={uniforms} toneMapped={false} />
       </mesh>
-      <mesh ref={clouds} scale={1.02}>
-        <sphereGeometry args={[radius, 56, 40]} />
+      <mesh ref={clouds} scale={1.018}>
+        <sphereGeometry args={[radius, 72, 52]} />
         <shaderMaterial
           vertexShader={vert}
           fragmentShader={cloudFrag}
@@ -319,8 +379,8 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.045}>
-        <sphereGeometry args={[radius, 40, 28]} />
+      <mesh scale={1.048}>
+        <sphereGeometry args={[radius, 64, 44]} />
         <shaderMaterial
           vertexShader={vert}
           fragmentShader={atmoFrag}
@@ -330,8 +390,8 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.11}>
-        <sphereGeometry args={[radius, 32, 24]} />
+      <mesh scale={1.12}>
+        <sphereGeometry args={[radius, 56, 40]} />
         <shaderMaterial
           vertexShader={vert}
           fragmentShader={atmoFrag}
@@ -342,8 +402,8 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.22}>
-        <sphereGeometry args={[radius, 24, 16]} />
+      <mesh scale={1.24}>
+        <sphereGeometry args={[radius, 40, 28]} />
         <shaderMaterial
           vertexShader={vert}
           fragmentShader={atmoFrag}

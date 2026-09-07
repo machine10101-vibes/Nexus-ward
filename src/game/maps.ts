@@ -118,12 +118,12 @@ export const MAPS: Record<MapId, MapDef> = {
     startGold: 220,
     lives: 20,
     waves: [
-      { groups: [{ enemy: "mite", count: 8, interval: 0.7, delay: 0 }] },
-      { groups: [{ enemy: "mite", count: 12, interval: 0.55, delay: 0 }] },
+      { groups: [{ enemy: "mite", count: 10, interval: 0.52, delay: 0 }] },
+      { groups: [{ enemy: "mite", count: 15, interval: 0.4, delay: 0 }] },
       {
         groups: [
-          { enemy: "mite", count: 8, interval: 0.5, delay: 0 },
-          { enemy: "brood", count: 4, interval: 0.9, delay: 1.2 },
+          { enemy: "mite", count: 10, interval: 0.38, delay: 0 },
+          { enemy: "brood", count: 6, interval: 0.75, delay: 1.2 },
         ],
       },
       { groups: [{ enemy: "spore", count: 7, interval: 0.7, delay: 0 }] },

@@ -1,7 +1,7 @@
 import { Suspense, useLayoutEffect, useRef } from "react";
 import { OrbitControls } from "@react-three/drei";
 import { useGameStore } from "@/game/store";
-import { PLANET_THEME } from "@/game/config";
+import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { PlanetGlobe } from "./Planet";
 import { EnemyModel, HexPad, NexusCore, SpawnGate, TowerModel } from "./models";
 import { studioEntry } from "./studioCatalog";
@@ -78,7 +78,7 @@ function StudioSubject({ id, variant }: { id: string; variant: number }) {
     return <TowerModel type={entry.tower} level={Math.min(3, Math.max(1, variant))} />;
   }
   if (entry.kind === "enemy" && entry.enemy) {
-    const lift = entry.enemy === "spore" || entry.enemy === "gunship" || entry.enemy === "wraith" ? 0.55 : 0;
+    const lift = entry.enemy && ENEMIES[entry.enemy].flying ? 0.55 : 0;
     return (
       <group position={[0, lift, 0]}>
         <EnemyModel type={entry.enemy} />

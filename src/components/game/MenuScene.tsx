@@ -6,17 +6,45 @@ import { useGameStore } from "@/game/store";
 import { PLANET_THEME } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetGlobe, PLANET_PALETTE } from "./Planet";
-import { useWorldLibrary } from "./worldArt";
+import { useWorldLibrary, type WorldLibrary } from "./worldArt";
+
+const skyVert = `varying vec3 vP; varying vec2 vUv; void main(){ vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+
+const skyFrag = `
+  uniform sampler2D sky; uniform vec3 fogCol; uniform vec3 accent;
+  varying vec3 vP; varying vec2 vUv;
+  void main() {
+    vec3 n = normalize(vP);
+    vec3 tex = texture2D(sky, vec2(vUv.x + 0.08, vUv.y * 0.82 + 0.1)).rgb * 1.08;
+    float h = n.y;
+    vec3 col = mix(tex * 0.7, tex, smoothstep(-0.15, 0.5, h));
+    col = mix(col, fogCol, smoothstep(0.08, -0.35, h) * 0.45);
+    col += accent * pow(1.0 - abs(h), 6.0) * 0.07;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
 
 export function MenuScene() {
   return (
-    <Suspense fallback={null}>
-      <MenuWorld />
-    </Suspense>
+    <>
+      <color attach="background" args={["#06070b"]} />
+      <fog attach="fog" args={["#0a0c12", 22, 70]} />
+      <ambientLight intensity={0.22} />
+      <Stars radius={70} depth={32} count={1200} factor={2.8} fade speed={0.45} />
+      <Sparkles count={28} scale={12} size={2.4} speed={0.35} color="#c8d4e4" opacity={0.5} />
+      <Suspense fallback={null}>
+        <MenuArt />
+      </Suspense>
+    </>
   );
 }
 
-function MenuWorld() {
+function MenuArt() {
+  const lib = useWorldLibrary();
+  return <MenuWorld lib={lib} />;
+}
+
+function MenuWorld({ lib }: { lib: WorldLibrary }) {
   const preview = useGameStore((s) => s.preview);
   const ring = useRef<Mesh>(null);
   const ring2 = useRef<Mesh>(null);
@@ -36,16 +64,11 @@ function MenuWorld() {
 
   return (
     <>
-      <color attach="background" args={["#06070b"]} />
-      <fog attach="fog" args={["#0a0c12", 22, 70]} />
-      <ambientLight intensity={0.22} />
       <hemisphereLight intensity={0.62} color={theme.hemiSky} groundColor={theme.hemiGround} />
       <directionalLight position={[6, 8, 4]} intensity={2.05} color={theme.dir} />
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
-      <MenuSky preview={preview} />
-      <Stars radius={70} depth={32} count={1200} factor={2.8} fade speed={0.45} />
-      <Sparkles count={28} scale={12} size={2.4} speed={0.35} color="#c8d4e4" opacity={0.5} />
+      <MenuSky lib={lib} preview={preview} />
       <PlanetGlobe id={preview} />
       <mesh ref={ring} rotation={[Math.PI / 2.6, 0.2, 0.3]}>
         <torusGeometry args={[3.4, 0.038, 8, 96]} />
@@ -84,8 +107,7 @@ function MenuWorld() {
   );
 }
 
-function MenuSky({ preview }: { preview: MapId }) {
-  const lib = useWorldLibrary();
+function MenuSky({ lib, preview }: { lib: WorldLibrary; preview: MapId }) {
   const mat = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({
@@ -111,20 +133,8 @@ function MenuSky({ preview }: { preview: MapId }) {
         side={BackSide}
         depthWrite={false}
         uniforms={uniforms}
-        vertexShader={`varying vec3 vP; varying vec2 vUv; void main(){ vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`}
-        fragmentShader={`
-          uniform sampler2D sky; uniform vec3 fogCol; uniform vec3 accent;
-          varying vec3 vP; varying vec2 vUv;
-          void main() {
-            vec3 n = normalize(vP);
-            vec3 tex = texture2D(sky, vec2(vUv.x + 0.08, vUv.y * 0.82 + 0.1)).rgb * 1.08;
-            float h = n.y;
-            vec3 col = mix(tex * 0.7, tex, smoothstep(-0.15, 0.5, h));
-            col = mix(col, fogCol, smoothstep(0.08, -0.35, h) * 0.45);
-            col += accent * pow(1.0 - abs(h), 6.0) * 0.07;
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `}
+        vertexShader={skyVert}
+        fragmentShader={skyFrag}
       />
     </mesh>
   );

@@ -11,6 +11,19 @@ export type WorldArt = {
 
 export type WorldLibrary = Record<MapId, WorldArt>;
 
+export const WORLD_TEXTURE_URLS = [
+  asset("/textures/mycelion-ground.jpg"),
+  asset("/textures/forge-ground.jpg"),
+  asset("/textures/aegis-ground.jpg"),
+  asset("/textures/mycelion-sky.jpg"),
+  asset("/textures/forge-sky.jpg"),
+  asset("/textures/aegis-sky.jpg"),
+] as const;
+
+if (typeof document !== "undefined") {
+  useTexture.preload(WORLD_TEXTURE_URLS as unknown as string[]);
+}
+
 function prepGround(tex: Texture) {
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
@@ -23,16 +36,10 @@ function prepSky(tex: Texture) {
   tex.anisotropy = 8;
 }
 
-/** Load every world map once. Do not clone on hover — that remounts the menu. */
+/** Load every world map once. Hover must not clone or re-suspend these. */
 export function useWorldLibrary(): WorldLibrary {
-  const [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky] = useTexture([
-    asset("/textures/mycelion-ground.jpg"),
-    asset("/textures/forge-ground.jpg"),
-    asset("/textures/aegis-ground.jpg"),
-    asset("/textures/mycelion-sky.jpg"),
-    asset("/textures/forge-sky.jpg"),
-    asset("/textures/aegis-sky.jpg"),
-  ]) as Texture[];
+  const loaded = useTexture(WORLD_TEXTURE_URLS as unknown as string[]) as Texture[];
+  const [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky] = loaded;
 
   useLayoutEffect(() => {
     prepGround(mycelionGround);

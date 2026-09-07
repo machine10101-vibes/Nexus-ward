@@ -69,8 +69,8 @@ vec3 triplanar(sampler2D tex, vec3 p, float scale) {
 
 void main() {
   vec3 pn = normalize(vP);
-  vec3 crust = triplanar(crustMap, vP, 0.34);
-  crust = crust * 1.18 + 0.04;
+  vec3 crust = triplanar(crustMap, vP, 0.46);
+  crust = crust * 1.42 + 0.02;
   float bump = dot(crust, vec3(0.28, 0.5, 0.22));
   vec3 Nw = normalize(vWorldN + vWorldN * (bump - 0.48) * 0.42);
   vec3 Nv = normalize(vN);
@@ -115,9 +115,9 @@ void main() {
   lit += albedo * dusk * 0.12;
   lit += atmo * dusk * 0.16;
 
-  float fres = pow(1.0 - max(dot(Nv, normalize(V)), 0.0), 2.15);
-  lit += atmo * fres * (0.22 + day * 0.28 + dusk * 0.45);
-  lit += atmo * pow(fres, 3.2) * 0.18;
+  float fres = pow(1.0 - max(dot(Nv, normalize(V)), 0.0), 2.6);
+  lit += atmo * fres * (0.14 + day * 0.16 + dusk * 0.32);
+  lit += atmo * pow(fres, 3.6) * 0.1;
 
   gl_FragColor = vec4(lit, 1.0);
 }
@@ -166,8 +166,8 @@ void main() {
   float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vView))), 1.8);
   vec3 col = mix(vec3(0.72, 0.78, 0.82), atmo, 0.28);
   col = mix(col, atmo * 1.15, (1.0 - day) * 0.35);
-  float a = mask * (0.22 + wisps * 0.28) * (0.55 + day * 0.45);
-  a *= 0.65 + fres * 0.55;
+  float a = mask * (0.14 + wisps * 0.18) * (0.5 + day * 0.4);
+  a *= 0.55 + fres * 0.45;
   gl_FragColor = vec4(col, a);
 }
 `;
@@ -207,9 +207,9 @@ const PALETTE_COLORS = Object.fromEntries(
 ) as Record<MapId, { a: Color; b: Color; c: Color; atmo: Color }>;
 
 const WORLD_SHAPE: Record<MapId, { landBias: number; iceAmt: number; cover: number }> = {
-  mycelion: { landBias: 0.42, iceAmt: 0.22, cover: 0.58 },
-  forge: { landBias: 0.36, iceAmt: 0.0, cover: 0.7 },
-  aegis: { landBias: 0.46, iceAmt: 0.72, cover: 0.54 },
+  mycelion: { landBias: 0.4, iceAmt: 0.16, cover: 0.62 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.74 },
+  aegis: { landBias: 0.44, iceAmt: 0.38, cover: 0.58 },
 };
 
 function applyPalette(
@@ -277,7 +277,7 @@ export function PlanetGlobe({
     () => ({
       atmo: { value: PALETTE_COLORS.mycelion.atmo.clone() },
       sunDir: { value: new Vector3(0.64, 0.42, 0.58) },
-      density: { value: 0.9 },
+      density: { value: 0.52 },
     }),
     [],
   );
@@ -286,7 +286,7 @@ export function PlanetGlobe({
     () => ({
       atmo: atmoUniforms.atmo,
       sunDir: atmoUniforms.sunDir,
-      density: { value: 0.42 },
+      density: { value: 0.26 },
     }),
     [atmoUniforms],
   );

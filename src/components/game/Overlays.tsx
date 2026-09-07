@@ -180,8 +180,9 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
         style={{
           backgroundImage: src,
           backgroundRepeat: "no-repeat",
-          backgroundSize: "220%",
+          backgroundSize: "190%",
           backgroundPosition: "42% 36%",
+          filter: "brightness(1.12) contrast(1.08) saturate(1.1)",
           boxShadow: `inset -16px -10px 22px rgba(0,0,0,0.55), inset 8px 6px 14px rgba(255,255,255,0.1), 0 0 0 1px ${rim}33, 0 0 22px -4px ${rim}`,
         }}
       >

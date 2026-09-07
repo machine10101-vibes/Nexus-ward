@@ -52,7 +52,7 @@ export function GameGL() {
           <Vignette eskil={false} offset={0.16} darkness={0.68} />
         </EffectComposer>
       ) : null}
-      <AdaptiveDpr />
+      {inBattle ? <AdaptiveDpr /> : null}
       <AdaptiveEvents />
     </Canvas>
   );

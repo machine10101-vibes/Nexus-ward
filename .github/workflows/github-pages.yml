@@ -30,7 +30,6 @@ jobs:
           GITHUB_PAGES: "1"
           GITHUB_REPOSITORY: ${{ github.repository }}
           VITE_AUTH_ENABLED: "false"
-      - uses: actions/configure-pages@v5
       - name: Collect public files
         run: |
           set -eu

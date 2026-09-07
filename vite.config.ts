@@ -143,14 +143,14 @@ function authPopupPlugin(): Plugin {
 }
 
 const pages = process.env.GITHUB_PAGES === "1";
-const repoName =
-  (process.env.GITHUB_REPOSITORY ?? "machine10101-vibes/Nexus-ward").split("/")[1] ?? "Nexus-ward";
 
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview }) => ({
-  base: pages ? `/${repoName}/` : "/",
+  // Relative base so the same folder works on GitHub Pages (`/Nexus-ward/`)
+  // and on a raw GitHub CDN URL that is not at the domain root.
+  base: pages ? "./" : "/",
   server: {
     host: "0.0.0.0",
     port: 8080,

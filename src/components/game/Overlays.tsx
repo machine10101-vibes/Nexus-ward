@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ArrowLeft, Check, Settings2 } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
-import { ENEMIES } from "@/game/config";
+import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
@@ -156,9 +156,14 @@ function Select() {
   );
 }
 
-/** A framed world disc, not a landscape crop: blurred field, lit sphere, orbit line. */
+/**
+ * A framed world disc, not a landscape crop: blurred field, lit sphere, orbit line.
+ * The source art letterboxes each planet in black, so the disc oversamples to crop
+ * that margin away — otherwise every world shrinks into the same dark dot.
+ */
 function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
   const src = `url(/textures/${id}-planet.jpg)`;
+  const rim = PLANET_THEME[id].padEmi;
   return (
     <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
       <div
@@ -173,12 +178,12 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
         )}
       />
       <div
-        className="absolute left-1/2 top-1/2 size-[4.5rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
+        className="absolute left-1/2 top-1/2 size-[5.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
         style={{
           backgroundImage: src,
-          backgroundSize: "cover",
+          backgroundSize: "132%",
           backgroundPosition: "center",
-          boxShadow: "inset -14px -8px 22px rgba(0,0,0,0.8), inset 6px 4px 14px rgba(255,255,255,0.06)",
+          boxShadow: `inset -14px -8px 22px rgba(0,0,0,0.78), inset 6px 4px 14px rgba(255,255,255,0.06), 0 0 22px -6px ${rim}`,
         }}
       >
         <span className="absolute inset-0 rounded-full outline outline-1 -outline-offset-1 outline-fg/15" />

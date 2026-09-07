@@ -159,6 +159,13 @@ class GameAudio {
   ui() {
     this.tone(640, 0.06, "sine", 0.03);
   }
+  rank() {
+    this.tone(392, 0.12, "triangle", 0.05, 784);
+    this.tone(588, 0.22, "sine", 0.035, 1176);
+  }
+  deny() {
+    this.tone(160, 0.11, "square", 0.035, 110);
+  }
   surge() {
     this.tone(140, 0.4, "sawtooth", 0.08, 420);
     this.noise(0.22, 0.1, 180);

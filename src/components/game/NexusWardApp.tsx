@@ -26,8 +26,15 @@ export function NexusWardApp() {
     const onKey = (e: KeyboardEvent) => {
       const s = useGameStore.getState();
       if (e.code === "Escape") {
-        if (s.screen === "playing") s.pause();
-        else if (s.screen === "paused") s.resume();
+        if (s.screen === "playing") {
+          if (engine.cancelBuild()) {
+            useGameStore.setState({ buildType: null });
+            s.syncHud();
+            audio.ui();
+          } else {
+            s.pause();
+          }
+        } else if (s.screen === "paused") s.resume();
         else if (s.screen === "help" || s.screen === "settings") s.closeOverlay();
         return;
       }
@@ -56,10 +63,11 @@ export function NexusWardApp() {
       const num = e.code.match(/^Digit([1-5])$/);
       if (num) {
         const id = TOWER_ORDER[Number(num[1]) - 1];
-        engine.buildType = id;
-        engine.selectedTower = null;
-        useGameStore.setState({ buildType: id });
+        const next = engine.buildType === id ? null : id;
+        engine.setBuildType(next);
+        useGameStore.setState({ buildType: next });
         s.syncHud();
+        audio.ui();
       }
       if (e.code === "KeyU") {
         engine.upgradeSelected();

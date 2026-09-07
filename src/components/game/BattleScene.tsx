@@ -13,9 +13,22 @@ import {
   type Group,
   type Mesh,
   type MeshBasicMaterial,
+  type MeshStandardMaterial,
 } from "three";
 import { engine } from "@/game/engine";
-import { PLANET_THEME, SYN_RANGE, TOWERS, towerStats, MAX_ENEMIES, MAX_BOLTS, MAX_BEAMS, MAX_BURSTS, MAX_FLOATERS, ENEMIES } from "@/game/config";
+import {
+  PLANET_THEME,
+  SYN_RANGE,
+  TOWERS,
+  towerStats,
+  MAX_ENEMIES,
+  MAX_BOLTS,
+  MAX_BEAMS,
+  MAX_BURSTS,
+  MAX_DECALS,
+  MAX_FLOATERS,
+  ENEMIES,
+} from "@/game/config";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
 import {
@@ -39,6 +52,64 @@ const FACTION_MARK = {
   mech: "#c46a3a",
   hybrid: "#8ec8d0",
 } as const;
+
+/** Per-world atmosphere: how far you can see, how the ground reads, how hard the key light is. */
+const WORLD_TUNE: Record<
+  MapId,
+  {
+    fogNear: number;
+    fogFar: number;
+    key: number;
+    fill: number;
+    ambient: number;
+    pathMetal: number;
+    pathRough: number;
+    groundMetal: number;
+    groundRough: number;
+    rimLight: string;
+    rimIntensity: number;
+  }
+> = {
+  mycelion: {
+    fogNear: 14,
+    fogFar: 50,
+    key: 1.75,
+    fill: 0.72,
+    ambient: 0.26,
+    pathMetal: 0.12,
+    pathRough: 0.66,
+    groundMetal: 0.03,
+    groundRough: 0.97,
+    rimLight: "#3dcaa0",
+    rimIntensity: 26,
+  },
+  forge: {
+    fogNear: 12,
+    fogFar: 42,
+    key: 2.55,
+    fill: 0.4,
+    ambient: 0.14,
+    pathMetal: 0.82,
+    pathRough: 0.24,
+    groundMetal: 0.34,
+    groundRough: 0.72,
+    rimLight: "#e07a38",
+    rimIntensity: 34,
+  },
+  aegis: {
+    fogNear: 17,
+    fogFar: 58,
+    key: 2.0,
+    fill: 0.66,
+    ambient: 0.2,
+    pathMetal: 0.5,
+    pathRough: 0.36,
+    groundMetal: 0.2,
+    groundRough: 0.62,
+    rimLight: "#8ec8d0",
+    rimIntensity: 30,
+  },
+};
 
 export function BattleScene() {
   const mapId = useGameStore((s) => s.mapId) ?? "mycelion";
@@ -71,7 +142,9 @@ export function BattleScene() {
       <EnemyLayer />
       <BoltLayer />
       <BeamLayer />
+      <ArcLayer />
       <BurstLayer />
+      <DecalLayer />
       <FloaterLayer />
       <OrbitControls
         makeDefault
@@ -89,8 +162,10 @@ export function BattleScene() {
 
 function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const theme = PLANET_THEME[mapId];
+  const tune = WORLD_TUNE[mapId];
   const map = engine.map;
   const lives = useGameStore((s) => s.hud.lives);
+  const leaked = useGameStore((s) => s.hud.leaked);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const combat = useGameStore((s) => s.hud.phase) === "combat";
   const { tube, rails } = useMemo(() => {
@@ -114,17 +189,20 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
     const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
     return { glow: new TubeGeometry(curve, 80, 0.62, 8, false) };
   }, [map.id, engine.waypoints.length]);
-  const terrain = useMemo(() => makeTerrain(groundW, groundD, theme.ground, theme.groundHi), [groundW, groundD, theme.ground, theme.groundHi]);
+  const terrain = useMemo(
+    () => makeTerrain(groundW, groundD, theme.ground, theme.groundHi, mapId),
+    [groundW, groundD, theme.ground, theme.groundHi, mapId],
+  );
 
   return (
     <>
       <color attach="background" args={[theme.sky]} />
-      <fog attach="fog" args={[theme.fog, 16, 54]} />
-      <ambientLight intensity={0.2} color={theme.ambient} />
-      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 1.05]} />
+      <fog attach="fog" args={[theme.fog, tune.fogNear, tune.fogFar]} />
+      <ambientLight intensity={tune.ambient} color={theme.ambient} />
+      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, mapId === "forge" ? 0.72 : 1.05]} />
       <directionalLight
         position={[12, 18, 9]}
-        intensity={2.05}
+        intensity={tune.key}
         color={theme.dir}
         castShadow={quality === "high"}
         shadow-mapSize-width={1024}
@@ -136,7 +214,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         shadow-camera-top={18}
         shadow-camera-bottom={-18}
       />
-      <directionalLight position={[-10, 5, -8]} intensity={0.62} color={theme.hemiSky} />
+      <directionalLight position={[-10, 5, -8]} intensity={tune.fill} color={theme.hemiSky} />
+      <pointLight position={[0, 3.4, -12]} intensity={tune.rimIntensity} distance={30} color={tune.rimLight} />
       <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={theme.core} />
       <pointLight position={[start.x, 2.2, start.z]} intensity={28} distance={11} color={theme.pathEmissive} />
       {overclock ? <pointLight position={[0, 6, 0]} intensity={48} distance={34} color="#d7e6ee" /> : null}
@@ -148,11 +227,16 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         </group>
       </Suspense>
       <mesh geometry={terrain} receiveShadow>
-        <meshStandardMaterial color={theme.ground} roughness={0.94} metalness={0.06} vertexColors />
+        <meshStandardMaterial
+          color={theme.ground}
+          roughness={tune.groundRough}
+          metalness={tune.groundMetal}
+          vertexColors
+        />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, 0]} receiveShadow>
         <circleGeometry args={[11.8, 48]} />
-        <meshStandardMaterial color={theme.groundHi} roughness={0.86} metalness={0.12} />
+        <meshStandardMaterial color={theme.groundHi} roughness={tune.groundRough * 0.9} metalness={tune.groundMetal + 0.08} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
         <ringGeometry args={[11.4, 12.15, 64]} />
@@ -168,6 +252,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         <torusGeometry args={[13.2, 0.035, 8, 80]} />
         <meshStandardMaterial color={theme.padEmi} emissive={theme.padEmi} emissiveIntensity={0.45} metalness={0.5} roughness={0.3} />
       </mesh>
+      <OverclockWash color={theme.padEmi} on={overclock} />
       <HexField cols={map.cols} rows={map.rows} color={theme.pad} accent={theme.padEmi} skip={skip} />
       {glow ? (
         <mesh geometry={glow}>
@@ -184,8 +269,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         <mesh geometry={tube} receiveShadow>
           <meshStandardMaterial
             color={theme.path}
-            metalness={mapId === "forge" ? 0.7 : 0.2}
-            roughness={mapId === "forge" ? 0.28 : 0.45}
+            metalness={tune.pathMetal}
+            roughness={tune.pathRough}
             emissive={theme.pathEmissive}
             emissiveIntensity={combat ? 0.38 : 0.22}
           />
@@ -196,12 +281,18 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       ) : null}
       <PathCourier points={engine.waypoints} color={theme.pathEmissive} />
       <group position={[end.x, 0, end.z]}>
-        <NexusCore color={theme.core} health={health} />
+        <NexusCore color={theme.core} health={health} hitGen={leaked} />
       </group>
       <group position={[start.x, 0, start.z]}>
         <SpawnGate color={theme.pathEmissive} />
       </group>
-      {mapId === "mycelion" ? <DecorOrganic seed={11} /> : mapId === "forge" ? <DecorMech seed={22} /> : <DecorHybrid seed={33} />}
+      {mapId === "mycelion" ? (
+        <DecorOrganic seed={11} count={quality === "high" ? 30 : 18} />
+      ) : mapId === "forge" ? (
+        <DecorMech seed={22} count={quality === "high" ? 28 : 16} />
+      ) : (
+        <DecorHybrid seed={33} count={quality === "high" ? 30 : 18} />
+      )}
       {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 32 : 48} /> : null}
       {quality === "high" ? (
         <Sparkles count={36} scale={[28, 6, 22]} size={2.2} speed={0.28} color={theme.pathEmissive} opacity={0.45} />
@@ -210,6 +301,26 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={36} blur={2.2} far={9} />
       ) : null}
     </>
+  );
+}
+
+/** A slow ground swell while Overclock runs — legible, never a strobe. */
+function OverclockWash({ color, on }: { color: string; on: boolean }) {
+  const ref = useRef<Mesh>(null);
+  useFrame((s) => {
+    const m = ref.current;
+    if (!m) return;
+    m.visible = on;
+    if (!on) return;
+    const k = (Math.sin(s.clock.elapsedTime * 1.6) + 1) / 2;
+    m.scale.setScalar(0.92 + k * 0.1);
+    (m.material as MeshBasicMaterial).opacity = 0.06 + k * 0.09;
+  });
+  return (
+    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]} visible={false}>
+      <ringGeometry args={[2.6, 12, 64]} />
+      <meshBasicMaterial color={color} transparent opacity={0.08} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
+    </mesh>
   );
 }
 
@@ -259,7 +370,8 @@ function SkyDome({
   );
 }
 
-function makeTerrain(w: number, d: number, low: string, high: string) {
+/** Terrain outside the arena. Each world folds differently: mounds, plates, or ridges. */
+function makeTerrain(w: number, d: number, low: string, high: string, style: MapId) {
   const g = new PlaneGeometry(w, d, 42, 30);
   g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position;
@@ -267,17 +379,21 @@ function makeTerrain(w: number, d: number, low: string, high: string) {
   const a = new Color(low);
   const b = new Color(high);
   const tmp = new Color();
+  const amp = style === "forge" ? 1.15 : style === "aegis" ? 1.85 : 1.55;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
     const dist = Math.hypot(x, z);
     const edge = Math.max(0, (dist - 8.2) / 11);
-    const n =
+    let n =
       Math.sin(x * 0.16) * Math.cos(z * 0.13) * 0.7 +
       Math.sin(x * 0.41 + z * 0.28) * 0.28 +
       Math.sin(x * 0.07 + z * 0.09) * 1.15;
-    pos.setY(i, n * edge * 1.55 + edge * 0.55 - 0.04);
-    tmp.copy(a).lerp(b, Math.min(1, dist / 16));
+    if (style === "forge") n = Math.round(n * 1.7) / 1.7;
+    else if (style === "aegis") n = Math.abs(n) * 1.25 - 0.35;
+    pos.setY(i, n * edge * amp + edge * 0.55 - 0.04);
+    const t = Math.min(1, dist / 16);
+    tmp.copy(a).lerp(b, style === "aegis" ? t * (0.55 + Math.abs(n) * 0.45) : t);
     cols[i * 3] = tmp.r;
     cols[i * 3 + 1] = tmp.g;
     cols[i * 3 + 2] = tmp.b;
@@ -288,7 +404,7 @@ function makeTerrain(w: number, d: number, low: string, high: string) {
 }
 
 function PulseRail({ geometry, color, hot }: { geometry: TubeGeometry; color: string; hot: boolean }) {
-  const mat = useRef<import("three").MeshStandardMaterial>(null);
+  const mat = useRef<MeshStandardMaterial>(null);
   useFrame((s) => {
     if (!mat.current) return;
     mat.current.emissiveIntensity = (hot ? 0.62 : 0.3) + Math.sin(s.clock.elapsedTime * 2.4) * 0.16;
@@ -338,11 +454,13 @@ function Pads() {
   const buildType = useGameStore((s) => s.buildType);
   const selected = useGameStore((s) => s.hud.selectedId);
   const hover = useGameStore((s) => s.hoverPad);
+  const gold = useGameStore((s) => s.hud.gold);
   const pads = engine.padWorld;
   return (
     <group>
       {pads.map((p, i) => {
         const occ = engine.occupied[i] !== -1;
+        const previewing = !occ && !!buildType && hover === i;
         return (
           <group
             key={i}
@@ -361,6 +479,9 @@ function Pads() {
             }}
             onPointerDown={(e) => {
               e.stopPropagation();
+              // Touch has no hover: mirror the pad under the finger before acting on it.
+              engine.hoverPad = i;
+              useGameStore.setState({ hoverPad: i });
               const before = engine.towers.length;
               engine.selectPad(i);
               if (engine.towers.length > before) audio.place();
@@ -375,25 +496,86 @@ function Pads() {
               hover={hover === i}
               selected={occ && engine.occupied[i] === selected}
             />
-            {!occ && buildType && hover === i ? (
-              <group position={[0, 0.02, 0]} scale={1.2}>
-                <TowerGhost type={buildType} />
-              </group>
-            ) : null}
-            {!occ && buildType && hover === i ? (
-              <RangeRing radius={towerStats(TOWERS[buildType], 1).range} color={TOWERS[buildType].color} />
+            {previewing ? (
+              <>
+                <group position={[0, 0.02, 0]} scale={1.2}>
+                  <TowerModel type={buildType} level={1} ghost />
+                </group>
+                <RangeRing radius={towerStats(TOWERS[buildType], 1).range} color={TOWERS[buildType].color} />
+                <GhostTag type={buildType} gold={gold} />
+              </>
             ) : null}
           </group>
         );
       })}
+      <SynergyPreview />
     </group>
   );
 }
 
-function TowerGhost({ type }: { type: TowerId }) {
+function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
+  const def = TOWERS[type];
+  const short = def.cost - gold;
+  return (
+    <Html position={[0, 1.95, 0]} center sprite pointerEvents="none" zIndexRange={[9, 9]} style={{ pointerEvents: "none" }}>
+      <div className="ghost-tag">
+        <span className="ghost-tag-cost">
+          {def.short} · {def.cost} cr
+        </span>
+        <span>{def.hitsFlying ? "ground + air" : "ground only"}</span>
+        {short > 0 ? (
+          <span className="ghost-tag-short">need {short} more</span>
+        ) : (
+          <span>{gold - def.cost} cr left</span>
+        )}
+      </div>
+    </Html>
+  );
+}
+
+/** Ticks from the hovered pad to same-type batteries that would link with it. */
+function SynergyPreview() {
+  const buildType = useGameStore((s) => s.buildType);
+  const hover = useGameStore((s) => s.hoverPad);
+  if (!buildType || hover == null) return null;
+  if (engine.occupied[hover] !== -1) return null;
+  const pad = engine.padWorld[hover];
+  if (!pad) return null;
+  const r2 = SYN_RANGE * SYN_RANGE;
+  const color = TOWERS[buildType].color;
+  const links = engine.towers.filter((t) => {
+    if (t.type !== buildType) return false;
+    const dx = t.x - pad.x;
+    const dz = t.z - pad.z;
+    return dx * dx + dz * dz <= r2;
+  });
+  if (!links.length) return null;
   return (
     <group>
-      <TowerModel type={type} level={1} />
+      {links.map((t) => {
+        const dx = t.x - pad.x;
+        const dz = t.z - pad.z;
+        const len = Math.hypot(dx, dz) || 0.001;
+        const yaw = Math.atan2(dx, dz);
+        const ticks = Math.max(2, Math.round(len / 0.34));
+        return (
+          <group key={t.id} position={[pad.x, 0.3, pad.z]} rotation={[0, yaw, 0]}>
+            {Array.from({ length: ticks }, (_, k) => (
+              <mesh key={k} position={[0, 0, ((k + 0.5) / ticks) * len]}>
+                <boxGeometry args={[0.05, 0.05, 0.12]} />
+                <meshBasicMaterial
+                  color={color}
+                  transparent
+                  opacity={0.7}
+                  blending={AdditiveBlending}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -403,6 +585,7 @@ function TowersLayer() {
   const count = useGameStore((s) => s.hud.towers);
   const refs = useRef<(Group | null)[]>([]);
   const flashRefs = useRef<(Mesh | null)[]>([]);
+  const tickRefs = useRef<(Mesh | null)[]>([]);
   const seenFire = useRef(0);
   const flashAge = useRef<number[]>([]);
   useFrame((_, dt) => {
@@ -427,6 +610,8 @@ function TowersLayer() {
         const mat = flash.material as MeshBasicMaterial;
         if (mat) mat.opacity = k;
       }
+      const tick = tickRefs.current[i];
+      if (tick) tick.visible = t.aiming;
     }
   });
   void count;
@@ -468,6 +653,25 @@ function TowersLayer() {
                 toneMapped={false}
               />
             </mesh>
+            {selected === t.id ? (
+              <mesh
+                ref={(el) => {
+                  tickRefs.current[i] = el;
+                }}
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0.03, 1.05]}
+                visible={false}
+              >
+                <planeGeometry args={[0.055, 0.62]} />
+                <meshBasicMaterial
+                  color={TOWERS[t.type].color}
+                  transparent
+                  opacity={0.8}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+            ) : null}
           </group>
           {t.level >= 3 ? (
             <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -486,7 +690,9 @@ function TowersLayer() {
 
 function SynergyLinks() {
   const n = useGameStore((s) => s.hud.towers);
-  const links: { key: string; ax: number; az: number; bx: number; bz: number; color: string }[] = [];
+  const selected = useGameStore((s) => s.hud.selectedId);
+  const mats = useRef<(MeshBasicMaterial | null)[]>([]);
+  const links: { key: string; ax: number; az: number; bx: number; bz: number; color: string; own: boolean }[] = [];
   const r2 = SYN_RANGE * SYN_RANGE;
   for (let i = 0; i < engine.towers.length; i++) {
     for (let j = i + 1; j < engine.towers.length; j++) {
@@ -496,13 +702,30 @@ function SynergyLinks() {
       const dx = a.x - b.x;
       const dz = a.z - b.z;
       if (dx * dx + dz * dz > r2) continue;
-      links.push({ key: `${a.id}-${b.id}`, ax: a.x, az: a.z, bx: b.x, bz: b.z, color: TOWERS[a.type].color });
+      links.push({
+        key: `${a.id}-${b.id}`,
+        ax: a.x,
+        az: a.z,
+        bx: b.x,
+        bz: b.z,
+        color: TOWERS[a.type].color,
+        own: selected === a.id || selected === b.id,
+      });
     }
   }
+  const owned = links.some((l) => l.own);
+  useFrame((s) => {
+    const pulse = 0.34 + (Math.sin(s.clock.elapsedTime * 2.1) + 1) * 0.09;
+    for (let i = 0; i < links.length; i++) {
+      const m = mats.current[i];
+      if (!m) continue;
+      m.opacity = owned ? (links[i].own ? pulse + 0.34 : pulse * 0.3) : pulse;
+    }
+  });
   void n;
   return (
     <group>
-      {links.map((l) => {
+      {links.map((l, i) => {
         const mx = (l.ax + l.bx) / 2;
         const mz = (l.az + l.bz) / 2;
         const len = Math.hypot(l.bx - l.ax, l.bz - l.az) || 0.001;
@@ -510,7 +733,17 @@ function SynergyLinks() {
         return (
           <mesh key={l.key} position={[mx, 0.28, mz]} rotation={[0, yaw, 0]}>
             <boxGeometry args={[0.045, 0.035, len]} />
-            <meshBasicMaterial color={l.color} transparent opacity={0.5} blending={AdditiveBlending} depthWrite={false} />
+            <meshBasicMaterial
+              ref={(el) => {
+                mats.current[i] = el;
+              }}
+              color={l.color}
+              transparent
+              opacity={0.5}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
           </mesh>
         );
       })}
@@ -540,28 +773,32 @@ function EnemyLayer() {
   void gen;
   return (
     <group>
-      {engine.enemies.map((e) => (
-        <group
-          key={`${e.slot}-${e.type}`}
-          ref={(el) => {
-            groups.current[e.slot] = el;
-          }}
-          visible={false}
-        >
-          <EnemyModel type={e.type} />
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -e.y + 0.03, 0]}>
-            <ringGeometry args={[0.22, 0.4, 16]} />
-            <meshBasicMaterial
-              color={FACTION_MARK[ENEMIES[e.type].faction]}
-              transparent
-              opacity={0.55}
-              depthWrite={false}
-              toneMapped={false}
-            />
-          </mesh>
-          <HpPip slot={e.slot} />
-        </group>
-      ))}
+      {engine.enemies.map((e) => {
+        const def = ENEMIES[e.type];
+        const markR = def.boss ? 0.72 : def.scale > 1.2 ? 0.5 : 0.4;
+        return (
+          <group
+            key={`${e.slot}-${e.type}`}
+            ref={(el) => {
+              groups.current[e.slot] = el;
+            }}
+            visible={false}
+          >
+            <EnemyModel type={e.type} />
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -e.y + 0.03, 0]}>
+              <ringGeometry args={[markR * 0.56, markR, def.boss ? 6 : 16]} />
+              <meshBasicMaterial
+                color={FACTION_MARK[def.faction]}
+                transparent
+                opacity={def.boss ? 0.8 : 0.55}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+            <HpPip slot={e.slot} />
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -575,7 +812,8 @@ function HpPip({ slot }: { slot: number }) {
     const show = e.alive && (e.boss || e.hp < e.maxHp);
     root.current.visible = show;
     if (!show) return;
-    root.current.position.y = e.flying ? 1.45 : e.boss ? 1.9 : 1.12;
+    root.current.position.y = e.flying ? 1.45 : e.boss ? 2.35 : 1.12;
+    root.current.scale.setScalar(e.boss ? 1.5 : 1);
     root.current.lookAt(camera.position);
     const ratio = Math.max(0.05, e.hp / e.maxHp);
     if (fill.current) {
@@ -588,12 +826,12 @@ function HpPip({ slot }: { slot: number }) {
   return (
     <group ref={root} position={[0, 1.15, 0]} visible={false}>
       <mesh>
-        <planeGeometry args={[0.84, 0.09]} />
+        <planeGeometry args={[0.86, 0.13]} />
         <meshBasicMaterial color="#07080a" />
       </mesh>
       <mesh ref={fill} position={[0, 0, 0.01]}>
-        <planeGeometry args={[0.76, 0.05]} />
-        <meshBasicMaterial color="#8fb4c4" />
+        <planeGeometry args={[0.76, 0.08]} />
+        <meshBasicMaterial color="#8fb4c4" toneMapped={false} />
       </mesh>
     </group>
   );
@@ -601,6 +839,7 @@ function HpPip({ slot }: { slot: number }) {
 
 function BoltLayer() {
   const refs = useRef<(Group | null)[]>(Array(MAX_BOLTS).fill(null));
+  const shown = useRef<string[]>(Array(MAX_BOLTS).fill(""));
   useFrame(() => {
     for (let i = 0; i < MAX_BOLTS; i++) {
       const b = engine.bolts[i];
@@ -610,12 +849,13 @@ function BoltLayer() {
       if (!b.alive) continue;
       g.position.set(b.x, b.y, b.z);
       if (b.vx || b.vz || b.vy) g.lookAt(b.x + b.vx, b.y + b.vy, b.z + b.vz);
-      const mesh = g.children[0] as Mesh | undefined;
-      const mat = mesh?.material as MeshBasicMaterial | undefined;
-      if (mat?.color) mat.color.set(b.color);
-      const trail = g.children[1] as Mesh | undefined;
-      const tmat = trail?.material as MeshBasicMaterial | undefined;
-      if (tmat?.color) tmat.color.set(b.color);
+      if (shown.current[i] !== b.color) {
+        shown.current[i] = b.color;
+        const core = (g.children[0] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
+        const trail = (g.children[1] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
+        core?.color.set(b.color);
+        trail?.color.set(b.color);
+      }
     }
   });
   return (
@@ -649,6 +889,7 @@ function BoltLayer() {
   );
 }
 
+/** Straight shots: the lance thread and the rail corridor. */
 function BeamLayer() {
   const refs = useRef<(Group | null)[]>(Array(MAX_BEAMS).fill(null));
   useFrame(() => {
@@ -656,20 +897,37 @@ function BeamLayer() {
       const b = engine.beams[i];
       const g = refs.current[i];
       if (!g) continue;
-      g.visible = b.alive;
-      if (!b.alive) continue;
+      const on = b.alive && b.style !== "chain";
+      g.visible = on;
+      if (!on) continue;
       const dx = b.x2 - b.x1;
       const dy = b.y2 - b.y1;
       const dz = b.z2 - b.z1;
       const len = Math.hypot(dx, dy, dz) || 0.001;
       g.position.set((b.x1 + b.x2) / 2, (b.y1 + b.y2) / 2, (b.z1 + b.z2) / 2);
       g.lookAt(b.x2, b.y2, b.z2);
-      g.scale.set(b.width, b.width, len);
+      g.scale.set(1, 1, len);
       const fade = Math.max(0, b.ttl / b.maxTtl);
-      const core = (g.children[0] as unknown as { material?: { opacity: number } })?.material;
-      const glow = (g.children[1] as unknown as { material?: { opacity: number } })?.material;
-      if (core) core.opacity = fade;
-      if (glow) glow.opacity = fade * 0.45;
+      const core = g.children[0] as Mesh;
+      const halo = g.children[1] as Mesh;
+      const spark = g.children[2] as Mesh;
+      core.scale.set(b.width * 0.5, 1, b.width * 0.5);
+      halo.scale.set(b.width * 1.7, 1, b.width * 1.7);
+      const cm = core.material as MeshBasicMaterial;
+      const hm = halo.material as MeshBasicMaterial;
+      cm.opacity = fade;
+      hm.opacity = fade * fade * 0.4;
+      cm.color.set(b.color);
+      hm.color.set(b.color);
+      // The rail leaves a hot muzzle bloom; the lance does not.
+      spark.visible = b.style === "rail";
+      if (spark.visible) {
+        const sm = spark.material as MeshBasicMaterial;
+        sm.opacity = fade * 0.9;
+        sm.color.set(b.color);
+        spark.scale.setScalar((0.3 + (1 - fade) * 0.5) / Math.max(0.001, len));
+        spark.position.set(0, 0, -0.5);
+      }
     }
   });
   return (
@@ -683,17 +941,106 @@ function BeamLayer() {
           visible={false}
         >
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.22, 0.22, 1, 6]} />
+            <cylinderGeometry args={[1, 1, 1, 6]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.95} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.55, 0.55, 1, 6]} />
+            <cylinderGeometry args={[1, 1, 1, 6]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.4} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+          <mesh visible={false}>
+            <sphereGeometry args={[1, 10, 8]} />
+            <meshBasicMaterial color={b.color} transparent opacity={0.8} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       ))}
     </group>
   );
+}
+
+const ARC_SLOTS = 16;
+const ARC_SEGS = 4;
+
+/** Tesla jumps drawn as jittered polylines so a chain reads as current, not a pipe. */
+function ArcLayer() {
+  const refs = useRef<(Group | null)[]>(Array(ARC_SLOTS).fill(null));
+  useFrame((s) => {
+    let used = 0;
+    const t = s.clock.elapsedTime;
+    for (let i = 0; i < MAX_BEAMS && used < ARC_SLOTS; i++) {
+      const b = engine.beams[i];
+      if (!b.alive || b.style !== "chain") continue;
+      const g = refs.current[used];
+      used++;
+      if (!g) continue;
+      g.visible = true;
+      const fade = Math.max(0, b.ttl / b.maxTtl);
+      const dx = b.x2 - b.x1;
+      const dy = b.y2 - b.y1;
+      const dz = b.z2 - b.z1;
+      const len = Math.hypot(dx, dy, dz) || 0.001;
+      const px = -dz / len;
+      const pz = dx / len;
+      const spread = Math.min(0.42, len * 0.16);
+      for (let k = 0; k < ARC_SEGS; k++) {
+        const seg = g.children[k] as Mesh;
+        const t0 = k / ARC_SEGS;
+        const t1 = (k + 1) / ARC_SEGS;
+        const j0 = k === 0 ? 0 : wiggle(b.seed + k, t) * spread;
+        const j1 = k === ARC_SEGS - 1 ? 0 : wiggle(b.seed + k + 1, t) * spread;
+        const v0 = k === 0 ? 0 : wiggle(b.seed + k + 17, t) * spread * 0.6;
+        const v1 = k === ARC_SEGS - 1 ? 0 : wiggle(b.seed + k + 18, t) * spread * 0.6;
+        const ax = b.x1 + dx * t0 + px * j0;
+        const ay = b.y1 + dy * t0 + v0;
+        const az = b.z1 + dz * t0 + pz * j0;
+        const bx = b.x1 + dx * t1 + px * j1;
+        const by = b.y1 + dy * t1 + v1;
+        const bz = b.z1 + dz * t1 + pz * j1;
+        seg.position.set((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+        seg.lookAt(bx, by, bz);
+        const d = Math.hypot(bx - ax, by - ay, bz - az) || 0.001;
+        seg.scale.set(b.width * 1.5, b.width * 1.5, d);
+        const m = seg.material as MeshBasicMaterial;
+        m.opacity = fade * (0.7 + Math.random() * 0.3);
+        m.color.set(b.color);
+      }
+    }
+    for (let i = used; i < ARC_SLOTS; i++) {
+      const g = refs.current[i];
+      if (g) g.visible = false;
+    }
+  });
+  return (
+    <group>
+      {Array.from({ length: ARC_SLOTS }, (_, i) => (
+        <group
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          visible={false}
+        >
+          {Array.from({ length: ARC_SEGS }, (_, k) => (
+            <mesh key={k}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial
+                color="#8eb8a8"
+                transparent
+                opacity={0.9}
+                blending={AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function wiggle(seed: number, t: number) {
+  return Math.sin(seed * 12.9898 + t * 28) * 0.5 + Math.sin(seed * 78.233 + t * 41) * 0.5;
 }
 
 function BurstLayer() {
@@ -710,10 +1057,12 @@ function BurstLayer() {
       g.position.set(b.x, b.y, b.z);
       g.scale.setScalar(s);
       const fade = Math.max(0, 1 - k);
-      const sph = (g.children[0] as unknown as { material?: { opacity: number } })?.material;
-      const ring = (g.children[1] as unknown as { material?: { opacity: number } })?.material;
-      if (sph) sph.opacity = fade * 0.7;
-      if (ring) ring.opacity = fade * 0.85;
+      const sph = (g.children[0] as Mesh).material as MeshBasicMaterial;
+      const ring = (g.children[1] as Mesh).material as MeshBasicMaterial;
+      sph.opacity = fade * 0.7;
+      ring.opacity = fade * 0.85;
+      sph.color.set(b.color);
+      ring.color.set(b.color);
     }
   });
   return (
@@ -733,6 +1082,62 @@ function BurstLayer() {
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[0.42, 0.62, 24]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.85} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Ground marks with a lifetime: frost fields, rank-up rings, breach scorch. */
+function DecalLayer() {
+  const refs = useRef<(Group | null)[]>(Array(MAX_DECALS).fill(null));
+  useFrame(() => {
+    for (let i = 0; i < MAX_DECALS; i++) {
+      const d = engine.decals[i];
+      const g = refs.current[i];
+      if (!g) continue;
+      g.visible = d.alive;
+      if (!d.alive) continue;
+      const k = 1 - d.ttl / d.maxTtl;
+      g.position.set(d.x, 0.045, d.z);
+      const ring = g.children[0] as Mesh;
+      const disc = g.children[1] as Mesh;
+      const rm = ring.material as MeshBasicMaterial;
+      const dm = disc.material as MeshBasicMaterial;
+      rm.color.set(d.color);
+      dm.color.set(d.color);
+      if (d.kind === "frost") {
+        const grow = Math.min(1, k * 6);
+        g.scale.setScalar(d.size * (0.55 + grow * 0.45));
+        const fade = Math.min(1, (1 - k) * 2.4);
+        rm.opacity = 0.5 * fade;
+        dm.opacity = 0.16 * fade;
+        disc.visible = true;
+      } else {
+        g.scale.setScalar(d.size * (0.25 + k * 1.05));
+        rm.opacity = Math.max(0, 1 - k) * 0.85;
+        disc.visible = false;
+      }
+    }
+  });
+  return (
+    <group>
+      {engine.decals.map((d) => (
+        <group
+          key={d.slot}
+          ref={(el) => {
+            refs.current[d.slot] = el;
+          }}
+          visible={false}
+        >
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.78, 1, 28]} />
+            <meshBasicMaterial color="#8ab4d4" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
+            <circleGeometry args={[0.94, 24]} />
+            <meshBasicMaterial color="#8ab4d4" transparent opacity={0.16} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       ))}

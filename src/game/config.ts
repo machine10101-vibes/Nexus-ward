@@ -7,10 +7,13 @@ export const MAX_BOLTS = 80;
 export const MAX_BEAMS = 48;
 export const MAX_BURSTS = 48;
 export const MAX_FLOATERS = 24;
+export const MAX_DECALS = 20;
 export const SURGE_CD = 22;
 export const OVERCLOCK_CD = 20;
 export const OVERCLOCK_DUR = 6.5;
 export const SYN_RANGE = 3.45;
+export const AUTO_WAVE_DELAY = 2.8;
+export const SALVAGE_RATE = 0.6;
 export const SPEED_STEPS = [1, 2, 3] as const;
 
 export const TOWERS: Record<TowerId, TowerDef> = {
@@ -107,6 +110,35 @@ export const TOWERS: Record<TowerId, TowerDef> = {
 };
 
 export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail"];
+
+/** Copy for the inspector: what the next rank buys, and the name of the rank 3 overdrive. */
+export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: string }> = {
+  pulse: {
+    r2: "Heavier bolts, faster cycle, wider reach.",
+    overdrive: "Twin Pulse",
+    r3: "Fires two bolts every cycle.",
+  },
+  arc: {
+    r2: "Hotter lance, faster tick, longer reach.",
+    overdrive: "Wide Lance",
+    r3: "Beam thickens and splits to a second host.",
+  },
+  frost: {
+    r2: "Colder shell, wider burst, longer reach.",
+    overdrive: "Deep Freeze",
+    r3: "Bigger splash, deeper slow, longer hold.",
+  },
+  tesla: {
+    r2: "Stronger current and one more jump.",
+    overdrive: "Cascade",
+    r3: "One extra jump on top of the rank gain.",
+  },
+  rail: {
+    r2: "Denser slug, faster charge, longer line.",
+    overdrive: "Heavy Line",
+    r3: "Pierce corridor widens to catch packs.",
+  },
+};
 
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
   mite: {

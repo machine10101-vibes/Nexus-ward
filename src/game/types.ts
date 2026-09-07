@@ -129,6 +129,7 @@ export type Tower = {
   targeting: Targeting;
   invested: number;
   kills: number;
+  aiming: boolean;
 };
 
 export type Bolt = {
@@ -151,9 +152,12 @@ export type Bolt = {
   color: string;
 };
 
+export type BeamStyle = "lance" | "chain" | "rail";
+
 export type Beam = {
   slot: number;
   alive: boolean;
+  style: BeamStyle;
   x1: number;
   y1: number;
   z1: number;
@@ -164,6 +168,7 @@ export type Beam = {
   maxTtl: number;
   color: string;
   width: number;
+  seed: number;
 };
 
 export type Burst = {
@@ -186,4 +191,18 @@ export type Floater = {
   z: number;
   ttl: number;
   text: string;
+};
+
+export type DecalKind = "frost" | "rank" | "scorch";
+
+export type Decal = {
+  slot: number;
+  alive: boolean;
+  kind: DecalKind;
+  x: number;
+  z: number;
+  ttl: number;
+  maxTtl: number;
+  size: number;
+  color: string;
 };

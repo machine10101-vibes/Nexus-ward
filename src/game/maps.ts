@@ -119,106 +119,136 @@ export const MAPS: Record<MapId, MapDef> = {
     lives: 20,
     waves: [
       { groups: [{ enemy: "mite", count: 10, interval: 0.52, delay: 0 }] },
-      { groups: [{ enemy: "mite", count: 15, interval: 0.4, delay: 0 }] },
+      { groups: [{ enemy: "mite", count: 16, interval: 0.38, delay: 0 }] },
       {
         groups: [
           { enemy: "mite", count: 10, interval: 0.38, delay: 0 },
           { enemy: "brood", count: 6, interval: 0.75, delay: 1.2 },
         ],
       },
-      { groups: [{ enemy: "spore", count: 7, interval: 0.7, delay: 0 }] },
       {
         groups: [
-          { enemy: "brood", count: 10, interval: 0.55, delay: 0 },
-          { enemy: "husk", count: 2, interval: 1.6, delay: 2 },
+          { enemy: "spore", count: 8, interval: 0.55, delay: 0 },
+          { enemy: "mite", count: 10, interval: 0.38, delay: 0.4 },
+          { enemy: "brood", count: 5, interval: 0.7, delay: 1.4 },
         ],
       },
       {
         groups: [
-          { enemy: "spore", count: 8, interval: 0.5, delay: 0 },
-          { enemy: "mite", count: 10, interval: 0.4, delay: 0.8 },
-        ],
-      },
-      { groups: [{ enemy: "husk", count: 6, interval: 1.1, delay: 0 }] },
-      {
-        groups: [
-          { enemy: "brood", count: 12, interval: 0.45, delay: 0 },
-          { enemy: "spore", count: 8, interval: 0.55, delay: 1 },
+          { enemy: "brood", count: 10, interval: 0.5, delay: 0 },
+          { enemy: "husk", count: 3, interval: 1.4, delay: 1.6 },
+          { enemy: "mite", count: 8, interval: 0.36, delay: 0.8 },
         ],
       },
       {
         groups: [
-          { enemy: "husk", count: 6, interval: 0.9, delay: 0 },
-          { enemy: "brood", count: 10, interval: 0.4, delay: 1.5 },
-          { enemy: "spore", count: 8, interval: 0.5, delay: 2 },
+          { enemy: "spore", count: 8, interval: 0.48, delay: 0 },
+          { enemy: "mite", count: 10, interval: 0.36, delay: 0.6 },
+          { enemy: "husk", count: 5, interval: 1.2, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "husk", count: 6, interval: 1.05, delay: 0 },
+          { enemy: "brood", count: 8, interval: 0.45, delay: 0.8 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "brood", count: 12, interval: 0.42, delay: 0 },
+          { enemy: "spore", count: 8, interval: 0.5, delay: 0.8 },
+          { enemy: "husk", count: 6, interval: 1.1, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "husk", count: 8, interval: 0.85, delay: 0 },
+          { enemy: "brood", count: 10, interval: 0.38, delay: 1.2 },
+          { enemy: "spore", count: 8, interval: 0.45, delay: 1.8 },
         ],
       },
       {
         groups: [
           { enemy: "titan", count: 1, interval: 1, delay: 0 },
-          { enemy: "brood", count: 10, interval: 0.5, delay: 3 },
-          { enemy: "spore", count: 8, interval: 0.45, delay: 4 },
+          { enemy: "brood", count: 10, interval: 0.48, delay: 2.6 },
+          { enemy: "spore", count: 8, interval: 0.42, delay: 3.4 },
         ],
       },
       {
         groups: [
-          { enemy: "myrmidon", count: 4, interval: 1.15, delay: 0 },
-          { enemy: "mite", count: 12, interval: 0.36, delay: 0.6 },
-        ],
-      },
-      { groups: [{ enemy: "bloom", count: 8, interval: 0.55, delay: 0 }] },
-      {
-        groups: [
-          { enemy: "myrmidon", count: 6, interval: 0.95, delay: 0 },
-          { enemy: "brood", count: 10, interval: 0.42, delay: 1 },
+          { enemy: "myrmidon", count: 5, interval: 1.05, delay: 0 },
+          { enemy: "mite", count: 14, interval: 0.32, delay: 0.5 },
+          { enemy: "husk", count: 4, interval: 1.1, delay: 1.4 },
+          { enemy: "brood", count: 8, interval: 0.4, delay: 1 },
         ],
       },
       {
         groups: [
           { enemy: "bloom", count: 10, interval: 0.48, delay: 0 },
-          { enemy: "husk", count: 4, interval: 1.2, delay: 1.2 },
+          { enemy: "mite", count: 12, interval: 0.34, delay: 0.4 },
+          { enemy: "myrmidon", count: 8, interval: 0.85, delay: 1 },
+          { enemy: "spore", count: 8, interval: 0.42, delay: 0.8 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "myrmidon", count: 8, interval: 0.82, delay: 0 },
+          { enemy: "brood", count: 10, interval: 0.4, delay: 0.8 },
+          { enemy: "bloom", count: 10, interval: 0.42, delay: 1.1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "bloom", count: 10, interval: 0.42, delay: 0 },
+          { enemy: "husk", count: 6, interval: 1.05, delay: 1 },
+          { enemy: "myrmidon", count: 7, interval: 0.95, delay: 1.4 },
         ],
       },
       {
         groups: [
           { enemy: "titan", count: 1, interval: 1, delay: 0 },
-          { enemy: "myrmidon", count: 4, interval: 1, delay: 2.2 },
-          { enemy: "bloom", count: 8, interval: 0.45, delay: 3 },
+          { enemy: "myrmidon", count: 5, interval: 0.9, delay: 2 },
+          { enemy: "bloom", count: 8, interval: 0.42, delay: 2.8 },
         ],
       },
       {
         groups: [
-          { enemy: "myrmidon", count: 8, interval: 0.85, delay: 0 },
-          { enemy: "spore", count: 10, interval: 0.42, delay: 1 },
+          { enemy: "myrmidon", count: 10, interval: 0.72, delay: 0 },
+          { enemy: "spore", count: 10, interval: 0.4, delay: 0.8 },
+          { enemy: "bloom", count: 8, interval: 0.42, delay: 1.2 },
+          { enemy: "husk", count: 6, interval: 0.9, delay: 1.5 },
         ],
       },
       {
         groups: [
-          { enemy: "bloom", count: 12, interval: 0.4, delay: 0 },
-          { enemy: "brood", count: 14, interval: 0.34, delay: 0.8 },
+          { enemy: "bloom", count: 12, interval: 0.38, delay: 0 },
+          { enemy: "brood", count: 14, interval: 0.32, delay: 0.6 },
+          { enemy: "myrmidon", count: 10, interval: 0.68, delay: 0.9 },
+          { enemy: "husk", count: 4, interval: 0.9, delay: 1.3 },
         ],
       },
       {
         groups: [
-          { enemy: "titan", count: 2, interval: 2.4, delay: 0 },
-          { enemy: "myrmidon", count: 6, interval: 0.8, delay: 2 },
-          { enemy: "bloom", count: 8, interval: 0.42, delay: 3 },
+          { enemy: "titan", count: 2, interval: 2.2, delay: 0 },
+          { enemy: "myrmidon", count: 6, interval: 0.75, delay: 1.8 },
+          { enemy: "bloom", count: 8, interval: 0.4, delay: 2.6 },
         ],
       },
       {
         groups: [
-          { enemy: "husk", count: 8, interval: 0.75, delay: 0 },
-          { enemy: "myrmidon", count: 8, interval: 0.7, delay: 0.8 },
-          { enemy: "bloom", count: 10, interval: 0.4, delay: 1.4 },
-          { enemy: "brood", count: 10, interval: 0.36, delay: 2 },
+          { enemy: "titan", count: 1, interval: 1, delay: 0 },
+          { enemy: "husk", count: 8, interval: 0.7, delay: 1.2 },
+          { enemy: "myrmidon", count: 8, interval: 0.65, delay: 1.6 },
+          { enemy: "bloom", count: 10, interval: 0.38, delay: 2 },
+          { enemy: "brood", count: 10, interval: 0.34, delay: 2.4 },
         ],
       },
       {
         groups: [
           { enemy: "colossus", count: 1, interval: 1, delay: 0 },
-          { enemy: "titan", count: 1, interval: 1, delay: 4 },
-          { enemy: "myrmidon", count: 8, interval: 0.7, delay: 3 },
-          { enemy: "bloom", count: 10, interval: 0.38, delay: 4.5 },
+          { enemy: "titan", count: 1, interval: 1, delay: 3.6 },
+          { enemy: "myrmidon", count: 8, interval: 0.65, delay: 2.6 },
+          { enemy: "bloom", count: 10, interval: 0.36, delay: 4 },
         ],
       },
     ],
@@ -238,106 +268,137 @@ export const MAPS: Record<MapId, MapDef> = {
     lives: 18,
     waves: [
       { groups: [{ enemy: "drone", count: 8, interval: 0.65, delay: 0 }] },
-      { groups: [{ enemy: "drone", count: 12, interval: 0.5, delay: 0 }] },
+      { groups: [{ enemy: "drone", count: 13, interval: 0.45, delay: 0 }] },
       {
         groups: [
-          { enemy: "drone", count: 8, interval: 0.45, delay: 0 },
-          { enemy: "walker", count: 4, interval: 1, delay: 1 },
-        ],
-      },
-      { groups: [{ enemy: "gunship", count: 7, interval: 0.7, delay: 0 }] },
-      {
-        groups: [
-          { enemy: "walker", count: 8, interval: 0.7, delay: 0 },
-          { enemy: "siege", count: 2, interval: 1.8, delay: 2 },
+          { enemy: "drone", count: 8, interval: 0.42, delay: 0 },
+          { enemy: "walker", count: 4, interval: 0.95, delay: 0.9 },
         ],
       },
       {
         groups: [
-          { enemy: "gunship", count: 8, interval: 0.5, delay: 0 },
-          { enemy: "drone", count: 10, interval: 0.35, delay: 0.6 },
-        ],
-      },
-      { groups: [{ enemy: "siege", count: 6, interval: 1.15, delay: 0 }] },
-      {
-        groups: [
-          { enemy: "walker", count: 10, interval: 0.5, delay: 0 },
-          { enemy: "gunship", count: 8, interval: 0.5, delay: 1 },
+          { enemy: "gunship", count: 8, interval: 0.55, delay: 0 },
+          { enemy: "drone", count: 8, interval: 0.36, delay: 0.4 },
+          { enemy: "walker", count: 3, interval: 0.95, delay: 1.2 },
         ],
       },
       {
         groups: [
-          { enemy: "siege", count: 6, interval: 0.95, delay: 0 },
-          { enemy: "walker", count: 8, interval: 0.45, delay: 1.4 },
-          { enemy: "gunship", count: 8, interval: 0.45, delay: 2 },
+          { enemy: "walker", count: 8, interval: 0.65, delay: 0 },
+          { enemy: "siege", count: 3, interval: 1.5, delay: 1.6 },
+          { enemy: "drone", count: 8, interval: 0.34, delay: 0.6 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "gunship", count: 8, interval: 0.45, delay: 0 },
+          { enemy: "drone", count: 10, interval: 0.32, delay: 0.5 },
+          { enemy: "walker", count: 4, interval: 0.85, delay: 1.2 },
+          { enemy: "siege", count: 5, interval: 1.1, delay: 1.4 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "siege", count: 6, interval: 1.05, delay: 0 },
+          { enemy: "walker", count: 6, interval: 0.55, delay: 0.8 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "walker", count: 10, interval: 0.45, delay: 0 },
+          { enemy: "gunship", count: 8, interval: 0.45, delay: 0.8 },
+          { enemy: "siege", count: 5, interval: 1.05, delay: 1.3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "siege", count: 6, interval: 0.9, delay: 0 },
+          { enemy: "walker", count: 8, interval: 0.42, delay: 1.2 },
+          { enemy: "gunship", count: 8, interval: 0.42, delay: 1.8 },
         ],
       },
       {
         groups: [
           { enemy: "dread", count: 1, interval: 1, delay: 0 },
-          { enemy: "walker", count: 10, interval: 0.5, delay: 3 },
-          { enemy: "gunship", count: 8, interval: 0.4, delay: 4 },
+          { enemy: "walker", count: 10, interval: 0.45, delay: 2.6 },
+          { enemy: "gunship", count: 8, interval: 0.38, delay: 3.4 },
         ],
       },
       {
         groups: [
-          { enemy: "bulwark", count: 4, interval: 1.2, delay: 0 },
-          { enemy: "drone", count: 10, interval: 0.38, delay: 0.5 },
-        ],
-      },
-      { groups: [{ enemy: "razor", count: 8, interval: 0.55, delay: 0 }] },
-      {
-        groups: [
-          { enemy: "bulwark", count: 6, interval: 1, delay: 0 },
-          { enemy: "walker", count: 8, interval: 0.5, delay: 1 },
+          { enemy: "bulwark", count: 5, interval: 1.1, delay: 0 },
+          { enemy: "drone", count: 12, interval: 0.32, delay: 0.4 },
+          { enemy: "walker", count: 6, interval: 0.5, delay: 1.2 },
         ],
       },
       {
         groups: [
           { enemy: "razor", count: 10, interval: 0.48, delay: 0 },
-          { enemy: "siege", count: 4, interval: 1.2, delay: 1.2 },
+          { enemy: "drone", count: 10, interval: 0.32, delay: 0.4 },
+          { enemy: "walker", count: 4, interval: 0.55, delay: 1 },
+          { enemy: "bulwark", count: 8, interval: 0.9, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "bulwark", count: 8, interval: 0.95, delay: 0 },
+          { enemy: "walker", count: 8, interval: 0.45, delay: 0.8 },
+          { enemy: "razor", count: 8, interval: 0.45, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "razor", count: 10, interval: 0.42, delay: 0 },
+          { enemy: "siege", count: 5, interval: 1.05, delay: 1 },
+          { enemy: "walker", count: 6, interval: 0.45, delay: 1.3 },
+          { enemy: "bulwark", count: 8, interval: 0.85, delay: 1.5 },
         ],
       },
       {
         groups: [
           { enemy: "dread", count: 1, interval: 1, delay: 0 },
-          { enemy: "bulwark", count: 3, interval: 1.1, delay: 2.2 },
-          { enemy: "razor", count: 8, interval: 0.45, delay: 3 },
+          { enemy: "bulwark", count: 4, interval: 1, delay: 2 },
+          { enemy: "razor", count: 8, interval: 0.42, delay: 2.8 },
         ],
       },
       {
         groups: [
-          { enemy: "bulwark", count: 8, interval: 0.9, delay: 0 },
-          { enemy: "gunship", count: 8, interval: 0.45, delay: 1 },
+          { enemy: "bulwark", count: 12, interval: 0.7, delay: 0 },
+          { enemy: "gunship", count: 8, interval: 0.4, delay: 0.8 },
+          { enemy: "razor", count: 8, interval: 0.4, delay: 1.2 },
         ],
       },
       {
         groups: [
-          { enemy: "razor", count: 12, interval: 0.4, delay: 0 },
-          { enemy: "drone", count: 12, interval: 0.32, delay: 0.7 },
+          { enemy: "razor", count: 12, interval: 0.36, delay: 0 },
+          { enemy: "drone", count: 12, interval: 0.3, delay: 0.5 },
+          { enemy: "walker", count: 8, interval: 0.4, delay: 1 },
+          { enemy: "siege", count: 6, interval: 0.9, delay: 1.3 },
+          { enemy: "bulwark", count: 8, interval: 0.7, delay: 1.6 },
         ],
       },
       {
         groups: [
-          { enemy: "dread", count: 2, interval: 2.5, delay: 0 },
-          { enemy: "bulwark", count: 6, interval: 0.85, delay: 2 },
-          { enemy: "razor", count: 8, interval: 0.42, delay: 3 },
+          { enemy: "dread", count: 2, interval: 2.3, delay: 0 },
+          { enemy: "bulwark", count: 6, interval: 0.8, delay: 1.8 },
+          { enemy: "razor", count: 8, interval: 0.4, delay: 2.6 },
         ],
       },
       {
         groups: [
-          { enemy: "siege", count: 8, interval: 0.8, delay: 0 },
-          { enemy: "bulwark", count: 8, interval: 0.75, delay: 0.8 },
-          { enemy: "razor", count: 10, interval: 0.4, delay: 1.4 },
-          { enemy: "walker", count: 8, interval: 0.42, delay: 2 },
+          { enemy: "dread", count: 1, interval: 1, delay: 0 },
+          { enemy: "siege", count: 8, interval: 0.75, delay: 1.2 },
+          { enemy: "bulwark", count: 8, interval: 0.7, delay: 1.6 },
+          { enemy: "razor", count: 10, interval: 0.38, delay: 2 },
+          { enemy: "walker", count: 8, interval: 0.4, delay: 2.4 },
         ],
       },
       {
         groups: [
           { enemy: "leviathan", count: 1, interval: 1, delay: 0 },
-          { enemy: "dread", count: 1, interval: 1, delay: 4 },
-          { enemy: "bulwark", count: 8, interval: 0.7, delay: 3 },
-          { enemy: "razor", count: 10, interval: 0.38, delay: 4.5 },
+          { enemy: "dread", count: 1, interval: 1, delay: 3.6 },
+          { enemy: "bulwark", count: 8, interval: 0.65, delay: 2.6 },
+          { enemy: "razor", count: 10, interval: 0.36, delay: 4 },
         ],
       },
     ],
@@ -362,127 +423,151 @@ export const MAPS: Record<MapId, MapDef> = {
           { enemy: "drone", count: 6, interval: 0.6, delay: 0.3 },
         ],
       },
-      { groups: [{ enemy: "chimera", count: 8, interval: 0.7, delay: 0 }] },
       {
         groups: [
-          { enemy: "brood", count: 6, interval: 0.55, delay: 0 },
-          { enemy: "walker", count: 5, interval: 0.8, delay: 0.8 },
+          { enemy: "chimera", count: 8, interval: 0.65, delay: 0 },
+          { enemy: "mite", count: 6, interval: 0.4, delay: 0.5 },
+          { enemy: "drone", count: 4, interval: 0.4, delay: 0.8 },
         ],
       },
       {
         groups: [
-          { enemy: "spore", count: 6, interval: 0.55, delay: 0 },
-          { enemy: "wraith", count: 6, interval: 0.55, delay: 0.4 },
+          { enemy: "brood", count: 6, interval: 0.5, delay: 0 },
+          { enemy: "walker", count: 5, interval: 0.75, delay: 0.6 },
+          { enemy: "chimera", count: 4, interval: 0.6, delay: 1 },
         ],
       },
       {
         groups: [
-          { enemy: "chimera", count: 8, interval: 0.55, delay: 0 },
-          { enemy: "husk", count: 2, interval: 1.5, delay: 1.5 },
+          { enemy: "spore", count: 6, interval: 0.5, delay: 0 },
+          { enemy: "wraith", count: 6, interval: 0.5, delay: 0.3 },
+          { enemy: "chimera", count: 6, interval: 0.5, delay: 0.8 },
         ],
       },
       {
         groups: [
-          { enemy: "wraith", count: 8, interval: 0.45, delay: 0 },
-          { enemy: "gunship", count: 6, interval: 0.5, delay: 1 },
-          { enemy: "drone", count: 8, interval: 0.35, delay: 0.5 },
+          { enemy: "chimera", count: 8, interval: 0.5, delay: 0 },
+          { enemy: "husk", count: 3, interval: 1.3, delay: 1.2 },
+          { enemy: "walker", count: 4, interval: 0.7, delay: 0.8 },
         ],
       },
       {
         groups: [
-          { enemy: "siege", count: 4, interval: 1.1, delay: 0 },
-          { enemy: "husk", count: 4, interval: 1.1, delay: 0.5 },
+          { enemy: "wraith", count: 8, interval: 0.42, delay: 0 },
+          { enemy: "gunship", count: 6, interval: 0.45, delay: 0.8 },
+          { enemy: "drone", count: 8, interval: 0.32, delay: 0.4 },
+          { enemy: "chimera", count: 4, interval: 0.5, delay: 1.2 },
+          { enemy: "husk", count: 4, interval: 1.1, delay: 1.4 },
         ],
       },
       {
         groups: [
-          { enemy: "chimera", count: 10, interval: 0.45, delay: 0 },
-          { enemy: "wraith", count: 8, interval: 0.45, delay: 1 },
+          { enemy: "siege", count: 4, interval: 1.05, delay: 0 },
+          { enemy: "husk", count: 4, interval: 1.05, delay: 0.4 },
+          { enemy: "chimera", count: 6, interval: 0.45, delay: 0.8 },
         ],
       },
       {
         groups: [
-          { enemy: "siege", count: 4, interval: 0.9, delay: 0 },
-          { enemy: "husk", count: 4, interval: 0.9, delay: 0.4 },
-          { enemy: "wraith", count: 8, interval: 0.4, delay: 2 },
-          { enemy: "chimera", count: 8, interval: 0.4, delay: 1.2 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
-          { enemy: "chimera", count: 10, interval: 0.45, delay: 3 },
-          { enemy: "wraith", count: 8, interval: 0.4, delay: 4 },
-          { enemy: "gunship", count: 6, interval: 0.45, delay: 5 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "amalgam", count: 6, interval: 0.7, delay: 0 },
-          { enemy: "chimera", count: 8, interval: 0.45, delay: 0.8 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "specter", count: 8, interval: 0.5, delay: 0 },
-          { enemy: "wraith", count: 6, interval: 0.48, delay: 0.5 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "amalgam", count: 6, interval: 0.7, delay: 0 },
-          { enemy: "siege", count: 3, interval: 1.15, delay: 0.8 },
-          { enemy: "husk", count: 3, interval: 1.15, delay: 1.1 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "specter", count: 10, interval: 0.42, delay: 0 },
-          { enemy: "gunship", count: 6, interval: 0.48, delay: 1 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
-          { enemy: "amalgam", count: 6, interval: 0.65, delay: 2.2 },
-          { enemy: "specter", count: 8, interval: 0.42, delay: 3 },
-        ],
-      },
-      {
-        groups: [
-          { enemy: "amalgam", count: 8, interval: 0.55, delay: 0 },
+          { enemy: "chimera", count: 10, interval: 0.42, delay: 0 },
           { enemy: "wraith", count: 8, interval: 0.42, delay: 0.8 },
-          { enemy: "walker", count: 6, interval: 0.5, delay: 1.2 },
+          { enemy: "husk", count: 3, interval: 1.1, delay: 1.2 },
+          { enemy: "siege", count: 4, interval: 1.05, delay: 1.4 },
         ],
       },
       {
         groups: [
-          { enemy: "specter", count: 12, interval: 0.38, delay: 0 },
-          { enemy: "chimera", count: 10, interval: 0.4, delay: 0.7 },
-          { enemy: "drone", count: 8, interval: 0.32, delay: 1 },
+          { enemy: "siege", count: 4, interval: 0.85, delay: 0 },
+          { enemy: "husk", count: 4, interval: 0.85, delay: 0.3 },
+          { enemy: "wraith", count: 8, interval: 0.38, delay: 1.6 },
+          { enemy: "chimera", count: 8, interval: 0.38, delay: 1 },
         ],
       },
       {
         groups: [
           { enemy: "overlord", count: 1, interval: 1, delay: 0 },
-          { enemy: "amalgam", count: 8, interval: 0.55, delay: 2 },
-          { enemy: "specter", count: 10, interval: 0.4, delay: 3 },
+          { enemy: "chimera", count: 10, interval: 0.42, delay: 2.6 },
+          { enemy: "wraith", count: 8, interval: 0.38, delay: 3.4 },
+          { enemy: "gunship", count: 6, interval: 0.42, delay: 4.2 },
         ],
       },
       {
         groups: [
-          { enemy: "amalgam", count: 10, interval: 0.5, delay: 0 },
-          { enemy: "specter", count: 10, interval: 0.38, delay: 0.6 },
-          { enemy: "siege", count: 4, interval: 1, delay: 1.2 },
-          { enemy: "husk", count: 4, interval: 1, delay: 1.5 },
+          { enemy: "amalgam", count: 24, interval: 0.55, delay: 0 },
+          { enemy: "chimera", count: 12, interval: 0.38, delay: 0.5 },
+          { enemy: "husk", count: 8, interval: 0.9, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 16, interval: 0.42, delay: 0 },
+          { enemy: "wraith", count: 6, interval: 0.42, delay: 0.4 },
+          { enemy: "chimera", count: 10, interval: 0.4, delay: 0.7 },
+          { enemy: "amalgam", count: 26, interval: 0.55, delay: 1.1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 21, interval: 0.6, delay: 0 },
+          { enemy: "siege", count: 4, interval: 1.05, delay: 0.7 },
+          { enemy: "husk", count: 4, interval: 1.05, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 10, interval: 0.38, delay: 0 },
+          { enemy: "gunship", count: 6, interval: 0.42, delay: 0.8 },
+          { enemy: "amalgam", count: 27, interval: 0.5, delay: 1 },
+          { enemy: "husk", count: 4, interval: 1, delay: 1.4 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
+          { enemy: "amalgam", count: 6, interval: 0.6, delay: 2 },
+          { enemy: "specter", count: 8, interval: 0.4, delay: 2.6 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 29, interval: 0.45, delay: 0 },
+          { enemy: "wraith", count: 8, interval: 0.38, delay: 0.6 },
+          { enemy: "walker", count: 6, interval: 0.45, delay: 1 },
+          { enemy: "specter", count: 6, interval: 0.4, delay: 1.2 },
+          { enemy: "husk", count: 4, interval: 0.95, delay: 1.5 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 12, interval: 0.36, delay: 0 },
+          { enemy: "chimera", count: 10, interval: 0.38, delay: 0.5 },
+          { enemy: "drone", count: 3, interval: 0.3, delay: 0.8 },
+          { enemy: "amalgam", count: 29, interval: 0.48, delay: 1 },
+          { enemy: "husk", count: 4, interval: 0.95, delay: 1.4 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
+          { enemy: "amalgam", count: 8, interval: 0.5, delay: 1.8 },
+          { enemy: "specter", count: 10, interval: 0.38, delay: 2.6 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
+          { enemy: "amalgam", count: 10, interval: 0.48, delay: 1.4 },
+          { enemy: "specter", count: 10, interval: 0.36, delay: 1.8 },
+          { enemy: "siege", count: 4, interval: 0.95, delay: 2.2 },
+          { enemy: "husk", count: 4, interval: 0.95, delay: 2.5 },
         ],
       },
       {
         groups: [
           { enemy: "sovereign", count: 1, interval: 1, delay: 0 },
-          { enemy: "overlord", count: 1, interval: 1, delay: 4.2 },
-          { enemy: "amalgam", count: 8, interval: 0.55, delay: 3 },
-          { enemy: "specter", count: 10, interval: 0.36, delay: 4.5 },
+          { enemy: "overlord", count: 1, interval: 1, delay: 3.8 },
+          { enemy: "amalgam", count: 8, interval: 0.5, delay: 2.6 },
+          { enemy: "specter", count: 10, interval: 0.34, delay: 4 },
         ],
       },
     ],

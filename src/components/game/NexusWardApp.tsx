@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useGameStore, applyQualityHint } from "@/game/store";
+import { useGameStore, applyEnvironmentDefaults } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
 import { TOWER_ORDER } from "@/game/config";
@@ -12,7 +12,7 @@ export function NexusWardApp() {
   const [glReady, setGlReady] = useState(false);
 
   useEffect(() => {
-    applyQualityHint();
+    applyEnvironmentDefaults();
     audio.setVolumes(useGameStore.getState().settings);
     setGlReady(true);
     const w = window as unknown as {

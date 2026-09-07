@@ -223,12 +223,18 @@ function snapHud(): HudSnap {
   };
 }
 
-export function applyQualityHint() {
+/** First-run defaults taken from the device. Explicit settings always win afterwards. */
+export function applyEnvironmentDefaults() {
   if (typeof window === "undefined") return;
   const narrow = window.innerWidth < 720;
   const saveNow = loadSave();
   if (narrow && saveNow.settings.quality === "high" && !localStorage.getItem("nexus-ward-qset")) {
     useGameStore.getState().patchSettings({ quality: "low" });
     localStorage.setItem("nexus-ward-qset", "1");
+  }
+  const calmed = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (calmed && saveNow.settings.shake && !localStorage.getItem("nexus-ward-shakeset")) {
+    useGameStore.getState().patchSettings({ shake: false });
+    localStorage.setItem("nexus-ward-shakeset", "1");
   }
 }

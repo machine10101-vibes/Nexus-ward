@@ -41,7 +41,7 @@ export function terrainElevation(x: number, z: number, arenaR: number, squash: n
   } else {
     n += Math.sin(x * 0.62 + z * 0.18) * Math.cos(z * 0.51) * 0.22;
   }
-  const amp = style === "forge" ? 1.55 : style === "aegis" ? 2.45 : 2.05;
+  const amp = style === "forge" ? 1.85 : style === "aegis" ? 2.8 : 2.4;
   return n * edge * amp + edge * 0.85;
 }
 
@@ -80,7 +80,7 @@ function makeBowl(arenaR: number, squash: number, style: MapId) {
   const pos = g.attributes.position;
   const cols = new Float32Array(pos.count * 3);
   const uv = g.attributes.uv;
-  const tile = style === "forge" ? 5.2 : 4.4;
+  const tile = style === "forge" ? 3.4 : 2.8;
   for (let i = 0; i < pos.count; i++) {
     // Circle sits in XY before we rotate it in the mesh.
     const x = pos.getX(i);
@@ -184,7 +184,7 @@ export function WorldGround({
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
     tex.wrapT = RepeatWrapping;
-    tex.repeat.set(mapId === "forge" ? 14 : 11, mapId === "forge" ? 11 : 8.5);
+    tex.repeat.set(mapId === "forge" ? 8 : 6.5, mapId === "forge" ? 6.2 : 5);
     tex.needsUpdate = true;
     return tex;
   }, [ground, mapId]);

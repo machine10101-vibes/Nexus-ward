@@ -7,14 +7,23 @@ export type EnemyId =
   | "husk"
   | "spore"
   | "titan"
+  | "myrmidon"
+  | "bloom"
+  | "colossus"
   | "drone"
   | "walker"
   | "siege"
   | "gunship"
   | "dread"
+  | "bulwark"
+  | "razor"
+  | "leviathan"
   | "chimera"
   | "wraith"
-  | "overlord";
+  | "overlord"
+  | "amalgam"
+  | "specter"
+  | "sovereign";
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type Screen =

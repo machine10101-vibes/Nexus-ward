@@ -110,7 +110,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Organic world",
     faction: "organic",
     lore: "A living planet of fungal canyons and bioluminescent marrow. The swarm is not an invasion so much as the lattice reclaiming a core we planted in its heart.",
-    hint: "Ground packs hit first. Bring a lance before spores take the air.",
+    hint: "Ground packs hit first. Bring a lance before spores take the air. After the Titan, Myrmidons and Blooms keep coming.",
     cols: COLS,
     rows: ROWS,
     path: mycelionPath,
@@ -160,6 +160,67 @@ export const MAPS: Record<MapId, MapDef> = {
           { enemy: "spore", count: 8, interval: 0.45, delay: 4 },
         ],
       },
+      {
+        groups: [
+          { enemy: "myrmidon", count: 4, interval: 1.15, delay: 0 },
+          { enemy: "mite", count: 12, interval: 0.36, delay: 0.6 },
+        ],
+      },
+      { groups: [{ enemy: "bloom", count: 8, interval: 0.55, delay: 0 }] },
+      {
+        groups: [
+          { enemy: "myrmidon", count: 6, interval: 0.95, delay: 0 },
+          { enemy: "brood", count: 10, interval: 0.42, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "bloom", count: 10, interval: 0.48, delay: 0 },
+          { enemy: "husk", count: 4, interval: 1.2, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "titan", count: 1, interval: 1, delay: 0 },
+          { enemy: "myrmidon", count: 4, interval: 1, delay: 2.2 },
+          { enemy: "bloom", count: 8, interval: 0.45, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "myrmidon", count: 8, interval: 0.85, delay: 0 },
+          { enemy: "spore", count: 10, interval: 0.42, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "bloom", count: 12, interval: 0.4, delay: 0 },
+          { enemy: "brood", count: 14, interval: 0.34, delay: 0.8 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "titan", count: 2, interval: 2.4, delay: 0 },
+          { enemy: "myrmidon", count: 6, interval: 0.8, delay: 2 },
+          { enemy: "bloom", count: 8, interval: 0.42, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "husk", count: 8, interval: 0.75, delay: 0 },
+          { enemy: "myrmidon", count: 8, interval: 0.7, delay: 0.8 },
+          { enemy: "bloom", count: 10, interval: 0.4, delay: 1.4 },
+          { enemy: "brood", count: 10, interval: 0.36, delay: 2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "colossus", count: 1, interval: 1, delay: 0 },
+          { enemy: "titan", count: 1, interval: 1, delay: 4 },
+          { enemy: "myrmidon", count: 8, interval: 0.7, delay: 3 },
+          { enemy: "bloom", count: 10, interval: 0.38, delay: 4.5 },
+        ],
+      },
     ],
   },
   forge: {
@@ -168,7 +229,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Mechanical world",
     faction: "mech",
     lore: "An industrial planet that smelts warships for the outer fleets. The foundry AIs have recast the nexus as raw stock — and dispatched the line to reclaim it.",
-    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships.",
+    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Late waves bring Bulwarks and Razors.",
     cols: COLS,
     rows: ROWS,
     path: forgePath,
@@ -218,6 +279,67 @@ export const MAPS: Record<MapId, MapDef> = {
           { enemy: "gunship", count: 8, interval: 0.4, delay: 4 },
         ],
       },
+      {
+        groups: [
+          { enemy: "bulwark", count: 4, interval: 1.2, delay: 0 },
+          { enemy: "drone", count: 10, interval: 0.38, delay: 0.5 },
+        ],
+      },
+      { groups: [{ enemy: "razor", count: 8, interval: 0.55, delay: 0 }] },
+      {
+        groups: [
+          { enemy: "bulwark", count: 6, interval: 1, delay: 0 },
+          { enemy: "walker", count: 8, interval: 0.5, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "razor", count: 10, interval: 0.48, delay: 0 },
+          { enemy: "siege", count: 4, interval: 1.2, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "dread", count: 1, interval: 1, delay: 0 },
+          { enemy: "bulwark", count: 3, interval: 1.1, delay: 2.2 },
+          { enemy: "razor", count: 8, interval: 0.45, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "bulwark", count: 8, interval: 0.9, delay: 0 },
+          { enemy: "gunship", count: 8, interval: 0.45, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "razor", count: 12, interval: 0.4, delay: 0 },
+          { enemy: "drone", count: 12, interval: 0.32, delay: 0.7 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "dread", count: 2, interval: 2.5, delay: 0 },
+          { enemy: "bulwark", count: 6, interval: 0.85, delay: 2 },
+          { enemy: "razor", count: 8, interval: 0.42, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "siege", count: 8, interval: 0.8, delay: 0 },
+          { enemy: "bulwark", count: 8, interval: 0.75, delay: 0.8 },
+          { enemy: "razor", count: 10, interval: 0.4, delay: 1.4 },
+          { enemy: "walker", count: 8, interval: 0.42, delay: 2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "leviathan", count: 1, interval: 1, delay: 0 },
+          { enemy: "dread", count: 1, interval: 1, delay: 4 },
+          { enemy: "bulwark", count: 8, interval: 0.7, delay: 3 },
+          { enemy: "razor", count: 10, interval: 0.38, delay: 4.5 },
+        ],
+      },
     ],
   },
   aegis: {
@@ -226,7 +348,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Hybrid world",
     faction: "hybrid",
     lore: "A collision world — living tissue welded to machine along a scar of light. Nothing here agrees what it is. Everything agrees the core must fall.",
-    hint: "Both kingdoms come at once. Mix slow control with air cover.",
+    hint: "Both kingdoms come at once. Mix slow control with air cover. The second half fuses Amalgams and Specters.",
     cols: COLS,
     rows: ROWS,
     path: aegisPath,
@@ -292,6 +414,75 @@ export const MAPS: Record<MapId, MapDef> = {
           { enemy: "chimera", count: 10, interval: 0.45, delay: 3 },
           { enemy: "wraith", count: 8, interval: 0.4, delay: 4 },
           { enemy: "gunship", count: 6, interval: 0.45, delay: 5 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 6, interval: 0.7, delay: 0 },
+          { enemy: "chimera", count: 8, interval: 0.45, delay: 0.8 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 8, interval: 0.5, delay: 0 },
+          { enemy: "wraith", count: 6, interval: 0.48, delay: 0.5 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 6, interval: 0.7, delay: 0 },
+          { enemy: "siege", count: 3, interval: 1.15, delay: 0.8 },
+          { enemy: "husk", count: 3, interval: 1.15, delay: 1.1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 10, interval: 0.42, delay: 0 },
+          { enemy: "gunship", count: 6, interval: 0.48, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
+          { enemy: "amalgam", count: 6, interval: 0.65, delay: 2.2 },
+          { enemy: "specter", count: 8, interval: 0.42, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 8, interval: 0.55, delay: 0 },
+          { enemy: "wraith", count: 8, interval: 0.42, delay: 0.8 },
+          { enemy: "walker", count: 6, interval: 0.5, delay: 1.2 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "specter", count: 12, interval: 0.38, delay: 0 },
+          { enemy: "chimera", count: 10, interval: 0.4, delay: 0.7 },
+          { enemy: "drone", count: 8, interval: 0.32, delay: 1 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "overlord", count: 1, interval: 1, delay: 0 },
+          { enemy: "amalgam", count: 8, interval: 0.55, delay: 2 },
+          { enemy: "specter", count: 10, interval: 0.4, delay: 3 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "amalgam", count: 10, interval: 0.5, delay: 0 },
+          { enemy: "specter", count: 10, interval: 0.38, delay: 0.6 },
+          { enemy: "siege", count: 4, interval: 1, delay: 1.2 },
+          { enemy: "husk", count: 4, interval: 1, delay: 1.5 },
+        ],
+      },
+      {
+        groups: [
+          { enemy: "sovereign", count: 1, interval: 1, delay: 0 },
+          { enemy: "overlord", count: 1, interval: 1, delay: 4.2 },
+          { enemy: "amalgam", count: 8, interval: 0.55, delay: 3 },
+          { enemy: "specter", count: 10, interval: 0.36, delay: 4.5 },
         ],
       },
     ],

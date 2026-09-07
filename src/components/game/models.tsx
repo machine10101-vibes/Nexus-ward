@@ -279,11 +279,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     });
   });
 
-  if (type === "mite" || type === "brood" || type === "husk" || type === "titan") {
-    const scale = type === "mite" ? 0.86 : type === "brood" ? 1.15 : type === "husk" ? 1.45 : 1.95;
-    const heavy = type === "husk" || type === "titan";
-    const color = type === "titan" ? "#4aaa78" : type === "husk" ? "#2c6b4c" : "#3d8f62";
-    const belly = type === "titan" ? "#8af0c4" : "#6ad4a0";
+  if (type === "mite" || type === "brood" || type === "husk" || type === "titan" || type === "myrmidon" || type === "colossus") {
+    const scale =
+      type === "mite" ? 0.86 : type === "brood" ? 1.15 : type === "husk" ? 1.45 : type === "myrmidon" ? 1.62 : type === "colossus" ? 2.25 : 1.95;
+    const heavy = type === "husk" || type === "titan" || type === "myrmidon" || type === "colossus";
+    const color =
+      type === "colossus" ? "#5cbc88" : type === "titan" ? "#4aaa78" : type === "myrmidon" ? "#245c40" : type === "husk" ? "#2c6b4c" : "#3d8f62";
+    const belly = type === "colossus" ? "#b8ffd8" : type === "titan" || type === "myrmidon" ? "#8af0c4" : "#6ad4a0";
     const eye = type === "mite" ? 0.045 : 0.05;
     return (
       <group scale={scale}>
@@ -331,17 +333,41 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             ))}
           </>
         ) : null}
-        {type === "titan" ? (
+        {type === "titan" || type === "colossus" || type === "myrmidon" ? (
           <>
             {[-0.9, -0.3, 0.3, 0.9].map((a) => (
               <mesh key={a} position={[Math.sin(a) * 0.26, 0.62, Math.cos(a) * 0.22 - 0.02]} rotation={[-0.35, a, 0]} castShadow>
-                <coneGeometry args={[0.075, 0.44, 5]} />
+                <coneGeometry args={[0.075, type === "colossus" ? 0.58 : 0.44, 5]} />
                 <Mat color="#7ee0b4" emissive={belly} eInt={0.85} roughness={0.35} />
               </mesh>
             ))}
             <mesh position={[0, 0.72, 0]}>
-              <sphereGeometry args={[0.12, 10, 8]} />
+              <sphereGeometry args={[type === "colossus" ? 0.16 : 0.12, 10, 8]} />
               <Mat color={belly} eInt={2.6} />
+            </mesh>
+          </>
+        ) : null}
+        {type === "myrmidon" ? (
+          <>
+            {([-0.34, 0.34] as const).map((x) => (
+              <mesh key={x} position={[x, 0.48, 0.12]} rotation={[0.2, 0, x > 0 ? -0.7 : 0.7]} castShadow>
+                <boxGeometry args={[0.08, 0.36, 0.22]} />
+                <Mat color="#1a3a2c" metalness={0.22} roughness={0.48} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
+        {type === "colossus" ? (
+          <>
+            {[-1.2, -0.6, 0, 0.6, 1.2].map((a) => (
+              <mesh key={a} position={[Math.sin(a) * 0.34, 0.86, Math.cos(a) * 0.28]} rotation={[-0.5, a, 0]} castShadow>
+                <coneGeometry args={[0.09, 0.7, 5]} />
+                <Mat color="#9af0c8" emissive={belly} eInt={1.15} roughness={0.3} />
+              </mesh>
+            ))}
+            <mesh position={[0, 0.42, 0]} castShadow>
+              <torusGeometry args={[0.38, 0.05, 8, 20]} />
+              <Mat color={belly} eInt={1.4} />
             </mesh>
           </>
         ) : null}
@@ -349,33 +375,45 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     );
   }
 
-  if (type === "spore") {
+  if (type === "spore" || type === "bloom") {
+    const bloom = type === "bloom";
     return (
       <HoverFloat>
         <mesh>
-          <icosahedronGeometry args={[0.28, 0]} />
+          <icosahedronGeometry args={[bloom ? 0.34 : 0.28, bloom ? 1 : 0]} />
           <meshStandardMaterial
-            color="#4aaa88"
+            color={bloom ? "#6ad4a8" : "#4aaa88"}
             emissive="#3dcaa0"
-            emissiveIntensity={1.3}
+            emissiveIntensity={bloom ? 1.7 : 1.3}
             roughness={0.3}
             transparent
             opacity={0.9}
           />
         </mesh>
         <mesh>
-          <sphereGeometry args={[0.11, 10, 8]} />
+          <sphereGeometry args={[bloom ? 0.14 : 0.11, 10, 8]} />
           <Mat color="#a8f0d4" eInt={2.8} />
         </mesh>
         <mesh>
-          <icosahedronGeometry args={[0.42, 0]} />
+          <icosahedronGeometry args={[bloom ? 0.52 : 0.42, 0]} />
           <meshStandardMaterial color="#3dcaa0" transparent opacity={0.14} emissive="#3dcaa0" emissiveIntensity={0.4} />
         </mesh>
+        {bloom
+          ? [0, 1, 2, 3].map((i) => {
+              const a = (i / 4) * Math.PI * 2;
+              return (
+                <mesh key={i} position={[Math.cos(a) * 0.28, 0.02, Math.sin(a) * 0.28]}>
+                  <octahedronGeometry args={[0.1, 0]} />
+                  <Mat color="#8af0c4" eInt={1.8} />
+                </mesh>
+              );
+            })
+          : null}
       </HoverFloat>
     );
   }
 
-  if (type === "drone" || type === "walker" || type === "siege" || type === "dread") {
+  if (type === "drone" || type === "walker" || type === "siege" || type === "dread" || type === "bulwark" || type === "leviathan") {
     const color = "#6a7078";
     const accent = "#c46a3a";
     if (type === "drone") {
@@ -401,7 +439,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </HoverFloat>
       );
     }
-    const big = type === "dread" ? 1.6 : type === "siege" ? 1.2 : 1;
+    const big = type === "leviathan" ? 1.85 : type === "dread" ? 1.6 : type === "bulwark" ? 1.35 : type === "siege" ? 1.2 : 1;
     return (
       <group scale={big}>
         <mesh position={[0, 0.55, 0]} castShadow>
@@ -436,7 +474,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#4a5058" metalness={0.7} roughness={0.26} />
           </mesh>
         ) : null}
-        {type === "dread" ? (
+        {type === "dread" || type === "leviathan" ? (
           <>
             {([-0.34, 0.34] as const).map((x) => (
               <mesh key={x} position={[x, 0.7, -0.02]} rotation={[0, 0, x > 0 ? -0.32 : 0.32]} castShadow>
@@ -456,15 +494,44 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             ))}
           </>
         ) : null}
+        {type === "bulwark" ? (
+          <>
+            <mesh position={[0, 0.58, 0.24]} castShadow>
+              <boxGeometry args={[0.58, 0.28, 0.12]} />
+              <Mat color="#3a4048" metalness={0.78} roughness={0.24} />
+            </mesh>
+            {([-0.28, 0.28] as const).map((x) => (
+              <mesh key={x} position={[x, 0.52, -0.08]} castShadow>
+                <boxGeometry args={[0.16, 0.42, 0.28]} />
+                <Mat color="#2a2e34" metalness={0.8} roughness={0.22} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
+        {type === "leviathan" ? (
+          <>
+            <mesh position={[0, 1.22, 0]} castShadow>
+              <boxGeometry args={[0.72, 0.12, 0.42]} />
+              <Mat color="#1f2328" metalness={0.82} roughness={0.22} />
+            </mesh>
+            {([-0.28, 0.28] as const).map((x) => (
+              <mesh key={x} position={[x, 1.18, 0.28]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.07, 0.09, 0.46, 8]} />
+                <Mat color={accent} eInt={1.8} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
       </group>
     );
   }
 
-  if (type === "gunship") {
+  if (type === "gunship" || type === "razor") {
+    const slim = type === "razor";
     return (
       <HoverFloat amp={0.05}>
         <mesh castShadow>
-          <boxGeometry args={[0.24, 0.1, 0.78]} />
+          <boxGeometry args={[slim ? 0.2 : 0.24, slim ? 0.08 : 0.1, slim ? 0.92 : 0.78]} />
           <Mat color="#5a6068" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[0.3, 0, 0]} rotation={[0, 0, 0.2]} castShadow>
@@ -476,40 +543,53 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a4048" metalness={0.6} roughness={0.35} />
         </mesh>
         <mesh position={[0, -0.02, 0.28]}>
-          <boxGeometry args={[0.1, 0.06, 0.18]} />
+          <boxGeometry args={[0.1, 0.06, slim ? 0.28 : 0.18]} />
           <Mat color="#e08848" eInt={2.6} />
         </mesh>
-        <Rotor position={[0.28, 0.08, 0]} width={0.38} />
-        <Rotor position={[-0.28, 0.08, 0]} width={0.38} />
+        <Rotor position={[0.28, 0.08, 0]} width={slim ? 0.3 : 0.38} />
+        <Rotor position={[-0.28, 0.08, 0]} width={slim ? 0.3 : 0.38} />
+        {slim ? (
+          <mesh position={[0, 0.08, -0.22]} rotation={[Math.PI / 2, 0, 0]}>
+            <coneGeometry args={[0.06, 0.28, 6]} />
+            <Mat color="#e08848" eInt={2.2} />
+          </mesh>
+        ) : null}
       </HoverFloat>
     );
   }
 
-  if (type === "wraith") {
+  if (type === "wraith" || type === "specter") {
+    const tall = type === "specter";
     return (
       <HoverFloat amp={0.1}>
         <mesh>
-          <coneGeometry args={[0.18, 0.7, 6]} />
+          <coneGeometry args={[tall ? 0.2 : 0.18, tall ? 0.92 : 0.7, 6]} />
           <meshStandardMaterial
             color="#6aa0a8"
             emissive="#8ec8d0"
-            emissiveIntensity={1.05}
+            emissiveIntensity={tall ? 1.35 : 1.05}
             transparent
             opacity={0.86}
             roughness={0.25}
           />
         </mesh>
-        <mesh position={[0, 0.34, 0]}>
-          <sphereGeometry args={[0.09, 10, 8]} />
+        <mesh position={[0, tall ? 0.44 : 0.34, 0]}>
+          <sphereGeometry args={[tall ? 0.11 : 0.09, 10, 8]} />
           <Mat color="#cfeaf0" eInt={3} />
         </mesh>
+        {tall ? (
+          <mesh position={[0, -0.18, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.12, 0.36, 6]} />
+            <meshStandardMaterial color="#8ec8d0" transparent opacity={0.35} emissive="#8ec8d0" emissiveIntensity={0.8} />
+          </mesh>
+        ) : null}
       </HoverFloat>
     );
   }
 
-  if (type === "overlord") {
+  if (type === "overlord" || type === "sovereign") {
     return (
-      <group scale={1.7}>
+      <group scale={type === "sovereign" ? 2.05 : 1.7}>
         <mesh position={[0, 0.5, 0]} castShadow>
           <sphereGeometry args={[0.38, 12, 10]} />
           <Mat color="#3a5a52" roughness={0.4} metalness={0.35} />
@@ -547,6 +627,45 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <sphereGeometry args={[0.11, 10, 8]} />
           <Mat color="#b8e4ea" eInt={2.6} />
         </mesh>
+        {type === "sovereign" ? (
+          <mesh position={[0, 0.5, 0]}>
+            <torusGeometry args={[0.52, 0.04, 8, 24]} />
+            <Mat color="#8ec8d0" eInt={1.6} />
+          </mesh>
+        ) : null}
+      </group>
+    );
+  }
+
+  if (type === "amalgam") {
+    return (
+      <group scale={1.28}>
+        <mesh position={[0, 0.36, 0]} castShadow>
+          <sphereGeometry args={[0.3, 12, 10]} />
+          <Mat color="#3a5a4c" roughness={0.42} metalness={0.3} />
+        </mesh>
+        <mesh position={[0.2, 0.42, 0.14]} castShadow>
+          <boxGeometry args={[0.26, 0.2, 0.26]} />
+          <Mat color="#5a686c" metalness={0.74} roughness={0.26} />
+        </mesh>
+        <mesh position={[-0.2, 0.44, 0.08]} castShadow>
+          <coneGeometry args={[0.1, 0.32, 5]} />
+          <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.75} />
+        </mesh>
+        <mesh position={[0, 0.42, 0]}>
+          <sphereGeometry args={[0.12, 8, 8]} />
+          <Mat color="#8ec8d0" eInt={2.6} />
+        </mesh>
+        <group ref={legs}>
+          {([-1, 1] as const).flatMap((s, i) =>
+            [0.12, -0.16].map((z, j) => (
+              <mesh key={`${i}${j}`} position={[0.2 * s, 0.1, z]} rotation={[0.3, 0, 0.55 * s]}>
+                <boxGeometry args={[0.07, 0.3, 0.07]} />
+                <Mat color="#2a3a38" />
+              </mesh>
+            )),
+          )}
+        </group>
       </group>
     );
   }

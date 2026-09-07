@@ -733,9 +733,14 @@ function EnemyLayer() {
       g.rotation.y = e.yaw;
       const flash = e.hitFlash;
       const slow = e.slowFactor < 0.95 ? 0.94 : 1;
-      g.scale.setScalar((1 + flash * 0.08) * slow);
-      const shadow = g.children[1];
+      const burst = engine.time < e.sprintUntil ? 1.07 : 1;
+      g.scale.setScalar((1 + flash * 0.08) * slow * burst);
+      const shadow = g.children[1] as Mesh | undefined;
       if (shadow) shadow.position.y = -e.y + 0.03;
+      const ringMat = shadow?.material as MeshBasicMaterial | undefined;
+      if (ringMat) {
+        ringMat.opacity = e.shieldHp > 0 ? 0.95 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+      }
     }
   });
   void gen;

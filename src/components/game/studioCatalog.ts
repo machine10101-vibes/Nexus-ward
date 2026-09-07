@@ -1,4 +1,4 @@
-import { ENEMIES, TOWERS, TOWER_ORDER } from "@/game/config";
+import { ENEMIES, TOWERS, TOWER_ORDER, enemyTraitLine } from "@/game/config";
 import type { EnemyId, MapId, TowerId } from "@/game/types";
 
 export type StudioKind = "tower" | "enemy" | "world";
@@ -81,7 +81,7 @@ export const STUDIO_CATALOG: StudioEntry[] = [
     name: ENEMIES[id].name + (ENEMIES[id].boss ? " · boss" : ENEMIES[id].flying ? " · air" : ""),
     group: FACTION_GROUP[id],
     kind: "enemy" as const,
-    blurb: `${ENEMIES[id].hp} hp · ${ENEMIES[id].speed.toFixed(2)} speed · ${ENEMIES[id].gold} cr`,
+    blurb: `${ENEMIES[id].hp} hp · ${ENEMIES[id].speed.toFixed(2)} speed · ${ENEMIES[id].gold} cr · ${enemyTraitLine(ENEMIES[id])}`,
     enemy: id,
   })),
   {

@@ -74,9 +74,9 @@ const WORLD_TUNE: Record<
   mycelion: {
     fogNear: 22,
     fogFar: 78,
-    key: 1.75,
-    fill: 0.72,
-    ambient: 0.26,
+    key: 1.95,
+    fill: 0.82,
+    ambient: 0.3,
     pathMetal: 0.12,
     pathRough: 0.66,
     groundMetal: 0.03,
@@ -87,9 +87,9 @@ const WORLD_TUNE: Record<
   forge: {
     fogNear: 18,
     fogFar: 70,
-    key: 2.55,
-    fill: 0.4,
-    ambient: 0.14,
+    key: 2.7,
+    fill: 0.5,
+    ambient: 0.18,
     pathMetal: 0.82,
     pathRough: 0.24,
     groundMetal: 0.34,
@@ -100,9 +100,9 @@ const WORLD_TUNE: Record<
   aegis: {
     fogNear: 24,
     fogFar: 82,
-    key: 2.0,
-    fill: 0.66,
-    ambient: 0.2,
+    key: 2.15,
+    fill: 0.74,
+    ambient: 0.24,
     pathMetal: 0.5,
     pathRough: 0.36,
     groundMetal: 0.2,
@@ -196,13 +196,16 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const leaked = useGameStore((s) => s.hud.leaked);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const combat = useGameStore((s) => s.hud.phase) === "combat";
-  const { tube, rails } = useMemo(() => {
+  const { tube, rails, bed } = useMemo(() => {
     const pts = engine.waypoints.map((w) => new Vector3(w.x, 0.08, w.z));
-    if (pts.length < 2) return { tube: null as TubeGeometry | null, rails: null as TubeGeometry | null };
+    if (pts.length < 2) {
+      return { tube: null as TubeGeometry | null, rails: null as TubeGeometry | null, bed: null as TubeGeometry | null };
+    }
     const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
     const tube = new TubeGeometry(curve, 120, 0.32, 8, false);
     const rails = new TubeGeometry(curve, 120, 0.09, 6, false);
-    return { tube, rails };
+    const bed = new TubeGeometry(curve, 80, 0.58, 8, false);
+    return { tube, rails, bed };
   }, [map.id, engine.waypoints.length]);
 
   const skip = useMemo(() => new Set(map.path.map((p) => `${p.c},${p.r}`)), [map]);
@@ -270,6 +273,11 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
             depthWrite={false}
             blending={AdditiveBlending}
           />
+        </mesh>
+      ) : null}
+      {bed ? (
+        <mesh geometry={bed} position={[0, -0.06, 0]} receiveShadow>
+          <meshStandardMaterial color={theme.ground} roughness={0.92} metalness={tune.groundMetal * 0.5} />
         </mesh>
       ) : null}
       {tube ? (

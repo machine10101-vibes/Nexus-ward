@@ -7,6 +7,7 @@ import {
   CircleGeometry,
   Float32BufferAttribute,
   PlaneGeometry,
+  RingGeometry,
   RepeatWrapping,
   type Mesh,
   type MeshStandardMaterial,
@@ -26,23 +27,27 @@ export function arenaMetrics(cols: number, rows: number) {
 /** Height outside the play ellipse. Pads and path stay on y=0. */
 export function terrainElevation(x: number, z: number, arenaR: number, squash: number, style: MapId) {
   const inset = Math.hypot(x / arenaR, z / (arenaR * squash));
-  const edge = smooth(clamp((inset - 1) / 0.55, 0, 1));
+  const edge = smooth(clamp((inset - 1) / 0.62, 0, 1));
   if (edge <= 0) return 0;
   let n =
-    Math.sin(x * 0.11) * Math.cos(z * 0.09) * 0.85 +
-    Math.sin(x * 0.23 + z * 0.17) * 0.42 +
-    Math.sin(x * 0.47 - z * 0.31) * 0.2 +
-    Math.sin(x * 0.07 + z * 0.05) * 1.05;
+    Math.sin(x * 0.1) * Math.cos(z * 0.08) * 0.95 +
+    Math.sin(x * 0.21 + z * 0.16) * 0.48 +
+    Math.sin(x * 0.44 - z * 0.29) * 0.22 +
+    Math.sin(x * 0.06 + z * 0.045) * 1.2 +
+    Math.sin(x * 0.73) * Math.cos(z * 0.61) * 0.14;
   if (style === "forge") {
-    n = Math.round(n * 1.55) / 1.55 + Math.sin(x * 0.33) * Math.sin(z * 0.29) * 0.18;
+    n = Math.round(n * 1.45) / 1.45 + Math.sin(x * 0.31) * Math.sin(z * 0.27) * 0.22;
+    n += Math.max(0, Math.sin(x * 0.09 + z * 0.07) - 0.35) * 0.55;
   } else if (style === "aegis") {
-    const rift = Math.abs(x * 0.22 + z * 0.31);
-    n = Math.abs(n) * 1.15 - 0.22 + Math.max(0, 0.85 - rift) * 1.4;
+    const rift = Math.abs(x * 0.2 + z * 0.34);
+    n = Math.abs(n) * 1.2 - 0.18 + Math.max(0, 1.05 - rift) * 1.7;
   } else {
-    n += Math.sin(x * 0.62 + z * 0.18) * Math.cos(z * 0.51) * 0.22;
+    const bowl = Math.max(0, 0.62 - Math.abs(Math.sin(x * 0.17) * Math.cos(z * 0.19)));
+    n += Math.sin(x * 0.58 + z * 0.16) * Math.cos(z * 0.48) * 0.28 - bowl * 0.45;
   }
-  const amp = style === "forge" ? 1.85 : style === "aegis" ? 2.8 : 2.4;
-  return n * edge * amp + edge * 0.85;
+  const far = smooth(clamp((inset - 1.35) / 0.7, 0, 1));
+  const amp = style === "forge" ? 2.05 : style === "aegis" ? 3.05 : 2.65;
+  return n * edge * amp + edge * 0.7 + far * 1.35;
 }
 
 function clamp(v: number, a: number, b: number) {
@@ -173,8 +178,8 @@ export function WorldGround({
   combat: boolean;
 }) {
   const { arenaR, squash } = arenaMetrics(cols, rows);
-  const groundW = cols * CELL + 22;
-  const groundD = rows * CELL + 22;
+  const groundW = cols * CELL + 26;
+  const groundD = rows * CELL + 26;
   const hills = useMemo(
     () => makeHills(groundW, groundD, arenaR, squash, mapId, quality === "high" ? 96 : 48),
     [groundW, groundD, arenaR, squash, mapId, quality],
@@ -223,6 +228,7 @@ export function WorldGround({
         <meshStandardMaterial color={emissive} emissive={emissive} emissiveIntensity={0.5} metalness={0.55} roughness={0.28} />
       </mesh>
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
+      {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
     </group>
   );
 }
@@ -260,6 +266,46 @@ function SkyShell({ map, fog, accent }: { map: Texture; fog: string; accent: str
           }
         `}
       />
+    </mesh>
+  );
+}
+
+function OuterRidges({
+  mapId,
+  arenaR,
+  squash,
+  map,
+  roughness,
+  metalness,
+  emissive,
+}: {
+  mapId: MapId;
+  arenaR: number;
+  squash: number;
+  map: Texture;
+  roughness: number;
+  metalness: number;
+  emissive: string;
+}) {
+  const geo = useMemo(() => {
+    const g = new RingGeometry(arenaR * 1.58, arenaR * 2.12, 80, 10);
+    g.rotateX(-Math.PI / 2);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      pos.setX(i, x);
+      pos.setZ(i, z * squash);
+      const r = Math.hypot(x / arenaR, (z * squash) / (arenaR * squash));
+      const band = 1 - Math.min(1, Math.abs(r - 1.85) / 0.28);
+      pos.setY(i, terrainElevation(x, z * squash, arenaR, squash, mapId) + band * 1.65);
+    }
+    g.computeVertexNormals();
+    return g;
+  }, [arenaR, squash, mapId]);
+  return (
+    <mesh geometry={geo} receiveShadow castShadow>
+      <GroundMat map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} />
     </mesh>
   );
 }

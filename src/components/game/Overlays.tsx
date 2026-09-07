@@ -158,18 +158,17 @@ function Select() {
 }
 
 /**
- * A framed world disc, not a landscape crop: blurred field, lit sphere, orbit line.
- * The source art letterboxes each planet in black, so the disc oversamples to crop
- * that margin away — otherwise every world shrinks into the same dark dot.
+ * Same crust the 3D globe uses. The cinematic planet stills are pre-lit portraits;
+ * cropping those next to the live globe made every card look half old, half new.
  */
 function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
-  const src = `url(${asset(`/textures/${id}-planet.jpg`)})`;
+  const src = `url(${asset(`/textures/${id}-ground.jpg`)})`;
   const rim = PLANET_THEME[id].padEmi;
   return (
     <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
       <div
-        className="absolute inset-0 scale-125 opacity-30"
-        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(16px)" }}
+        className="absolute inset-0 opacity-40"
+        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(18px)" }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,transparent_28%,var(--color-bg)_78%)]" />
       <span
@@ -182,11 +181,17 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
         className="absolute left-1/2 top-1/2 size-[5.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
         style={{
           backgroundImage: src,
-          backgroundSize: "132%",
-          backgroundPosition: "center",
-          boxShadow: `inset -14px -8px 22px rgba(0,0,0,0.78), inset 6px 4px 14px rgba(255,255,255,0.06), 0 0 22px -6px ${rim}`,
+          backgroundSize: "220%",
+          backgroundPosition: "42% 38%",
+          boxShadow: `inset -16px -10px 22px rgba(0,0,0,0.78), inset 8px 6px 14px rgba(255,255,255,0.08), 0 0 22px -6px ${rim}`,
         }}
       >
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 78% 72%, ${rim}33, transparent 48%)`,
+          }}
+        />
         <span className="absolute inset-0 rounded-full outline outline-1 -outline-offset-1 outline-fg/15" />
       </div>
     </div>

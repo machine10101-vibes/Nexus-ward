@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BackSide, Color, Vector3, type Mesh, type ShaderMaterial } from "three";
+import { BackSide, Color, RepeatWrapping, Vector3, type Mesh, type ShaderMaterial } from "three";
 import type { MapId } from "@/game/types";
 import { useWorldArt } from "./worldArt";
 
@@ -19,7 +19,7 @@ void main() {
 `;
 
 const frag = /* glsl */ `
-uniform sampler2D planetMap;
+uniform sampler2D crustMap;
 uniform vec3 colorA;
 uniform vec3 colorB;
 uniform vec3 colorC;
@@ -44,23 +44,28 @@ float noise(vec3 p) {
         mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
 }
 void main() {
-  vec3 tex = texture2D(planetMap, vUv).rgb;
-  float n = noise(vP * 2.2);
-  n += 0.45 * noise(vP * 5.1 + time * 0.03);
-  vec3 proc = mix(colorA, colorB, smoothstep(0.3, 0.64, n));
-  proc = mix(proc, colorC, smoothstep(0.7, 0.9, n) * 0.55);
-  vec3 albedo = mix(proc, tex, 0.82);
-  float ndl = clamp(dot(normalize(vWorldN), normalize(sunDir)), 0.0, 1.0);
-  float day = smoothstep(-0.08, 0.55, ndl);
-  float dusk = smoothstep(-0.22, 0.12, ndl) * (1.0 - smoothstep(0.12, 0.55, ndl));
-  float vein = max(tex.b * 0.7 + tex.g * 0.35 - tex.r * 0.45 - 0.12, 0.0);
-  vein = max(vein, max(tex.r * 0.7 + tex.g * 0.2 - tex.b * 0.55 - 0.18, 0.0));
-  vec3 lit = albedo * (0.16 + 0.92 * day);
-  lit += albedo * dusk * 0.22;
-  lit += colorC * vein * mix(0.22, 1.15, 1.0 - day);
-  float fres = pow(1.0 - abs(dot(normalize(vN), vec3(0.0, 0.0, 1.0))), 2.4);
-  lit += atmo * fres * (0.28 + 0.55 * day);
-  lit += atmo * dusk * 0.18;
+  vec3 crust = texture2D(crustMap, vUv * vec2(2.6, 1.55)).rgb;
+  crust = crust * 1.28 + 0.03;
+  float n = noise(vP * 1.28);
+  n += 0.48 * noise(vP * 2.7 + time * 0.01);
+  n += 0.22 * noise(vP * 5.8);
+  float land = smoothstep(0.4, 0.58, n);
+  float coast = smoothstep(0.36, 0.5, n) * (1.0 - smoothstep(0.52, 0.64, n));
+  vec3 deep = colorA * 0.7;
+  vec3 shelf = mix(colorA, colorB, 0.4);
+  vec3 ocean = mix(deep, shelf, smoothstep(0.18, 0.4, n));
+  vec3 albedo = mix(ocean, crust, land);
+  albedo = mix(albedo, mix(colorC, crust, 0.55), coast * 0.5);
+  float ndl = max(dot(normalize(vWorldN), normalize(sunDir)), 0.0);
+  float day = smoothstep(-0.04, 0.38, ndl);
+  float spec = pow(ndl, 32.0) * (1.0 - land) * 0.32;
+  float vein = max(crust.b * 0.78 + crust.g * 0.28 - crust.r * 0.58 - 0.12, 0.0);
+  vein = max(vein, max(crust.r * 0.76 + crust.g * 0.2 - crust.b * 0.62 - 0.14, 0.0));
+  vec3 lit = albedo * (0.14 + 0.9 * day);
+  lit += spec * mix(colorC, vec3(0.85, 0.9, 0.95), 0.35);
+  lit += colorC * vein * land * mix(0.18, 0.95, 1.0 - day);
+  float fres = pow(1.0 - max(dot(normalize(vN), vec3(0.0, 0.0, 1.0)), 0.0), 2.5);
+  lit += atmo * fres * (0.32 + 0.4 * day);
   gl_FragColor = vec4(lit, 1.0);
 }
 `;
@@ -85,12 +90,12 @@ float noise(vec3 p) {
         mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
 }
 void main() {
-  float n = noise(vP * 2.8 + vec3(time * 0.035, 0.0, time * 0.02));
-  n += 0.5 * noise(vP * 6.2 - vec3(time * 0.04, time * 0.01, 0.0));
-  float mask = smoothstep(cover, cover + 0.22, n);
-  float fres = pow(1.0 - abs(vN.z), 2.0);
-  float a = mask * (0.1 + fres * 0.12);
-  gl_FragColor = vec4(mix(vec3(0.62, 0.72, 0.74), atmo, 0.55), a);
+  float n = noise(vP * 2.6 + vec3(time * 0.03, 0.0, time * 0.018));
+  n += 0.45 * noise(vP * 5.8 - vec3(time * 0.035, time * 0.01, 0.0));
+  float mask = smoothstep(cover, cover + 0.2, n);
+  float fres = pow(1.0 - abs(vN.z), 2.1);
+  float a = mask * (0.08 + fres * 0.1);
+  gl_FragColor = vec4(mix(vec3(0.55, 0.64, 0.68), atmo, 0.5), a);
 }
 `;
 
@@ -119,10 +124,19 @@ export function PlanetGlobe({
   const art = useWorldArt(id);
   const planet = useRef<Mesh>(null);
   const clouds = useRef<Mesh>(null);
+  const crust = useMemo(() => {
+    const tex = art.ground.clone();
+    tex.wrapS = RepeatWrapping;
+    tex.wrapT = RepeatWrapping;
+    tex.repeat.set(1, 1);
+    tex.needsUpdate = true;
+    return tex;
+  }, [art.ground]);
+
   const uniforms = useMemo<ShaderMaterial["uniforms"]>(() => {
     const pal = PALETTE_COLORS[id];
     return {
-      planetMap: { value: art.planet },
+      crustMap: { value: crust },
       colorA: { value: pal.a.clone() },
       colorB: { value: pal.b.clone() },
       colorC: { value: pal.c.clone() },
@@ -130,13 +144,13 @@ export function PlanetGlobe({
       sunDir: { value: new Vector3(0.62, 0.48, 0.62) },
       time: { value: 0 },
     };
-  }, [id, art.planet]);
+  }, [id, crust]);
 
   const cloudUniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
       atmo: { value: PALETTE_COLORS[id].atmo.clone() },
       time: { value: 0 },
-      cover: { value: id === "forge" ? 0.74 : id === "aegis" ? 0.7 : 0.72 },
+      cover: { value: id === "forge" ? 0.76 : id === "aegis" ? 0.72 : 0.74 },
     }),
     [id],
   );
@@ -145,7 +159,7 @@ export function PlanetGlobe({
     uniforms.time.value = state.clock.elapsedTime;
     cloudUniforms.time.value = state.clock.elapsedTime;
     if (planet.current) planet.current.rotation.y += dt * spin;
-    if (clouds.current) clouds.current.rotation.y += dt * spin * 1.35;
+    if (clouds.current) clouds.current.rotation.y += dt * spin * 1.28;
   });
 
   const pal = PLANET_PALETTE[id];

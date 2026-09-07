@@ -5,7 +5,6 @@ import type { MapId } from "@/game/types";
 import { asset } from "@/lib/asset";
 
 export type WorldArt = {
-  planet: Texture;
   ground: Texture;
   sky: Texture;
 };
@@ -27,44 +26,25 @@ function tiled(src: Texture, rx: number, ry: number) {
 }
 
 export function useWorldArt(id: MapId): WorldArt {
-  const [mycelionPlanet, forgePlanet, aegisPlanet, mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky] =
-    useTexture([
-      asset("/textures/mycelion-planet.jpg"),
-      asset("/textures/forge-planet.jpg"),
-      asset("/textures/aegis-planet.jpg"),
-      asset("/textures/mycelion-ground.jpg"),
-      asset("/textures/forge-ground.jpg"),
-      asset("/textures/aegis-ground.jpg"),
-      asset("/textures/mycelion-sky.jpg"),
-      asset("/textures/forge-sky.jpg"),
-      asset("/textures/aegis-sky.jpg"),
-    ]) as Texture[];
+  const [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky] = useTexture([
+    asset("/textures/mycelion-ground.jpg"),
+    asset("/textures/forge-ground.jpg"),
+    asset("/textures/aegis-ground.jpg"),
+    asset("/textures/mycelion-sky.jpg"),
+    asset("/textures/forge-sky.jpg"),
+    asset("/textures/aegis-sky.jpg"),
+  ]) as Texture[];
 
   useLayoutEffect(() => {
-    [mycelionPlanet, forgePlanet, aegisPlanet, mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky].forEach(
-      prepColor,
-    );
-  }, [
-    mycelionPlanet,
-    forgePlanet,
-    aegisPlanet,
-    mycelionGround,
-    forgeGround,
-    aegisGround,
-    mycelionSky,
-    forgeSky,
-    aegisSky,
-  ]);
+    [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky].forEach(prepColor);
+  }, [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky]);
 
   return useMemo(() => {
-    const planet = id === "mycelion" ? mycelionPlanet : id === "forge" ? forgePlanet : aegisPlanet;
     const groundSrc = id === "mycelion" ? mycelionGround : id === "forge" ? forgeGround : aegisGround;
     const sky = id === "mycelion" ? mycelionSky : id === "forge" ? forgeSky : aegisSky;
     return {
-      planet,
       ground: tiled(groundSrc, 1, 1),
       sky,
     };
-  }, [id, mycelionPlanet, forgePlanet, aegisPlanet, mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky]);
+  }, [id, mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky]);
 }
-

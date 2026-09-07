@@ -9,23 +9,22 @@ export type WorldArt = {
   sky: Texture;
 };
 
-function prepColor(tex: Texture) {
-  tex.colorSpace = SRGBColorSpace;
-  tex.anisotropy = 8;
-}
+export type WorldLibrary = Record<MapId, WorldArt>;
 
-function tiled(src: Texture, rx: number, ry: number) {
-  const tex = src.clone();
+function prepGround(tex: Texture) {
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
   tex.wrapT = RepeatWrapping;
-  tex.repeat.set(rx, ry);
   tex.anisotropy = 8;
-  tex.needsUpdate = true;
-  return tex;
 }
 
-export function useWorldArt(id: MapId): WorldArt {
+function prepSky(tex: Texture) {
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+}
+
+/** Load every world map once. Do not clone on hover — that remounts the menu. */
+export function useWorldLibrary(): WorldLibrary {
   const [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky] = useTexture([
     asset("/textures/mycelion-ground.jpg"),
     asset("/textures/forge-ground.jpg"),
@@ -36,15 +35,24 @@ export function useWorldArt(id: MapId): WorldArt {
   ]) as Texture[];
 
   useLayoutEffect(() => {
-    [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky].forEach(prepColor);
+    prepGround(mycelionGround);
+    prepGround(forgeGround);
+    prepGround(aegisGround);
+    prepSky(mycelionSky);
+    prepSky(forgeSky);
+    prepSky(aegisSky);
   }, [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky]);
 
-  return useMemo(() => {
-    const groundSrc = id === "mycelion" ? mycelionGround : id === "forge" ? forgeGround : aegisGround;
-    const sky = id === "mycelion" ? mycelionSky : id === "forge" ? forgeSky : aegisSky;
-    return {
-      ground: tiled(groundSrc, 1, 1),
-      sky,
-    };
-  }, [id, mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky]);
+  return useMemo(
+    () => ({
+      mycelion: { ground: mycelionGround, sky: mycelionSky },
+      forge: { ground: forgeGround, sky: forgeSky },
+      aegis: { ground: aegisGround, sky: aegisSky },
+    }),
+    [mycelionGround, forgeGround, aegisGround, mycelionSky, forgeSky, aegisSky],
+  );
+}
+
+export function useWorldArt(id: MapId): WorldArt {
+  return useWorldLibrary()[id];
 }

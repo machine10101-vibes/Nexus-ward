@@ -1,11 +1,12 @@
-import { Suspense, useRef } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, Stars } from "@react-three/drei";
-import { BackSide, Color, type Mesh } from "three";
+import { BackSide, Color, type Mesh, type ShaderMaterial } from "three";
 import { useGameStore } from "@/game/store";
 import { PLANET_THEME } from "@/game/config";
+import type { MapId } from "@/game/types";
 import { PlanetGlobe, PLANET_PALETTE } from "./Planet";
-import { useWorldArt } from "./worldArt";
+import { useWorldLibrary } from "./worldArt";
 
 export function MenuScene() {
   return (
@@ -19,7 +20,6 @@ function MenuWorld() {
   const preview = useGameStore((s) => s.preview);
   const ring = useRef<Mesh>(null);
   const ring2 = useRef<Mesh>(null);
-  const art = useWorldArt(preview);
 
   useFrame((state, dt) => {
     if (ring.current) ring.current.rotation.z += dt * 0.04;
@@ -36,16 +36,16 @@ function MenuWorld() {
 
   return (
     <>
-      <color attach="background" args={[theme.sky]} />
-      <fog attach="fog" args={[theme.fog, 12, 48]} />
-      <ambientLight intensity={0.2} />
-      <hemisphereLight args={[theme.hemiSky, theme.hemiGround, 0.7]} />
+      <color attach="background" args={["#06070b"]} />
+      <fog attach="fog" args={["#0a0c12", 22, 70]} />
+      <ambientLight intensity={0.22} />
+      <hemisphereLight intensity={0.62} color={theme.hemiSky} groundColor={theme.hemiGround} />
       <directionalLight position={[6, 8, 4]} intensity={2.05} color={theme.dir} />
-      <pointLight position={[-4, 2, 3]} intensity={24} distance={18} color={pal.atmo} />
-      <pointLight position={[5, -1, 2]} intensity={12} distance={14} color={pal.ring} />
-      <MenuSky key={preview} map={art.sky} fog={theme.fog} accent={pal.atmo} />
+      <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
+      <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
+      <MenuSky preview={preview} />
       <Stars radius={70} depth={32} count={1200} factor={2.8} fade speed={0.45} />
-      <Sparkles count={28} scale={12} size={2.4} speed={0.35} color={pal.atmo} opacity={0.55} />
+      <Sparkles count={28} scale={12} size={2.4} speed={0.35} color="#c8d4e4" opacity={0.5} />
       <PlanetGlobe id={preview} />
       <mesh ref={ring} rotation={[Math.PI / 2.6, 0.2, 0.3]}>
         <torusGeometry args={[3.4, 0.038, 8, 96]} />
@@ -84,16 +84,30 @@ function MenuWorld() {
   );
 }
 
-function MenuSky({ map, fog, accent }: { map: ReturnType<typeof useWorldArt>["sky"]; fog: string; accent: string }) {
-  const uniforms = {
-    sky: { value: map },
-    fogCol: { value: new Color(fog) },
-    accent: { value: new Color(accent) },
-  };
+function MenuSky({ preview }: { preview: MapId }) {
+  const lib = useWorldLibrary();
+  const mat = useRef<ShaderMaterial>(null);
+  const uniforms = useMemo(
+    () => ({
+      sky: { value: lib.mycelion.sky },
+      fogCol: { value: new Color("#0a0c12") },
+      accent: { value: new Color(PLANET_PALETTE.mycelion.atmo) },
+    }),
+    [lib.mycelion.sky],
+  );
+
+  useLayoutEffect(() => {
+    uniforms.sky.value = lib[preview].sky;
+    uniforms.fogCol.value.set(PLANET_THEME[preview].fog);
+    uniforms.accent.value.set(PLANET_PALETTE[preview].atmo);
+    if (mat.current) mat.current.uniformsNeedUpdate = true;
+  }, [preview, lib, uniforms]);
+
   return (
     <mesh>
       <sphereGeometry args={[42, 40, 24]} />
       <shaderMaterial
+        ref={mat}
         side={BackSide}
         depthWrite={false}
         uniforms={uniforms}
@@ -103,11 +117,11 @@ function MenuSky({ map, fog, accent }: { map: ReturnType<typeof useWorldArt>["sk
           varying vec3 vP; varying vec2 vUv;
           void main() {
             vec3 n = normalize(vP);
-            vec3 tex = texture2D(sky, vec2(vUv.x + 0.08, vUv.y * 0.82 + 0.1)).rgb * 1.12;
+            vec3 tex = texture2D(sky, vec2(vUv.x + 0.08, vUv.y * 0.82 + 0.1)).rgb * 1.08;
             float h = n.y;
-            vec3 col = mix(tex * 0.72, tex, smoothstep(-0.15, 0.5, h));
-            col = mix(col, fogCol, smoothstep(0.08, -0.35, h) * 0.4);
-            col += accent * pow(1.0 - abs(h), 6.0) * 0.08;
+            vec3 col = mix(tex * 0.7, tex, smoothstep(-0.15, 0.5, h));
+            col = mix(col, fogCol, smoothstep(0.08, -0.35, h) * 0.45);
+            col += accent * pow(1.0 - abs(h), 6.0) * 0.07;
             gl_FragColor = vec4(col, 1.0);
           }
         `}

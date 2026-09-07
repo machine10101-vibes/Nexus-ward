@@ -167,24 +167,35 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
   return (
     <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
       <div
-        className="absolute inset-0 opacity-40"
-        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(18px)" }}
+        className="absolute inset-0 opacity-35"
+        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(20px)" }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,transparent_28%,var(--color-bg)_78%)]" />
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 size-[6.15rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-md"
+        style={{ background: `radial-gradient(circle, ${rim}55, transparent 68%)` }}
+      />
       <div
         className="absolute left-1/2 top-1/2 size-[5.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
         style={{
           backgroundImage: src,
           backgroundRepeat: "no-repeat",
-          backgroundSize: "280%",
-          backgroundPosition: "38% 32%",
-          boxShadow: `inset -8px -6px 14px rgba(0,0,0,0.42), inset 5px 4px 10px rgba(255,255,255,0.08), 0 0 20px -6px ${rim}`,
+          backgroundSize: "220%",
+          backgroundPosition: "42% 36%",
+          boxShadow: `inset -16px -10px 22px rgba(0,0,0,0.55), inset 8px 6px 14px rgba(255,255,255,0.1), 0 0 0 1px ${rim}33, 0 0 22px -4px ${rim}`,
         }}
       >
         <span
           className="absolute inset-0 rounded-full"
           style={{
-            background: `radial-gradient(circle at 34% 30%, rgba(255,255,255,0.14), transparent 46%)`,
+            background:
+              "radial-gradient(circle at 32% 28%, rgba(255,255,255,0.2), transparent 38%), radial-gradient(circle at 72% 70%, rgba(0,0,0,0.42), transparent 48%)",
+          }}
+        />
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: "radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,0.45) 100%)",
           }}
         />
         <span

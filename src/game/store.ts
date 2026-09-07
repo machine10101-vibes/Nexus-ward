@@ -103,7 +103,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hoverPad: null,
   buildType: "pulse",
   setScreen: (screen) => set({ screen }),
-  setPreview: (preview) => set({ preview }),
+  setPreview: (preview) => {
+    if (get().preview === preview) return;
+    set({ preview });
+  },
   openHelp: () => set({ helpFrom: get().screen, screen: "help" }),
   openSettings: () => set({ settingsFrom: get().screen, screen: "settings" }),
   closeOverlay: () => {

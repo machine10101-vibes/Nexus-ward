@@ -2,7 +2,7 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main, cursor/nexus-ward-polish-pass-ef54]
+    branches: [main, cursor/nexus-ward-polish-pass-ef54, cursor/terrain-planet-visuals-ef54]
   workflow_dispatch:
 
 permissions:

@@ -158,36 +158,53 @@ function Select() {
 }
 
 /**
- * A framed world disc, not a landscape crop: blurred field, lit sphere, orbit line.
- * The source art letterboxes each planet in black, so the disc oversamples to crop
- * that margin away — otherwise every world shrinks into the same dark dot.
+ * Same crust the 3D globe uses. The cinematic planet stills are pre-lit portraits;
+ * cropping those next to the live globe made every card look half old, half new.
  */
 function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
-  const src = `url(${asset(`/textures/${id}-planet.jpg`)})`;
+  const src = `url(${asset(`/textures/${id}-ground.jpg`)})`;
   const rim = PLANET_THEME[id].padEmi;
   return (
     <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
       <div
-        className="absolute inset-0 scale-125 opacity-30"
-        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(16px)" }}
+        className="absolute inset-0 opacity-35"
+        style={{ backgroundImage: src, backgroundSize: "cover", backgroundPosition: "center", filter: "blur(20px)" }}
       />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,transparent_28%,var(--color-bg)_78%)]" />
-      <span
-        className={cn(
-          "absolute left-1/2 top-1/2 h-[5.5rem] w-[8.5rem] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border transition-colors duration-[var(--motion-fast)]",
-          active ? "border-accent/35" : "border-fg/10",
-        )}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 size-[6.15rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-md"
+        style={{ background: `radial-gradient(circle, ${rim}55, transparent 68%)` }}
       />
       <div
         className="absolute left-1/2 top-1/2 size-[5.25rem] -translate-x-1/2 -translate-y-1/2 rounded-full transition-transform duration-[var(--motion-slow)] ease-[var(--ease-smooth-out)] group-hover:scale-105"
         style={{
           backgroundImage: src,
-          backgroundSize: "132%",
-          backgroundPosition: "center",
-          boxShadow: `inset -14px -8px 22px rgba(0,0,0,0.78), inset 6px 4px 14px rgba(255,255,255,0.06), 0 0 22px -6px ${rim}`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "190%",
+          backgroundPosition: "42% 36%",
+          filter: "brightness(1.12) contrast(1.08) saturate(1.1)",
+          boxShadow: `inset -16px -10px 22px rgba(0,0,0,0.55), inset 8px 6px 14px rgba(255,255,255,0.1), 0 0 0 1px ${rim}33, 0 0 22px -4px ${rim}`,
         }}
       >
-        <span className="absolute inset-0 rounded-full outline outline-1 -outline-offset-1 outline-fg/15" />
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle at 32% 28%, rgba(255,255,255,0.2), transparent 38%), radial-gradient(circle at 72% 70%, rgba(0,0,0,0.42), transparent 48%)",
+          }}
+        />
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: "radial-gradient(circle at 50% 50%, transparent 58%, rgba(0,0,0,0.45) 100%)",
+          }}
+        />
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full outline outline-1 -outline-offset-1",
+            active ? "outline-accent/45" : "outline-fg/15",
+          )}
+        />
       </div>
     </div>
   );

@@ -2,15 +2,7 @@
 
 A 3D space tower defense game. Hold planetary cores on Mycelion, Kron Forge, and Aegis Rift against organic, mechanical, and hybrid incursions.
 
-## Play
-
-**Live:** https://rawcdn.githack.com/machine10101-vibes/Nexus-ward/gh-pages/index.html
-
-That serves the `gh-pages` branch from GitHub. The proxy may show a one-time “Open the page” notice.
-
-The official GitHub Pages URL is https://machine10101-vibes.github.io/Nexus-ward/ — turn on **Settings → Pages → Source: GitHub Actions** once to activate it.
-
-No account required. Progress is saved in the browser.
+**Play:** https://machine10101-vibes.github.io/Nexus-ward/
 
 ## How to hold
 

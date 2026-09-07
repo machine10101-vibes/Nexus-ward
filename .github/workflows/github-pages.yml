@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -54,16 +52,13 @@ jobs:
             cp _site/_shell.html _site/404.html
           fi
           touch _site/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
       - uses: actions/upload-artifact@v4
         with:
           name: site
           path: _site
 
-  # Always keep the gh-pages branch current. Official github.io starts working
-  # as soon as Settings → Pages → Source is "Deploy from a branch / gh-pages".
+  # Official github.io starts working once Settings → Pages → Source is
+  # "Deploy from a branch / gh-pages". This job cannot enable Pages itself.
   publish-branch:
     needs: build
     runs-on: ubuntu-latest
@@ -77,14 +72,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: _site
           force_orphan: true
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

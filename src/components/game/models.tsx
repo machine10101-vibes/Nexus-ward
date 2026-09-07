@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { DoubleSide, InstancedMesh, Object3D, type Group, type Mesh, type Side } from "three";
+import { AdditiveBlending, DoubleSide, InstancedMesh, Object3D, type Group, type Mesh, type Side } from "three";
 import type { EnemyId, MapId, TowerId } from "@/game/types";
 import { TOWERS } from "@/game/config";
 import { cellToWorld } from "@/game/maps";
@@ -768,12 +768,51 @@ export function SpawnGate({ color }: { color: string }) {
   );
 }
 
+/**
+ * Coverage footprint for a hovered or selected battery. The wash carries the
+ * area, the rim carries the edge; a bare outline reads as stray ground geometry
+ * from the iso camera.
+ */
 export function RangeRing({ radius, color }: { radius: number; color: string }) {
+  const wash = useRef<Mesh>(null);
+  const rim = useRef<Mesh>(null);
+  const t = useRef(0);
+  useFrame((_, dt) => {
+    t.current = Math.min(1, t.current + dt * 6);
+    const k = t.current * (2 - t.current);
+    const w = wash.current;
+    const r = rim.current;
+    if (w) (w.material as { opacity: number }).opacity = k * 0.075;
+    if (r) (r.material as { opacity: number }).opacity = k * 0.85;
+    if (w) w.scale.setScalar(0.94 + k * 0.06);
+    if (r) r.scale.setScalar(0.94 + k * 0.06);
+  });
+  const outer = Math.max(0.3, radius);
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.09, 0]} renderOrder={2}>
-      <ringGeometry args={[Math.max(0.2, radius - 0.1), radius, 6]} />
-      <meshBasicMaterial color={color} transparent opacity={0.32} depthWrite={false} toneMapped={false} />
-    </mesh>
+    <group>
+      <mesh ref={wash} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.075, 0]} renderOrder={2}>
+        <circleGeometry args={[outer, 6]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+      <mesh ref={rim} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.085, 0]} renderOrder={3}>
+        <ringGeometry args={[outer - 0.08, outer, 6]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -815,7 +854,7 @@ export function HexField({
     }
     m.count = i;
     m.instanceMatrix.needsUpdate = true;
-  }, [cols, rows, skip]);
+  }, [cols, rows, count, skip]);
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
       <ringGeometry args={[0.74, 0.84, 6]} />

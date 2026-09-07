@@ -82,8 +82,8 @@ export function Hud() {
     <div className="pointer-events-none absolute inset-0 z-10 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-5">
       <HudFrame critical={critical} leak={leakPulse} />
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="hud-panel flex items-center gap-3 px-3 py-2">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="hud-panel flex shrink-0 items-center gap-2 px-2.5 py-2 sm:gap-3 sm:px-3">
           <CoreRing pct={corePct} lives={hud.lives} leak={leakPulse} />
           <span className="h-9 w-px bg-border" />
           <StatBlock label="credits" value={hud.gold} />
@@ -107,13 +107,13 @@ export function Hud() {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-col items-center gap-2">
-          <div className="hud-panel min-w-40 px-4 py-2 text-center">
+        <div className="flex min-w-0 flex-1 justify-center">
+          <div className="hud-panel w-full max-w-44 px-2 py-2 text-center sm:min-w-40 sm:px-4">
             <div className="flex items-center justify-center gap-2">
               <span className="size-1.5 rounded-full" style={{ background: theme.core }} />
               <p className="hud-label">{engine.map.name}</p>
             </div>
-            <div className="mt-1.5 flex items-center justify-center gap-2">
+            <div className="mt-1.5 flex items-center justify-center gap-1.5 whitespace-nowrap sm:gap-2">
               <span className={cn("phase-dot", hud.phase === "combat" && "phase-dot-hot")} />
               <p className="font-display text-2xs uppercase tracking-label text-muted">
                 {hud.phase === "combat" ? "Incursion" : "Build"}
@@ -123,26 +123,16 @@ export function Hud() {
                 <span className="text-muted"> / {hud.waveTotal}</span>
               </p>
             </div>
-            <span className="mx-auto mt-2 block h-1 w-32 overflow-hidden rounded-full bg-surface-2">
+            <span className="mx-auto mt-2 block h-1 w-full max-w-32 overflow-hidden rounded-full bg-surface-2">
               <span
                 className="block h-full rounded-full bg-accent transition-[width] duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)]"
                 style={{ width: `${Math.max(4, (hud.phase === "combat" ? wavePct : hud.wave / Math.max(1, hud.waveTotal)) * 100)}%` }}
               />
             </span>
           </div>
-          <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
-            {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
-            {hud.autoIn >= 0 ? (
-              <StatusChip muted>Auto in {hud.autoIn.toFixed(1)}s</StatusChip>
-            ) : null}
-          </div>
-          {hud.event ? (
-            <p className="max-w-[18rem] truncate text-center font-mono text-2xs text-muted">{hud.event}</p>
-          ) : null}
         </div>
 
-        <div className="pointer-events-auto hud-panel flex items-center p-2">
+        <div className="pointer-events-auto hud-panel flex shrink-0 items-center p-1.5 sm:p-2">
           {[1, 2, 3].map((n) => (
             <button
               key={n}
@@ -171,6 +161,18 @@ export function Hud() {
         </div>
       </div>
 
+      {/* Below the corner panels rather than between them, so narrow screens keep it legible. */}
+      <div className="mt-2 flex flex-col items-center gap-2">
+        <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
+          {hud.autoIn >= 0 ? <StatusChip muted>Auto in {hud.autoIn.toFixed(1)}s</StatusChip> : null}
+        </div>
+        {hud.event ? (
+          <p className="max-w-full truncate text-center font-mono text-2xs text-muted">{hud.event}</p>
+        ) : null}
+      </div>
+
       <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:inset-x-5 sm:bottom-5">
         {selected ? (
           <div className="pointer-events-auto ml-auto w-[min(100%,21rem)]">
@@ -182,10 +184,10 @@ export function Hud() {
             Tap a lit platform to place
           </p>
         ) : null}
-        <div className="flex items-end justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <Tray buildType={buildType} gold={hud.gold} denyGen={hud.denyGen} />
 
-          <div className="pointer-events-auto hud-panel flex items-center gap-1 p-2">
+          <div className="pointer-events-auto hud-panel flex items-center gap-1 self-end p-2 sm:self-auto">
             <AbilityIcon
               label="Surge"
               hint="Q"
@@ -273,7 +275,7 @@ function Tray({ buildType, gold, denyGen }: { buildType: TowerId | null; gold: n
   }, [denyGen]);
 
   return (
-    <div className="pointer-events-auto hud-panel flex gap-1 overflow-x-auto p-2">
+    <div className="pointer-events-auto hud-panel flex gap-1 overflow-x-auto p-2 sm:w-auto">
       {TOWER_ORDER.map((id, i) => {
         const d = TOWERS[id];
         const Icon = ICONS[id];
@@ -292,7 +294,7 @@ function Tray({ buildType, gold, denyGen }: { buildType: TowerId | null; gold: n
               audio.ui();
             }}
             className={cn(
-              "relative flex min-h-11 min-w-16 flex-col items-center gap-1 overflow-hidden rounded-lg px-2.5 py-2 transition-colors duration-[var(--motion-quick)]",
+              "relative flex min-h-11 min-w-16 flex-1 flex-col items-center gap-1 overflow-hidden rounded-lg px-2.5 py-2 transition-colors duration-[var(--motion-quick)] sm:flex-none",
               on ? "bg-accent text-accent-fg" : afford ? "text-fg hover:bg-surface-2" : "text-subtle",
             )}
           >

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   ENEMIES,
+  enemyTraitTag,
   OVERCLOCK_CD,
   PLANET_THEME,
   RANK_NOTES,
@@ -504,6 +505,7 @@ function WaveChips({
     <div className="flex max-w-[min(100%,28rem)] items-center gap-1 overflow-x-auto">
       {groups.map((g, i) => {
         const d = ENEMIES[g.enemy];
+        const tag = enemyTraitTag(d);
         return (
           <span
             key={`${g.enemy}${i}`}
@@ -520,6 +522,7 @@ function WaveChips({
             />
             {d.name} {g.count}
             {d.flying ? <span className="text-subtle">air</span> : null}
+            {tag ? <span className="text-subtle">{tag}</span> : null}
           </span>
         );
       })}

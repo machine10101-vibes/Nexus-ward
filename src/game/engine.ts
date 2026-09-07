@@ -1,6 +1,7 @@
 import {
   AUTO_WAVE_DELAY,
   ENEMIES,
+  inflateSpawnCount,
   MAX_BEAMS,
   MAX_BOLTS,
   MAX_BURSTS,
@@ -23,6 +24,7 @@ import type {
   BeamStyle,
   Bolt,
   Burst,
+  DamageKind,
   Decal,
   DecalKind,
   Enemy,
@@ -154,6 +156,10 @@ export class GameEngine {
       slowFactor: 1,
       hitFlash: 0,
       lane: 0,
+      skillT: 0,
+      shieldHp: 0,
+      hardenUntil: 0,
+      sprintUntil: 0,
     };
   }
 
@@ -285,10 +291,12 @@ export class GameEngine {
     } else {
       this.lastBonus = 0;
     }
-    const def = this.map.waves[this.wave];
+    const waveIndex = this.wave;
+    const def = this.map.waves[waveIndex];
     this.spawnQueue = [];
     for (const g of def.groups) {
-      for (let i = 0; i < g.count; i++) {
+      const count = inflateSpawnCount(g.enemy, g.count, waveIndex);
+      for (let i = 0; i < count; i++) {
         this.spawnQueue.push({ t: g.delay + i * g.interval, type: g.enemy });
       }
     }
@@ -340,8 +348,7 @@ export class GameEngine {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       this.hurt(e, 36, "surge");
-      e.slowFactor = 0.38;
-      e.slowUntil = this.time + 2.8;
+      this.applySlow(e, 0.38, 2.8);
       n += 1;
     }
     this.addTrauma(0.42);
@@ -376,7 +383,10 @@ export class GameEngine {
     const idx = this.phase === "combat" ? this.wave - 1 : this.wave;
     const def = this.map.waves[idx];
     if (!def) return [] as { enemy: EnemyId; count: number }[];
-    return def.groups.map((g) => ({ enemy: g.enemy, count: g.count }));
+    return def.groups.map((g) => ({
+      enemy: g.enemy,
+      count: inflateSpawnCount(g.enemy, g.count, idx),
+    }));
   }
 
   placeOnPad(pad: number) {
@@ -590,7 +600,7 @@ export class GameEngine {
     }
   }
 
-  spawnEnemy(type: EnemyId) {
+  spawnEnemy(type: EnemyId, at?: { x: number; z: number; y: number; wp: number; progress: number; lane: number; gold?: number }) {
     const def = ENEMIES[type];
     const slot = this.enemies.find((e) => !e.alive);
     if (!slot) return;
@@ -605,24 +615,28 @@ export class GameEngine {
     slot.maxHp = Math.round(def.hp * waveScale);
     slot.hp = slot.maxHp;
     slot.speed = def.speed;
-    slot.gold = def.gold;
+    slot.gold = at?.gold ?? def.gold;
     slot.armor = def.armor;
     slot.flying = def.flying;
     slot.leak = def.leak;
     slot.scale = def.scale;
     slot.boss = !!def.boss;
-    slot.x = start.x + (ddx / dlen) * 0.6;
-    slot.z = start.z + (ddz / dlen) * 0.6;
-    slot.y = def.flying ? 1.55 : 0.28 * def.scale;
+    slot.x = at ? at.x : start.x + (ddx / dlen) * 0.6;
+    slot.z = at ? at.z : start.z + (ddz / dlen) * 0.6;
+    slot.y = at ? at.y : def.flying ? 1.55 : 0.28 * def.scale;
     slot.yaw = 0;
-    slot.wp = 1;
-    slot.progress = 0;
+    slot.wp = at ? at.wp : 1;
+    slot.progress = at ? at.progress : 0;
     slot.vx = 0;
     slot.vz = 0;
     slot.slowUntil = 0;
     slot.slowFactor = 1;
     slot.hitFlash = 0;
-    slot.lane = ((slot.slot % 5) - 2) * 0.16;
+    slot.lane = at ? at.lane : ((slot.slot % 5) - 2) * 0.16;
+    slot.skillT = 0;
+    slot.shieldHp = def.skill === "shield" ? (def.boss ? 90 : 32) : 0;
+    slot.hardenUntil = 0;
+    slot.sprintUntil = 0;
     this.spawnGen += 1;
     this.hudDirty = true;
   }
@@ -637,10 +651,13 @@ export class GameEngine {
       } else {
         e.slowFactor = 1;
       }
+      this.tickSkill(e, dt);
       if (e.wp >= wps.length) {
         this.leak(e);
         continue;
       }
+      const sprint = this.time < e.sprintUntil ? 1.55 : 1;
+      const pace = e.speed * e.slowFactor * sprint;
       const target = wps[e.wp];
       const prev = wps[Math.max(0, e.wp - 1)];
       const pdx = target.x - prev.x;
@@ -653,7 +670,7 @@ export class GameEngine {
       const dx = tx - e.x;
       const dz = tz - e.z;
       const dist = Math.hypot(dx, dz);
-      const step = e.speed * e.slowFactor * dt;
+      const step = pace * dt;
       if (dist <= step || dist < 0.04) {
         e.x = tx;
         e.z = tz;
@@ -663,8 +680,8 @@ export class GameEngine {
         continue;
       }
       const inv = 1 / dist;
-      e.vx = dx * inv * e.speed * e.slowFactor;
-      e.vz = dz * inv * e.speed * e.slowFactor;
+      e.vx = dx * inv * pace;
+      e.vz = dz * inv * pace;
       e.x += e.vx * dt;
       e.z += e.vz * dt;
       e.yaw = Math.atan2(dx, dz);
@@ -673,6 +690,35 @@ export class GameEngine {
         e.y = 1.55 + Math.sin(this.time * 3 + e.slot) * 0.08;
       }
     }
+  }
+
+  tickSkill(e: Enemy, dt: number) {
+    const def = ENEMIES[e.type];
+    const skill = def.skill;
+    if (!skill) return;
+    e.skillT += dt;
+    if (skill === "regen") {
+      const rate = e.boss ? 16 : def.flying ? 3.2 : 5.5;
+      if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + rate * dt);
+      return;
+    }
+    if (skill === "sprint") {
+      if (e.skillT >= 3.1) {
+        e.skillT = 0;
+        e.sprintUntil = this.time + 0.85;
+      }
+      return;
+    }
+    if (skill === "shield" && e.skillT >= 6.8) {
+      e.skillT = 0;
+      e.shieldHp = e.boss ? 90 : 32;
+    }
+  }
+
+  applySlow(e: Enemy, factor: number, duration: number) {
+    if (ENEMIES[e.type].immuneSlow) return;
+    e.slowFactor = factor;
+    e.slowUntil = this.time + duration;
   }
 
   leak(e: Enemy) {
@@ -912,25 +958,56 @@ export class GameEngine {
       if (!e.alive || e.flying) continue;
       if (dist2(x, z, e.x, e.z) <= r2) {
         this.hurt(e, b.damage, "shell");
-        if (b.slow > 0) {
-          e.slowFactor = b.slow;
-          e.slowUntil = this.time + b.slowTime;
-        }
+        if (b.slow > 0) this.applySlow(e, b.slow, b.slowTime);
       }
     }
   }
 
-  hurt(e: Enemy, raw: number, kind: string) {
+  hurt(e: Enemy, raw: number, kind: DamageKind | string) {
     if (!e.alive) return;
+    const def = ENEMIES[e.type];
     let armor = e.armor;
+    if (this.time < e.hardenUntil) armor += 5;
     if (kind === "rail" || kind === "chain") armor *= 0.35;
-    const dmg = Math.max(1, raw - armor);
+    const resist = def.resist?.[kind as DamageKind] ?? 1;
+    let dmg = Math.max(1, (raw - armor) * resist);
+    if (e.shieldHp > 0) {
+      const absorb = Math.min(e.shieldHp, dmg);
+      e.shieldHp -= absorb;
+      dmg -= absorb;
+      if (dmg <= 0) {
+        e.hitFlash = 0.45;
+        return;
+      }
+    }
     e.hp -= dmg;
     e.hitFlash = 1;
+    if (def.skill === "harden") e.hardenUntil = this.time + 2.2;
     if (e.hp <= 0) this.kill(e);
   }
 
   kill(e: Enemy) {
+    if (ENEMIES[e.type].skill === "split") {
+      const lane = e.lane;
+      this.spawnEnemy("mite", {
+        x: e.x + 0.18,
+        z: e.z,
+        y: e.y,
+        wp: e.wp,
+        progress: e.progress,
+        lane: lane + 0.12,
+        gold: 2,
+      });
+      this.spawnEnemy("mite", {
+        x: e.x - 0.18,
+        z: e.z,
+        y: e.y,
+        wp: e.wp,
+        progress: e.progress,
+        lane: lane - 0.12,
+        gold: 2,
+      });
+    }
     e.alive = false;
     if (this.time < this.comboUntil) this.combo = Math.min(8, this.combo + 1);
     else this.combo = 1;

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ArrowLeft, Check, Settings2 } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
-import { ENEMIES, PLANET_THEME } from "@/game/config";
+import { ENEMIES, inflateSpawnCount, PLANET_THEME } from "@/game/config";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
@@ -226,7 +226,7 @@ function Briefing() {
   const id = useGameStore((s) => s.mapId) ?? "mycelion";
   const m = MAPS[id];
   const first = m.waves[0].groups
-    .map((g) => `${ENEMIES[g.enemy].name} ×${g.count}`)
+    .map((g) => `${ENEMIES[g.enemy].name} ×${inflateSpawnCount(g.enemy, g.count, 0)}`)
     .join(", ");
   return (
     <Shell>
@@ -387,6 +387,8 @@ function Help() {
         </li>
         <li>
           <span className="text-fg">3. Air units</span> ignore pulse and frost. Lance, tesla, and rail cover the sky.
+          Each host also has its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split,
+          or shrug frost.
         </li>
         <li>
           <span className="text-fg">4. Linked batteries</span> of the same type within range deal 15% more damage. Rank 3

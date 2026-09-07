@@ -26,6 +26,8 @@ export type EnemyId =
   | "sovereign";
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
+export type DamageKind = ProjectileKind | "surge";
+export type EnemySkill = "regen" | "sprint" | "split" | "shield" | "harden";
 export type Screen =
   | "title"
   | "select"
@@ -72,6 +74,10 @@ export type EnemyDef = {
   scale: number;
   leak: number;
   boss?: boolean;
+  /** Damage multiplier after armor. Below 1 resists, above 1 is a weakness. */
+  resist?: Partial<Record<DamageKind, number>>;
+  immuneSlow?: boolean;
+  skill?: EnemySkill;
 };
 
 export type WaveGroup = {
@@ -124,6 +130,10 @@ export type Enemy = {
   slowFactor: number;
   hitFlash: number;
   lane: number;
+  skillT: number;
+  shieldHp: number;
+  hardenUntil: number;
+  sprintUntil: number;
 };
 
 export type Tower = {

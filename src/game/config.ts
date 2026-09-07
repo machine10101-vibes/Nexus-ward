@@ -1,4 +1,4 @@
-import type { EnemyDef, EnemyId, TowerDef, TowerId } from "./types";
+import type { DamageKind, EnemyDef, EnemyId, EnemySkill, TowerDef, TowerId } from "./types";
 
 export const CELL = 1.7;
 export const STEP = 1 / 60;
@@ -140,6 +140,23 @@ export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: st
   },
 };
 
+export const SKILL_COPY: Record<EnemySkill, string> = {
+  regen: "regenerates",
+  sprint: "speed bursts",
+  split: "splits on death",
+  shield: "recharging plate",
+  harden: "hardens when hit",
+};
+
+export const KIND_SHORT: Record<DamageKind, string> = {
+  bolt: "pulse",
+  shell: "frost",
+  beam: "lance",
+  rail: "rail",
+  chain: "tesla",
+  surge: "surge",
+};
+
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
   mite: {
     id: "mite",
@@ -152,6 +169,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 0.72,
     leak: 1,
+    skill: "sprint",
+    resist: { surge: 0.7, shell: 1.5 },
   },
   brood: {
     id: "brood",
@@ -164,6 +183,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1,
     leak: 1,
+    skill: "split",
+    resist: { bolt: 0.75, shell: 1.4 },
   },
   husk: {
     id: "husk",
@@ -176,6 +197,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.38,
     leak: 2,
+    skill: "harden",
+    resist: { bolt: 0.55, shell: 0.7, rail: 1.5 },
   },
   spore: {
     id: "spore",
@@ -188,6 +211,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 0.82,
     leak: 1,
+    skill: "regen",
+    resist: { chain: 0.65, beam: 1.5 },
   },
   titan: {
     id: "titan",
@@ -201,6 +226,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.2,
     leak: 5,
     boss: true,
+    skill: "regen",
+    resist: { bolt: 0.65, surge: 0.55, rail: 1.45 },
   },
   myrmidon: {
     id: "myrmidon",
@@ -213,6 +240,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.58,
     leak: 3,
+    skill: "harden",
+    resist: { bolt: 0.5, chain: 0.7, rail: 1.55 },
   },
   bloom: {
     id: "bloom",
@@ -225,6 +254,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 0.98,
     leak: 1,
+    skill: "sprint",
+    resist: { rail: 0.7, beam: 1.55 },
   },
   colossus: {
     id: "colossus",
@@ -238,6 +269,9 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.7,
     leak: 8,
     boss: true,
+    immuneSlow: true,
+    skill: "regen",
+    resist: { bolt: 0.5, shell: 0.6, surge: 0.4, rail: 1.6 },
   },
   drone: {
     id: "drone",
@@ -250,6 +284,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 0.76,
     leak: 1,
+    skill: "sprint",
+    resist: { shell: 0.7, chain: 1.5 },
   },
   walker: {
     id: "walker",
@@ -262,6 +298,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.12,
     leak: 1,
+    immuneSlow: true,
+    resist: { shell: 0.45, bolt: 0.75, rail: 1.5 },
   },
   siege: {
     id: "siege",
@@ -274,6 +312,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.42,
     leak: 2,
+    immuneSlow: true,
+    resist: { bolt: 0.5, shell: 0.4, rail: 1.55 },
   },
   gunship: {
     id: "gunship",
@@ -286,6 +326,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 0.92,
     leak: 1,
+    skill: "shield",
+    resist: { rail: 0.7, chain: 1.5 },
   },
   dread: {
     id: "dread",
@@ -299,6 +341,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.28,
     leak: 5,
     boss: true,
+    skill: "shield",
+    resist: { bolt: 0.55, chain: 0.6, rail: 1.5 },
   },
   bulwark: {
     id: "bulwark",
@@ -311,6 +355,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.58,
     leak: 3,
+    skill: "harden",
+    resist: { bolt: 0.4, shell: 0.45, chain: 0.55, rail: 1.6 },
   },
   razor: {
     id: "razor",
@@ -323,6 +369,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 1.02,
     leak: 1,
+    skill: "sprint",
+    resist: { beam: 0.7, chain: 1.5 },
   },
   leviathan: {
     id: "leviathan",
@@ -336,6 +384,9 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.75,
     leak: 8,
     boss: true,
+    immuneSlow: true,
+    skill: "shield",
+    resist: { bolt: 0.45, shell: 0.4, surge: 0.35, rail: 1.6 },
   },
   chimera: {
     id: "chimera",
@@ -348,6 +399,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.16,
     leak: 1,
+    skill: "regen",
+    resist: { beam: 0.7, shell: 1.35 },
   },
   wraith: {
     id: "wraith",
@@ -360,6 +413,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 0.88,
     leak: 1,
+    skill: "sprint",
+    resist: { rail: 0.65, beam: 1.5 },
   },
   overlord: {
     id: "overlord",
@@ -373,6 +428,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.45,
     leak: 6,
     boss: true,
+    skill: "shield",
+    resist: { bolt: 0.7, beam: 0.7, shell: 1.3, rail: 1.25 },
   },
   amalgam: {
     id: "amalgam",
@@ -385,6 +442,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: false,
     scale: 1.42,
     leak: 2,
+    skill: "regen",
+    resist: { beam: 0.6, bolt: 0.7, shell: 1.4 },
   },
   specter: {
     id: "specter",
@@ -397,6 +456,8 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     flying: true,
     scale: 1.02,
     leak: 1,
+    skill: "sprint",
+    resist: { rail: 0.6, beam: 1.55 },
   },
   sovereign: {
     id: "sovereign",
@@ -410,8 +471,38 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 2.9,
     leak: 9,
     boss: true,
+    immuneSlow: true,
+    skill: "shield",
+    resist: { bolt: 0.5, beam: 0.6, surge: 0.4, shell: 1.35, rail: 1.4 },
   },
 };
+
+export function inflateSpawnCount(enemy: EnemyId, base: number, waveIndex: number) {
+  if (ENEMIES[enemy].boss) return base;
+  return base + Math.floor(waveIndex / 3) + 1;
+}
+
+export function enemyTraitLine(def: EnemyDef) {
+  const resist = def.resist ?? {};
+  const strong = (Object.entries(resist) as [DamageKind, number][])
+    .filter(([, m]) => m < 0.85)
+    .map(([k]) => KIND_SHORT[k]);
+  const weak = (Object.entries(resist) as [DamageKind, number][])
+    .filter(([, m]) => m > 1.15)
+    .map(([k]) => KIND_SHORT[k]);
+  const bits: string[] = [];
+  if (def.skill) bits.push(SKILL_COPY[def.skill]);
+  if (def.immuneSlow) bits.push("slow-proof");
+  if (strong.length) bits.push(`resists ${strong.join("/")}`);
+  if (weak.length) bits.push(`weak to ${weak.join("/")}`);
+  return bits.join(" · ");
+}
+
+export function enemyTraitTag(def: EnemyDef) {
+  if (def.skill) return SKILL_COPY[def.skill];
+  if (def.immuneSlow) return "slow-proof";
+  return null;
+}
 
 export function upgradeCost(base: number, level: number) {
   return Math.round(base * 0.72 * level);

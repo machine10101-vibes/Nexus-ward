@@ -6,25 +6,34 @@ import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { MenuScene } from "./MenuScene";
 import { BattleScene } from "./BattleScene";
+import { StudioScene } from "./StudioScene";
 
 export function GameGL() {
   const screen = useGameStore((s) => s.screen);
   const quality = useGameStore((s) => s.settings.quality);
   const phase = useGameStore((s) => s.hud.phase);
   const overclock = useGameStore((s) => s.hud.overclockOn);
+  const inStudio = screen === "studio";
   const inBattle =
-    phase !== "idle" && screen !== "title" && screen !== "select" && screen !== "briefing";
+    phase !== "idle" &&
+    screen !== "title" &&
+    screen !== "select" &&
+    screen !== "briefing" &&
+    screen !== "studio";
+  const mode = inStudio ? "studio" : inBattle ? "battle" : "menu";
 
   return (
     <Canvas
-      key={`${inBattle ? "battle" : "menu"}-${quality}`}
+      key={`${mode}-${quality}`}
       className="h-full w-full touch-none"
       shadows={quality === "high"}
       dpr={quality === "high" ? [1, 1.75] : [1, 1.25]}
       camera={
-        inBattle
-          ? { position: [0, 15.5, 17.5], fov: 40, near: 0.1, far: 140 }
-          : { position: [0, 0.35, 8.2], fov: 40, near: 0.1, far: 90 }
+        inStudio
+          ? { position: [3.1, 2.15, 4.05], fov: 42, near: 0.08, far: 80 }
+          : inBattle
+            ? { position: [0, 15.5, 17.5], fov: 40, near: 0.1, far: 140 }
+            : { position: [0, 0.35, 8.2], fov: 40, near: 0.1, far: 90 }
       }
       gl={{
         antialias: quality === "high",
@@ -41,11 +50,11 @@ export function GameGL() {
         useGameStore.getState().syncHud();
       }}
     >
-      {inBattle ? <BattleScene /> : <MenuScene />}
+      {inStudio ? <StudioScene /> : inBattle ? <BattleScene /> : <MenuScene />}
       {quality === "high" ? (
         <EffectComposer enableNormalPass={false}>
           <Bloom
-            intensity={inBattle ? (overclock ? 0.72 : 0.52) : 0.78}
+            intensity={inStudio ? 0.42 : inBattle ? (overclock ? 0.72 : 0.52) : 0.78}
             luminanceThreshold={0.62}
             mipmapBlur
           />

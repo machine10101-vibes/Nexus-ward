@@ -40,6 +40,11 @@ type GameStore = {
   preview: MapId;
   helpFrom: Screen;
   settingsFrom: Screen;
+  studioFrom: Screen;
+  studioId: string;
+  studioVariant: number;
+  studioSpin: boolean;
+  studioFit: number;
   settings: Settings;
   completed: MapId[];
   hud: HudSnap;
@@ -49,6 +54,11 @@ type GameStore = {
   setPreview: (id: MapId) => void;
   openHelp: () => void;
   openSettings: () => void;
+  openStudio: () => void;
+  setStudioId: (id: string) => void;
+  setStudioVariant: (n: number) => void;
+  toggleStudioSpin: () => void;
+  fitStudio: () => void;
   closeOverlay: () => void;
   startBriefing: (id: MapId) => void;
   dropIn: () => void;
@@ -97,6 +107,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   preview: "mycelion",
   helpFrom: "title",
   settingsFrom: "title",
+  studioFrom: "title",
+  studioId: "pulse",
+  studioVariant: 3,
+  studioSpin: false,
+  studioFit: 0,
   settings: save.settings,
   completed: save.completed,
   hud: emptyHud,
@@ -109,10 +124,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   openHelp: () => set({ helpFrom: get().screen, screen: "help" }),
   openSettings: () => set({ settingsFrom: get().screen, screen: "settings" }),
+  openStudio: () => {
+    const { screen, studioFrom } = get();
+    if (screen === "studio") {
+      set({ screen: studioFrom === "studio" ? "title" : studioFrom });
+      return;
+    }
+    audio.ui();
+    set({ studioFrom: screen === "playing" ? "paused" : screen, screen: "studio" });
+  },
+  setStudioId: (studioId) => {
+    if (get().studioId === studioId) return;
+    set({ studioId, studioVariant: 3, studioFit: get().studioFit + 1 });
+  },
+  setStudioVariant: (studioVariant) => set({ studioVariant }),
+  toggleStudioSpin: () => set({ studioSpin: !get().studioSpin }),
+  fitStudio: () => set({ studioFit: get().studioFit + 1, studioSpin: false }),
   closeOverlay: () => {
-    const { screen, helpFrom, settingsFrom } = get();
+    const { screen, helpFrom, settingsFrom, studioFrom } = get();
     if (screen === "help") set({ screen: helpFrom });
     else if (screen === "settings") set({ screen: settingsFrom });
+    else if (screen === "studio") set({ screen: studioFrom === "studio" ? "title" : studioFrom });
   },
   startBriefing: (id) => {
     audio.ui();

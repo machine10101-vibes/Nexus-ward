@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -74,27 +72,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: _site
           force_orphan: true
-
-  enable-pages:
-    needs: publish-branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: Point GitHub Pages at gh-pages /
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -eu
-          payload='{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}'
-          if gh api "repos/$GH_REPO/pages" >/dev/null 2>&1; then
-            echo "Pages exists — keep legacy source on gh-pages /"
-            printf '%s' "$payload" | gh api --method PUT "repos/$GH_REPO/pages" --input -
-            exit 0
-          fi
-          echo "Creating Pages site from gh-pages /"
-          if printf '%s' "$payload" | gh api --method POST "repos/$GH_REPO/pages" --input -; then
-            exit 0
-          fi
-          echo "Retrying without build_type (older Pages API)"
-          printf '%s' '{"source":{"branch":"gh-pages","path":"/"}}' \
-            | gh api --method POST "repos/$GH_REPO/pages" --input -

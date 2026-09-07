@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import {
   AdditiveBlending,
@@ -32,6 +32,7 @@ import {
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
 import {
+  DecorField,
   DecorHybrid,
   DecorMech,
   DecorOrganic,
@@ -39,13 +40,15 @@ import {
   HexField,
   HexPad,
   Motes,
+  type FieldSpot,
   NexusCore,
   RangeRing,
   SpawnGate,
   TowerModel,
 } from "./models";
 import { PlanetGlobe } from "./Planet";
-import type { MapId, TowerId } from "@/game/types";
+import { cellToWorld } from "@/game/maps";
+import type { MapDef, MapId, TowerId } from "@/game/types";
 
 const FACTION_MARK = {
   organic: "#3dcaa0",
@@ -146,17 +149,41 @@ export function BattleScene() {
       <BurstLayer />
       <DecalLayer />
       <FloaterLayer />
-      <OrbitControls
-        makeDefault
-        enableDamping
-        dampingFactor={0.08}
-        minPolarAngle={0.48}
-        maxPolarAngle={1.12}
-        minDistance={12}
-        maxDistance={34}
-        target={[0, 0.2, 0]}
-      />
+      <CameraRig />
     </>
+  );
+}
+
+/** Frames the whole field for the current viewport, then hands the camera to orbit. */
+function CameraRig() {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const [dist, setDist] = useState(23);
+
+  useEffect(() => {
+    const map = engine.map;
+    const halfW = (map.cols * 1.7) / 2 + 1.4;
+    const halfD = (map.rows * 1.7) / 2 + 1.4;
+    const aspect = Math.max(0.35, size.width / Math.max(1, size.height));
+    const half = Math.tan((40 * Math.PI) / 360);
+    const need = Math.max(halfD / half, halfW / (half * aspect)) * 1.06;
+    const d = Math.min(46, Math.max(20, need));
+    setDist(d);
+    camera.position.set(0, d * 0.658, d * 0.753);
+    camera.updateProjectionMatrix();
+  }, [camera, size.width, size.height]);
+
+  return (
+    <OrbitControls
+      makeDefault
+      enableDamping
+      dampingFactor={0.08}
+      minPolarAngle={0.48}
+      maxPolarAngle={1.12}
+      minDistance={dist * 0.5}
+      maxDistance={dist * 1.5}
+      target={[0, 0.2, 0]}
+    />
   );
 }
 
@@ -178,8 +205,12 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   }, [map.id, engine.waypoints.length]);
 
   const skip = useMemo(() => new Set(map.path.map((p) => `${p.c},${p.r}`)), [map]);
-  const groundW = map.cols * 1.7 + 10;
-  const groundD = map.rows * 1.7 + 10;
+  // The arena floor is an ellipse around the whole play field, so the path ends
+  // (core and spawn gate) stand on flat ground instead of the outer hills.
+  const arenaR = (map.cols * 1.7) / 2 + 3.2;
+  const squash = ((map.rows * 1.7) / 2 + 3.2) / arenaR;
+  const groundW = map.cols * 1.7 + 18;
+  const groundD = map.rows * 1.7 + 18;
   const start = engine.startWorld();
   const end = engine.endWorld();
   const health = map.lives ? lives / map.lives : 1;
@@ -190,9 +221,10 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
     return { glow: new TubeGeometry(curve, 80, 0.62, 8, false) };
   }, [map.id, engine.waypoints.length]);
   const terrain = useMemo(
-    () => makeTerrain(groundW, groundD, theme.ground, theme.groundHi, mapId),
-    [groundW, groundD, theme.ground, theme.groundHi, mapId],
+    () => makeTerrain(groundW, groundD, arenaR, squash, theme.ground, theme.groundHi, mapId),
+    [groundW, groundD, arenaR, squash, theme.ground, theme.groundHi, mapId],
   );
+  const fieldProps = useMemo(() => freeCellProps(map), [map]);
 
   return (
     <>
@@ -234,12 +266,12 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
           vertexColors
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, 0]} receiveShadow>
-        <circleGeometry args={[11.8, 48]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.0, 0]} receiveShadow>
+        <circleGeometry args={[arenaR, 72]} />
         <meshStandardMaterial color={theme.groundHi} roughness={tune.groundRough * 0.9} metalness={tune.groundMetal + 0.08} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <ringGeometry args={[11.4, 12.15, 64]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.025, 0]}>
+        <ringGeometry args={[arenaR - 0.5, arenaR, 88]} />
         <meshStandardMaterial
           color={theme.padEmi}
           emissive={theme.padEmi}
@@ -248,8 +280,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
           opacity={0.7}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <torusGeometry args={[13.2, 0.035, 8, 80]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.03, 0]}>
+        <torusGeometry args={[arenaR + 1.3, 0.035, 8, 96]} />
         <meshStandardMaterial color={theme.padEmi} emissive={theme.padEmi} emissiveIntensity={0.45} metalness={0.5} roughness={0.3} />
       </mesh>
       <OverclockWash color={theme.padEmi} on={overclock} />
@@ -293,6 +325,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       ) : (
         <DecorHybrid seed={33} count={quality === "high" ? 30 : 18} />
       )}
+      <DecorField id={mapId} spots={fieldProps} />
       {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 32 : 48} /> : null}
       {quality === "high" ? (
         <Sparkles count={36} scale={[28, 6, 22]} size={2.2} speed={0.28} color={theme.pathEmissive} opacity={0.45} />
@@ -370,29 +403,63 @@ function SkyDome({
   );
 }
 
+/** Cells that hold neither path nor pad, thinned out so props never crowd the lanes. */
+function freeCellProps(map: MapDef) {
+  const taken = new Set<string>();
+  for (const p of map.path) taken.add(`${p.c},${p.r}`);
+  for (const p of map.pads) taken.add(`${p.c},${p.r}`);
+  const out: FieldSpot[] = [];
+  let s = 7;
+  const rand = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0xffffffff;
+  };
+  for (let r = 0; r < map.rows; r++) {
+    for (let c = 0; c < map.cols; c++) {
+      if (taken.has(`${c},${r}`)) continue;
+      const roll = rand();
+      const k = rand();
+      const a = rand() * Math.PI * 2;
+      if (roll > 0.22) continue;
+      const w = cellToWorld(c, r, map.cols, map.rows);
+      out.push({ x: w.x + (k - 0.5) * 1.5, z: w.z + (k - 0.5) * 1.5, k, a });
+    }
+  }
+  return out;
+}
+
 /** Terrain outside the arena. Each world folds differently: mounds, plates, or ridges. */
-function makeTerrain(w: number, d: number, low: string, high: string, style: MapId) {
-  const g = new PlaneGeometry(w, d, 42, 30);
+function makeTerrain(
+  w: number,
+  d: number,
+  arenaR: number,
+  squash: number,
+  low: string,
+  high: string,
+  style: MapId,
+) {
+  const g = new PlaneGeometry(w, d, 54, 40);
   g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position;
   const cols = new Float32Array(pos.count * 3);
   const a = new Color(low);
   const b = new Color(high);
   const tmp = new Color();
-  const amp = style === "forge" ? 1.15 : style === "aegis" ? 1.85 : 1.55;
+  const amp = style === "forge" ? 1.4 : style === "aegis" ? 2.3 : 1.9;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
-    const dist = Math.hypot(x, z);
-    const edge = Math.max(0, (dist - 8.2) / 11);
+    // Elliptical distance: 1 at the arena rim, so the play field stays perfectly flat.
+    const inset = Math.hypot(x / arenaR, z / (arenaR * squash));
+    const edge = Math.max(0, (inset - 1) * 1.9);
     let n =
       Math.sin(x * 0.16) * Math.cos(z * 0.13) * 0.7 +
       Math.sin(x * 0.41 + z * 0.28) * 0.28 +
       Math.sin(x * 0.07 + z * 0.09) * 1.15;
     if (style === "forge") n = Math.round(n * 1.7) / 1.7;
     else if (style === "aegis") n = Math.abs(n) * 1.25 - 0.35;
-    pos.setY(i, n * edge * amp + edge * 0.55 - 0.04);
-    const t = Math.min(1, dist / 16);
+    pos.setY(i, n * edge * amp + edge * 0.75 - 0.05);
+    const t = Math.min(1, edge * 0.9);
     tmp.copy(a).lerp(b, style === "aegis" ? t * (0.55 + Math.abs(n) * 0.45) : t);
     cols[i * 3] = tmp.r;
     cols[i * 3 + 1] = tmp.g;
@@ -1154,11 +1221,13 @@ function FloaterLayer() {
       const g = refs.current[i];
       if (!g) continue;
       g.visible = f.alive;
+      const el = labels.current[i];
+      // drei's Html portals outside the scene graph, so hide the label explicitly.
+      if (el) el.style.display = f.alive ? "" : "none";
       if (!f.alive) continue;
       g.position.set(f.x, f.y + 0.15, f.z);
       const k = Math.max(0, Math.min(1, f.ttl / 0.7));
       g.scale.setScalar(0.75 + k * 0.35);
-      const el = labels.current[i];
       if (el) {
         if (el.textContent !== f.text) el.textContent = f.text;
         el.style.opacity = String(Math.min(1, k * 1.4));
@@ -1181,6 +1250,7 @@ function FloaterLayer() {
                 labels.current[f.slot] = el;
               }}
               className="hud-floater"
+              style={{ display: "none" }}
             >
               +0
             </span>

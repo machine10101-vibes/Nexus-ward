@@ -2,7 +2,11 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main, cursor/nexus-ward-polish-pass-ef54, cursor/terrain-planet-visuals-ef54, cursor/model-studio-ef54, cursor/late-wave-hosts-ef54, cursor/host-traits-pressure-ef54, cursor/planet-host-visuals-ef54, cursor/wave-pressure-ramp-ef54]
+    # Every stacked cursor/* push rebuilds and publishes the playable site.
+    # Do not list branches by hand — new agent branches must go live on push.
+    branches:
+      - main
+      - "cursor/**"
   workflow_dispatch:
 
 permissions:

@@ -26,7 +26,8 @@ export type Screen =
   | "won"
   | "lost"
   | "help"
-  | "settings";
+  | "settings"
+  | "studio";
 export type Quality = "high" | "low";
 
 export type Cell = { c: number; r: number };

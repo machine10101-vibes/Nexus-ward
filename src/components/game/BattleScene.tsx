@@ -117,7 +117,13 @@ export function BattleScene() {
   const quality = useGameStore((s) => s.settings.quality);
   const shake = useGameStore((s) => s.settings.shake);
   const screen = useGameStore((s) => s.screen);
-  const paused = screen === "paused" || screen === "won" || screen === "lost" || screen === "help" || screen === "settings";
+  const paused =
+    screen === "paused" ||
+    screen === "won" ||
+    screen === "lost" ||
+    screen === "help" ||
+    screen === "settings" ||
+    screen === "studio";
 
   useFrame((state, dt) => {
     engine.update(dt, paused);

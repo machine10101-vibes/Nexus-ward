@@ -9,10 +9,12 @@ import { loadSave } from "@/game/save";
 import type { MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/asset";
+import { STUDIO_CATALOG, studioEntry } from "./studioCatalog";
 
 export function Overlays() {
   const screen = useGameStore((s) => s.screen);
   if (screen === "playing") return null;
+  if (screen === "studio") return <StudioOverlay />;
   return (
     <div className="absolute inset-0 z-20 overflow-y-auto">
       {screen === "title" && <Title />}
@@ -79,6 +81,16 @@ function Title() {
             }}
           >
             How to hold
+          </button>
+          <button
+            type="button"
+            className="h-12 rounded-xl border border-border px-6 font-display text-sm text-fg transition-colors duration-[var(--motion-quick)] hover:border-border-strong"
+            onClick={() => {
+              audio.unlock();
+              useGameStore.getState().openStudio();
+            }}
+          >
+            Model studio
           </button>
           <button
             type="button"
@@ -285,6 +297,13 @@ function Paused() {
           </button>
           <button
             type="button"
+            className="h-11 rounded-lg border border-border text-sm text-fg"
+            onClick={() => useGameStore.getState().openStudio()}
+          >
+            Model studio
+          </button>
+          <button
+            type="button"
             className="h-11 rounded-lg border border-border text-sm text-muted"
             onClick={() => useGameStore.getState().abortToSelect()}
           >
@@ -418,6 +437,13 @@ function Settings() {
       </div>
       <button
         type="button"
+        className="mt-5 h-11 w-full rounded-lg border border-border text-sm text-fg"
+        onClick={() => useGameStore.getState().openStudio()}
+      >
+        Open model studio
+      </button>
+      <button
+        type="button"
         className="mt-6 h-11 w-full rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
         onClick={() => useGameStore.getState().closeOverlay()}
       >
@@ -444,6 +470,97 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
         className="w-full accent-accent"
       />
     </label>
+  );
+}
+
+function StudioOverlay() {
+  const id = useGameStore((s) => s.studioId);
+  const variant = useGameStore((s) => s.studioVariant);
+  const spin = useGameStore((s) => s.studioSpin);
+  const entry = studioEntry(id);
+  let lastGroup = "";
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <div className="pointer-events-auto absolute inset-x-0 top-0 flex items-center gap-3 bg-gradient-to-b from-bg from-40% to-transparent px-4 py-3 pl-[13.5rem] sm:pl-[15.5rem]">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-2xs uppercase tracking-label text-accent">Inspect</p>
+          <p className="truncate font-display text-lg leading-tight">{entry.name}</p>
+          <p className="mt-0.5 hidden text-xs text-muted sm:block">{entry.blurb}</p>
+        </div>
+        <p className="hidden text-2xs text-subtle lg:block">
+          Drag to orbit · Scroll to zoom · Esc to close · V to toggle
+        </p>
+        <button
+          type="button"
+          className="h-9 rounded-lg border border-border px-3 text-sm text-fg"
+          onClick={() => useGameStore.getState().closeOverlay()}
+        >
+          Close
+        </button>
+      </div>
+      <aside className="pointer-events-auto absolute bottom-3 left-3 top-3 w-48 overflow-y-auto rounded-xl border border-border bg-surface/92 p-2 sm:w-56">
+        <p className="px-2 pb-2 font-display text-2xs uppercase tracking-label text-muted">Models</p>
+        {STUDIO_CATALOG.map((item) => {
+          const head = item.group !== lastGroup;
+          lastGroup = item.group;
+          return (
+            <div key={item.id}>
+              {head ? (
+                <p className="mt-2 px-2 pb-1 font-display text-2xs uppercase tracking-label text-subtle first:mt-0">
+                  {item.group}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => useGameStore.getState().setStudioId(item.id)}
+                className={cn(
+                  "mb-0.5 w-full rounded-lg px-2 py-1.5 text-left text-sm transition-colors duration-[var(--motion-quick)]",
+                  item.id === id ? "bg-accent text-accent-fg" : "text-fg hover:bg-surface-2",
+                )}
+              >
+                {item.name}
+              </button>
+            </div>
+          );
+        })}
+      </aside>
+      <div className="pointer-events-auto absolute bottom-3 left-52 right-3 flex flex-wrap items-center justify-between gap-2 sm:left-60">
+        <div className="flex flex-wrap gap-1.5">
+          {entry.variants?.map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => useGameStore.getState().setStudioVariant(i + 1)}
+              className={cn(
+                "h-9 rounded-lg border px-3 text-xs",
+                variant === i + 1 ? "border-accent bg-accent text-accent-fg" : "border-border bg-surface/80 text-fg",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => useGameStore.getState().toggleStudioSpin()}
+            className={cn(
+              "h-9 rounded-lg border px-3 text-xs",
+              spin ? "border-accent bg-accent text-accent-fg" : "border-border bg-surface/80 text-fg",
+            )}
+          >
+            Spin
+          </button>
+          <button
+            type="button"
+            onClick={() => useGameStore.getState().fitStudio()}
+            className="h-9 rounded-lg border border-border bg-surface/80 px-3 text-xs text-fg"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

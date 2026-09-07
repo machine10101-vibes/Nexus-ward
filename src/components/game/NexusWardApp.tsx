@@ -35,7 +35,13 @@ export function NexusWardApp() {
             s.pause();
           }
         } else if (s.screen === "paused") s.resume();
-        else if (s.screen === "help" || s.screen === "settings") s.closeOverlay();
+        else if (s.screen === "help" || s.screen === "settings" || s.screen === "studio") s.closeOverlay();
+        return;
+      }
+      if (e.code === "KeyV" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const t = e.target as HTMLElement | null;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+        s.openStudio();
         return;
       }
       if (s.screen !== "playing") return;

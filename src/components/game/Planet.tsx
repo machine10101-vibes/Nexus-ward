@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { BackSide, Color, SRGBColorSpace, type Mesh, type ShaderMaterial, type Texture } from "three";
 import type { MapId } from "@/game/types";
+import { asset } from "@/lib/asset";
 
 const vert = /* glsl */ `
 varying vec3 vN;
@@ -79,9 +80,9 @@ function prep(tex: Texture) {
 
 export function usePlanetMaps() {
   const [mycelion, forge, aegis] = useTexture([
-    "/textures/mycelion-planet.jpg",
-    "/textures/forge-planet.jpg",
-    "/textures/aegis-planet.jpg",
+    asset("/textures/mycelion-planet.jpg"),
+    asset("/textures/forge-planet.jpg"),
+    asset("/textures/aegis-planet.jpg"),
   ]) as Texture[];
   useLayoutEffect(() => {
     [mycelion, forge, aegis].forEach(prep);

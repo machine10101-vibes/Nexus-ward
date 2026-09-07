@@ -8,6 +8,7 @@ import { audio } from "@/game/audio";
 import { loadSave } from "@/game/save";
 import type { MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
+import { asset } from "@/lib/asset";
 
 export function Overlays() {
   const screen = useGameStore((s) => s.screen);
@@ -162,7 +163,7 @@ function Select() {
  * that margin away — otherwise every world shrinks into the same dark dot.
  */
 function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
-  const src = `url(/textures/${id}-planet.jpg)`;
+  const src = `url(${asset(`/textures/${id}-planet.jpg`)})`;
   const rim = PLANET_THEME[id].padEmi;
   return (
     <div className="relative h-28 overflow-hidden rounded-lg bg-bg">

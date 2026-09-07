@@ -4,7 +4,9 @@ A 3D space tower defense game. Hold planetary cores on Mycelion, Kron Forge, and
 
 ## Play
 
-Open the live deployment and drop in. No account required. Progress is saved in the browser.
+**Live:** https://machine10101-vibes.github.io/Nexus-ward/
+
+Open that link and drop in. No account required. Progress is saved in the browser.
 
 ## How to hold
 

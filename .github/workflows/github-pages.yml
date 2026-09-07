@@ -1,0 +1,67 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main, cursor/nexus-ward-polish-pass-ef54]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build static playable site
+        run: npm run build:pages
+        env:
+          GITHUB_PAGES: "1"
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          VITE_AUTH_ENABLED: "false"
+      - name: Collect public files
+        run: |
+          set -eu
+          if [ -d .output/public ]; then
+            SITE=.output/public
+          elif [ -d dist ]; then
+            SITE=dist
+          else
+            echo "No static output found" >&2
+            ls -la
+            exit 1
+          fi
+          mkdir -p _site
+          cp -a "$SITE"/. _site/
+          # GitHub Pages 404s unknown paths; copy the shell so /Nexus-ward/* still loads the game.
+          if [ -f _site/index.html ]; then
+            cp _site/index.html _site/404.html
+          elif [ -f _site/_shell.html ]; then
+            cp _site/_shell.html _site/index.html
+            cp _site/_shell.html _site/404.html
+          fi
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

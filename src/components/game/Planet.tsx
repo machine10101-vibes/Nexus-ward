@@ -44,7 +44,11 @@ float noise(vec3 p) {
         mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
 }
 void main() {
-  vec3 crust = texture2D(crustMap, vUv * vec2(2.6, 1.55)).rgb;
+  vec3 pn = abs(normalize(vP));
+  pn /= (pn.x + pn.y + pn.z + 1e-4);
+  vec3 crust = texture2D(crustMap, vP.yz * 0.38).rgb * pn.x
+             + texture2D(crustMap, vP.xz * 0.38).rgb * pn.y
+             + texture2D(crustMap, vP.xy * 0.38).rgb * pn.z;
   crust = crust * 1.28 + 0.03;
   float n = noise(vP * 1.28);
   n += 0.48 * noise(vP * 2.7 + time * 0.01);

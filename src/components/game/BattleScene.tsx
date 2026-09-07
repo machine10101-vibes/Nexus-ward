@@ -204,7 +204,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
     const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
     const tube = new TubeGeometry(curve, 120, 0.32, 8, false);
     const rails = new TubeGeometry(curve, 120, 0.09, 6, false);
-    const bed = new TubeGeometry(curve, 80, 0.58, 8, false);
+    const bed = new TubeGeometry(curve, 80, 0.5, 8, false);
     return { tube, rails, bed };
   }, [map.id, engine.waypoints.length]);
 
@@ -276,7 +276,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         </mesh>
       ) : null}
       {bed ? (
-        <mesh geometry={bed} position={[0, -0.06, 0]} receiveShadow>
+        <mesh geometry={bed} position={[0, -0.28, 0]} receiveShadow>
           <meshStandardMaterial color={theme.ground} roughness={0.92} metalness={tune.groundMetal * 0.5} />
         </mesh>
       ) : null}

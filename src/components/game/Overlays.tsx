@@ -391,12 +391,15 @@ function Help() {
           or shrug frost.
         </li>
         <li>
-          <span className="text-fg">4. Linked batteries</span> of the same type within range deal 15% more damage. Rank 3
-          unlocks a unique overdrive per battery.
+          <span className="text-fg">4. Linked batteries</span> of the same type within range deal 15% more damage. Each
+          rank changes that battery's silhouette. Rank 3 unlocks a unique overdrive.
         </li>
         <li>
           <span className="text-fg">5. Surge (Q)</span> slams every host on the grid.{" "}
           <span className="text-fg">Overclock (E)</span> haste-fires the line.
+        </li>
+        <li>
+          <span className="text-fg">6. Extra gates</span> open every 10 incursions, each with a new path into the core.
         </li>
       </ol>
       <div className="mt-5 rounded-lg border border-border p-2">

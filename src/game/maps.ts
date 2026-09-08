@@ -81,11 +81,31 @@ const mycelionPath = stitch([
   [15, 9],
 ]);
 
+const mycelionBranch = stitch([
+  [0, 8],
+  [2, 8],
+  [8, 8],
+  [8, 3],
+  [13, 3],
+  [13, 7],
+  [10, 7],
+  [10, 9],
+  [15, 9],
+]);
+
 const forgePath = stitch([
   [0, 2],
   [12, 2],
   [12, 5],
   [3, 5],
+  [3, 8],
+  [14, 8],
+  [14, 5],
+  [15, 5],
+]);
+
+const forgeBranch = stitch([
+  [0, 8],
   [3, 8],
   [14, 8],
   [14, 5],
@@ -103,6 +123,30 @@ const aegisPath = stitch([
   [15, 4],
 ]);
 
+const aegisBranch = stitch([
+  [0, 2],
+  [4, 2],
+  [9, 2],
+  [9, 9],
+  [13, 9],
+  [13, 4],
+  [15, 4],
+]);
+
+export function unionCells(...paths: Cell[][]): Cell[] {
+  const seen = new Set<string>();
+  const out: Cell[] = [];
+  for (const path of paths) {
+    for (const p of path) {
+      const k = `${p.c},${p.r}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(p);
+    }
+  }
+  return out;
+}
+
 export const MAPS: Record<MapId, MapDef> = {
   mycelion: {
     id: "mycelion",
@@ -110,11 +154,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Organic world",
     faction: "organic",
     lore: "A living planet of fungal canyons and bioluminescent marrow. The swarm is not an invasion so much as the lattice reclaiming a core we planted in its heart.",
-    hint: "Ground packs hit first. Bring a lance before spores take the air. After the Titan, Myrmidons and Blooms keep coming. Frost melts mites; rails crack husks and Myrmidons.",
+    hint: "Ground packs hit first. Bring a lance before spores take the air. After the Titan, Myrmidons and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons.",
     cols: COLS,
     rows: ROWS,
     path: mycelionPath,
-    pads: padsFromPath(mycelionPath, COLS, ROWS, 22),
+    branches: [mycelionBranch],
+    pads: padsFromPath(unionCells(mycelionPath, mycelionBranch), COLS, ROWS, 22),
     startGold: 220,
     lives: 20,
     waves: [
@@ -259,11 +304,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Mechanical world",
     faction: "mech",
     lore: "An industrial planet that smelts warships for the outer fleets. The foundry AIs have recast the nexus as raw stock — and dispatched the line to reclaim it.",
-    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Late waves bring Bulwarks and Razors. Walkers shrug frost; tesla shreds drones and Razors.",
+    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Late waves bring Bulwarks and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors.",
     cols: COLS,
     rows: ROWS,
     path: forgePath,
-    pads: padsFromPath(forgePath, COLS, ROWS, 20),
+    branches: [forgeBranch],
+    pads: padsFromPath(unionCells(forgePath, forgeBranch), COLS, ROWS, 20),
     startGold: 240,
     lives: 18,
     waves: [
@@ -409,11 +455,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Hybrid world",
     faction: "hybrid",
     lore: "A collision world — living tissue welded to machine along a scar of light. Nothing here agrees what it is. Everything agrees the core must fall.",
-    hint: "Both kingdoms come at once. Mix slow control with air cover. The second half fuses Amalgams and Specters. Each hybrid resists one plate and folds to another — mix the line.",
+    hint: "Both kingdoms come at once. Mix slow control with air cover. The second half fuses Amalgams and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line.",
     cols: COLS,
     rows: ROWS,
     path: aegisPath,
-    pads: padsFromPath(aegisPath, COLS, ROWS, 22),
+    branches: [aegisBranch],
+    pads: padsFromPath(unionCells(aegisPath, aegisBranch), COLS, ROWS, 22),
     startGold: 260,
     lives: 16,
     waves: [

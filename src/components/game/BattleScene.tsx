@@ -42,7 +42,7 @@ import { PlanetGlobe } from "./Planet";
 import { PathLane } from "./PathLane";
 import { WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
-import { cellToWorld } from "@/game/maps";
+import { cellToWorld, unionCells } from "@/game/maps";
 import type { MapDef, MapId, TowerId } from "@/game/types";
 
 const FACTION_MARK = {
@@ -198,12 +198,19 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const lives = useGameStore((s) => s.hud.lives);
   const leaked = useGameStore((s) => s.hud.leaked);
   const overclock = useGameStore((s) => s.hud.overclockOn);
-  const combat = useGameStore((s) => s.hud.phase) === "combat";
-  const skip = useMemo(() => new Set(map.path.map((p) => `${p.c},${p.r}`)), [map]);
-  const start = engine.startWorld();
+  const phase = useGameStore((s) => s.hud.phase);
+  const wave = useGameStore((s) => s.hud.wave);
+  const combat = phase === "combat";
+  const skip = useMemo(() => {
+    const cells = unionCells(map.path, ...(map.branches ?? []));
+    return new Set(cells.map((p) => `${p.c},${p.r}`));
+  }, [map]);
   const end = engine.endWorld();
   const health = map.lives ? lives / map.lives : 1;
   const fieldProps = useMemo(() => freeCellProps(map), [map]);
+  const pathCount = useMemo(() => engine.activePathCount(), [wave, phase]);
+  const activePaths = engine.paths.slice(0, pathCount);
+  const keepClear = useMemo(() => engine.paths.flat(), [map]);
 
   return (
     <>
@@ -228,7 +235,19 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       <directionalLight position={[-10, 5, -8]} intensity={tune.fill} color={theme.hemiSky} />
       <pointLight position={[0, 3.4, -12]} intensity={tune.rimIntensity} distance={30} color={tune.rimLight} />
       <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={theme.core} />
-      <pointLight position={[start.x, 2.2, start.z]} intensity={14} distance={8} color={theme.pathEmissive} />
+      {activePaths.map((pts, i) => {
+        const gate = pts[0];
+        if (!gate) return null;
+        return (
+          <pointLight
+            key={`gate-light-${i}`}
+            position={[gate.x, 2.2, gate.z]}
+            intensity={14}
+            distance={8}
+            color={theme.pathEmissive}
+          />
+        );
+      })}
       {overclock ? <pointLight position={[0, 6, 0]} intensity={48} distance={34} color="#d7e6ee" /> : null}
       {quality === "high" ? <Stars radius={90} depth={28} count={900} factor={2.4} fade speed={0.16} /> : null}
       <WorldGround
@@ -243,27 +262,35 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         roughness={tune.groundRough}
         metalness={tune.groundMetal}
         combat={combat}
-        keepClear={engine.waypoints}
+        keepClear={keepClear}
       />
       <group position={[-11, 8.5, -22]} scale={1.05}>
         <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
       </group>
       <OverclockWash color={theme.padEmi} on={overclock} />
       <HexField cols={map.cols} rows={map.rows} color={theme.pad} accent={theme.padEmi} skip={skip} />
-      <PathLane
-        key={map.id}
-        points={engine.waypoints}
-        mapId={mapId}
-        ground={art.ground}
-        metalness={tune.pathMetal * 0.18}
-        roughness={Math.min(0.97, tune.pathRough + 0.28)}
-      />
+      {activePaths.map((pts, i) => (
+        <PathLane
+          key={`${map.id}-lane-${i}`}
+          points={pts}
+          mapId={mapId}
+          ground={art.ground}
+          metalness={tune.pathMetal * 0.18}
+          roughness={Math.min(0.97, tune.pathRough + 0.28)}
+        />
+      ))}
       <group position={[end.x, 0, end.z]}>
         <NexusCore color={theme.core} health={health} hitGen={leaked} />
       </group>
-      <group position={[start.x, 0, start.z]}>
-        <SpawnGate color={theme.pathEmissive} />
-      </group>
+      {activePaths.map((pts, i) => {
+        const gate = pts[0];
+        if (!gate) return null;
+        return (
+          <group key={`${map.id}-gate-${i}`} position={[gate.x, 0, gate.z]}>
+            <SpawnGate color={theme.pathEmissive} />
+          </group>
+        );
+      })}
       {mapId === "mycelion" ? (
         <DecorOrganic seed={11} count={quality === "high" ? 30 : 18} />
       ) : mapId === "forge" ? (
@@ -306,7 +333,7 @@ function OverclockWash({ color, on }: { color: string; on: boolean }) {
 /** Cells that hold neither path nor pad, thinned out so props never crowd the lanes. */
 function freeCellProps(map: MapDef) {
   const taken = new Set<string>();
-  for (const p of map.path) taken.add(`${p.c},${p.r}`);
+  for (const p of unionCells(map.path, ...(map.branches ?? []))) taken.add(`${p.c},${p.r}`);
   for (const p of map.pads) taken.add(`${p.c},${p.r}`);
   const out: FieldSpot[] = [];
   let s = 7;

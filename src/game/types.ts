@@ -10,6 +10,7 @@ export type EnemyId =
   | "myrmidon"
   | "bloom"
   | "colossus"
+  | "thorn"
   | "drone"
   | "walker"
   | "siege"
@@ -18,12 +19,14 @@ export type EnemyId =
   | "bulwark"
   | "razor"
   | "leviathan"
+  | "sentry"
   | "chimera"
   | "wraith"
   | "overlord"
   | "amalgam"
   | "specter"
-  | "sovereign";
+  | "sovereign"
+  | "relic";
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type DamageKind = ProjectileKind | "surge";

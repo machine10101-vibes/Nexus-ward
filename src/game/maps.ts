@@ -154,7 +154,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Organic world",
     faction: "organic",
     lore: "A living planet of fungal canyons and bioluminescent marrow. The swarm is not an invasion so much as the lattice reclaiming a core we planted in its heart.",
-    hint: "Ground packs hit first. Bring a lance before spores take the air. After the Titan, Myrmidons and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons.",
+    hint: "Ground packs hit first. Bring a lance before spores take the air. After the Titan, Myrmidons, Thorns, and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons.",
     cols: COLS,
     rows: ROWS,
     path: mycelionPath,
@@ -222,6 +222,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "myrmidon", count: 5, interval: 1.05, delay: 0 },
+          { enemy: "thorn", count: 4, interval: 1.1, delay: 0.6 },
           { enemy: "mite", count: 14, interval: 0.32, delay: 0.5 },
           { enemy: "husk", count: 4, interval: 1.1, delay: 1.4 },
           { enemy: "brood", count: 8, interval: 0.4, delay: 1 },
@@ -238,6 +239,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "myrmidon", count: 8, interval: 0.82, delay: 0 },
+          { enemy: "thorn", count: 6, interval: 0.9, delay: 0.5 },
           { enemy: "brood", count: 10, interval: 0.4, delay: 0.8 },
           { enemy: "bloom", count: 10, interval: 0.42, delay: 1.1 },
         ],
@@ -259,6 +261,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "myrmidon", count: 10, interval: 0.72, delay: 0 },
+          { enemy: "thorn", count: 8, interval: 0.72, delay: 1.1 },
           { enemy: "spore", count: 10, interval: 0.4, delay: 0.8 },
           { enemy: "bloom", count: 8, interval: 0.42, delay: 1.2 },
           { enemy: "husk", count: 6, interval: 0.9, delay: 1.5 },
@@ -304,7 +307,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Mechanical world",
     faction: "mech",
     lore: "An industrial planet that smelts warships for the outer fleets. The foundry AIs have recast the nexus as raw stock — and dispatched the line to reclaim it.",
-    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Late waves bring Bulwarks and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors.",
+    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Late waves bring Bulwarks, Sentries, and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors.",
     cols: COLS,
     rows: ROWS,
     path: forgePath,
@@ -373,6 +376,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "bulwark", count: 5, interval: 1.1, delay: 0 },
+          { enemy: "sentry", count: 4, interval: 1.15, delay: 0.6 },
           { enemy: "drone", count: 12, interval: 0.32, delay: 0.4 },
           { enemy: "walker", count: 6, interval: 0.5, delay: 1.2 },
         ],
@@ -388,6 +392,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "bulwark", count: 8, interval: 0.95, delay: 0 },
+          { enemy: "sentry", count: 6, interval: 0.95, delay: 0.5 },
           { enemy: "walker", count: 8, interval: 0.45, delay: 0.8 },
           { enemy: "razor", count: 8, interval: 0.45, delay: 1.2 },
         ],
@@ -410,6 +415,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "bulwark", count: 12, interval: 0.7, delay: 0 },
+          { enemy: "sentry", count: 8, interval: 0.75, delay: 1.1 },
           { enemy: "gunship", count: 8, interval: 0.4, delay: 0.8 },
           { enemy: "razor", count: 8, interval: 0.4, delay: 1.2 },
         ],
@@ -455,7 +461,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Hybrid world",
     faction: "hybrid",
     lore: "A collision world — living tissue welded to machine along a scar of light. Nothing here agrees what it is. Everything agrees the core must fall.",
-    hint: "Both kingdoms come at once. Mix slow control with air cover. The second half fuses Amalgams and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line.",
+    hint: "Both kingdoms come at once. Mix slow control with air cover. The second half fuses Amalgams, Relics, and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line.",
     cols: COLS,
     rows: ROWS,
     path: aegisPath,
@@ -541,6 +547,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "amalgam", count: 24, interval: 0.55, delay: 0 },
+          { enemy: "relic", count: 6, interval: 0.7, delay: 0.4 },
           { enemy: "chimera", count: 12, interval: 0.38, delay: 0.5 },
           { enemy: "husk", count: 8, interval: 0.9, delay: 1 },
         ],
@@ -556,6 +563,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "amalgam", count: 21, interval: 0.6, delay: 0 },
+          { enemy: "relic", count: 8, interval: 0.65, delay: 0.5 },
           { enemy: "siege", count: 4, interval: 1.05, delay: 0.7 },
           { enemy: "husk", count: 4, interval: 1.05, delay: 1 },
         ],
@@ -578,6 +586,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "amalgam", count: 29, interval: 0.45, delay: 0 },
+          { enemy: "relic", count: 8, interval: 0.55, delay: 0.8 },
           { enemy: "wraith", count: 8, interval: 0.38, delay: 0.6 },
           { enemy: "walker", count: 6, interval: 0.45, delay: 1 },
           { enemy: "specter", count: 6, interval: 0.4, delay: 1.2 },

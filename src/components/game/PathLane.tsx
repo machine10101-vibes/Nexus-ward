@@ -46,7 +46,7 @@ export function PathLane({
       <mesh geometry={lane} receiveShadow>
         <meshStandardMaterial
           map={laneMap}
-          color={mapId === "forge" ? "#b08968" : mapId === "aegis" ? "#8b97a0" : "#7d8a78"}
+          color={mapId === "forge" ? "#8a6a4e" : mapId === "aegis" ? "#6e7880" : "#4f5c50"}
           roughness={roughness}
           metalness={metalness}
           vertexColors

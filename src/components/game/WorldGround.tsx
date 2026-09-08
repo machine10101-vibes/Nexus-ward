@@ -88,7 +88,7 @@ function makeBowl(arenaR: number, squash: number, style: MapId) {
   const pos = g.attributes.position;
   const cols = new Float32Array(pos.count * 3);
   const uv = g.attributes.uv;
-  const tile = style === "forge" ? 5.2 : style === "aegis" ? 4.6 : 4.4;
+  const tile = style === "forge" ? 3.2 : style === "aegis" ? 2.9 : 2.8;
   for (let i = 0; i < pos.count; i++) {
     // Circle sits in XY before we rotate it in the mesh.
     const x = pos.getX(i);
@@ -223,21 +223,25 @@ export function WorldGround({
           tint="#e8e4dc"
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.028, 0]}>
-        <ringGeometry args={[arenaR - 0.55, arenaR + 0.08, 96]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.02, 0]}>
+        <ringGeometry args={[arenaR - 0.62, arenaR + 0.22, 96]} />
         <meshStandardMaterial
-          color={emissive}
+          color={mapId === "forge" ? "#2c221c" : mapId === "aegis" ? "#1c242c" : "#1a241e"}
+          roughness={0.9}
+          metalness={0.12}
           emissive={emissive}
-          emissiveIntensity={combat ? 0.28 : 0.16}
-          transparent
-          opacity={0.78}
-          roughness={0.35}
-          metalness={0.4}
+          emissiveIntensity={combat ? 0.06 : 0.035}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.034, 0]}>
-        <torusGeometry args={[arenaR + 1.15, 0.04, 8, 96]} />
-        <meshStandardMaterial color={emissive} emissive={emissive} emissiveIntensity={0.22} metalness={0.55} roughness={0.28} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.03, 0]}>
+        <torusGeometry args={[arenaR + 1.15, 0.05, 8, 96]} />
+        <meshStandardMaterial
+          color={mapId === "forge" ? "#3a2c22" : mapId === "aegis" ? "#2a343c" : "#243028"}
+          roughness={0.84}
+          metalness={0.18}
+          emissive={emissive}
+          emissiveIntensity={0.04}
+        />
       </mesh>
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
@@ -354,7 +358,7 @@ function HorizonHaze({
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.16, 0]}>
         <ringGeometry args={[arenaR + 6.2, arenaR + 11, 64]} />
-        <meshBasicMaterial color={accent} transparent opacity={0.045} depthWrite={false} blending={AdditiveBlending} />
+        <meshBasicMaterial color={accent} transparent opacity={0.02} depthWrite={false} blending={AdditiveBlending} />
       </mesh>
     </group>
   );

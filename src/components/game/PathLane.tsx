@@ -57,7 +57,7 @@ export function PathLane({
       <mesh geometry={lane} receiveShadow>
         <meshStandardMaterial
           map={laneMap}
-          color={mapId === "forge" ? "#8a6a4e" : mapId === "aegis" ? "#6e7880" : "#4f5c50"}
+          color={mapId === "forge" ? "#9a7454" : mapId === "aegis" ? "#76828a" : "#566458"}
           roughness={roughness}
           metalness={metalness}
           vertexColors
@@ -101,7 +101,7 @@ function buildLane(points: Waypoint[], mapId: MapId) {
   const pts = points.map((w) => new Vector3(w.x, 0, w.z));
   const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
   const frames = sampleFrames(curve);
-  const packed = mapId === "forge" ? 0.72 : mapId === "aegis" ? 0.78 : 0.74;
+  const packed = mapId === "forge" ? 0.78 : mapId === "aegis" ? 0.84 : 0.8;
   const len = frames[frames.length - 1]?.u ?? 0;
   const n = Math.max(2, Math.floor(len / DOT_GAP));
   const dots: Vector3[] = [];
@@ -119,7 +119,7 @@ function buildLane(points: Waypoint[], mapId: MapId) {
   return {
     lane: strip(frames, [-HALF, -HALF * 0.42, 0, HALF * 0.42, HALF], LANE_Y, (u, v) => {
       const rut = (v > 0.2 && v < 0.38) || (v > 0.62 && v < 0.8);
-      const k = rut ? packed * 0.78 : packed;
+      const k = rut ? packed * 0.7 : packed;
       return { u: u * 0.55, v, r: k, g: k, b: k };
     }),
     dots,

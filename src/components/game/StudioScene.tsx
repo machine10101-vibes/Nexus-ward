@@ -31,11 +31,11 @@ export function StudioScene() {
     <>
       <color attach="background" args={["#12141a"]} />
       <fog attach="fog" args={["#12141a", 14, 32]} />
-      <hemisphereLight intensity={0.85} color="#f2f4f8" groundColor="#2a2e34" />
-      <ambientLight intensity={0.28} />
+      <hemisphereLight intensity={0.92} color="#f2f4f8" groundColor="#2a2e34" />
+      <ambientLight intensity={0.34} />
       <directionalLight
         position={[4.5, 7.2, 5.2]}
-        intensity={2.05}
+        intensity={2.28}
         color="#fff4dc"
         castShadow
         shadow-mapSize-width={1024}
@@ -50,6 +50,10 @@ export function StudioScene() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 0]}>
         <ringGeometry args={[1.52, 1.6, 48]} />
         <meshBasicMaterial color="#8fb4c4" transparent opacity={0.45} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <ringGeometry args={[2.18, 2.28, 56]} />
+        <meshBasicMaterial color="#6a8898" transparent opacity={0.28} />
       </mesh>
       <gridHelper args={[8, 16, "#3a4450", "#232830"]} position={[0, 0.004, 0]} />
       <group>

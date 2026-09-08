@@ -82,6 +82,34 @@ function GlowOrb({
   );
 }
 
+function PulseLight({
+  position,
+  r,
+  color,
+  base = 1.55,
+  amp = 0.5,
+  speed = 3.1,
+}: {
+  position?: Vec;
+  r: number;
+  color: string;
+  base?: number;
+  amp?: number;
+  speed?: number;
+}) {
+  const ref = useRef<Mesh>(null);
+  useFrame((s) => {
+    const mat = ref.current?.material as { emissiveIntensity?: number } | undefined;
+    if (mat) mat.emissiveIntensity = base + Math.sin(s.clock.elapsedTime * speed) * amp;
+  });
+  return (
+    <mesh ref={ref} position={position}>
+      <sphereGeometry args={[r, 10, 8]} />
+      <Mat color={color} eInt={base} roughness={0.16} />
+    </mesh>
+  );
+}
+
 function BoltStuds({
   count,
   radius,
@@ -119,8 +147,10 @@ export function TowerModel({ type, level, ghost }: { type: TowerId; level: numbe
 function TowerBody({ type, level }: { type: TowerId; level: number }) {
   const def = TOWERS[type];
   const yaw = useRef<Group>(null);
-  useFrame((_, dt) => {
+  const dish = useRef<Group>(null);
+  useFrame((s, dt) => {
     if (type === "tesla" && yaw.current) yaw.current.rotation.y += dt * 0.8;
+    if (type === "frost" && dish.current) dish.current.rotation.z = Math.sin(s.clock.elapsedTime * 0.7) * 0.06;
   });
 
   // Pulse — squat armored block with twin plasma barrels. Reads as a low rectangle from above.
@@ -159,6 +189,12 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             <boxGeometry args={[0.22, 0.1, 0.16]} />
             <Mat color="#2a323a" metalness={0.7} roughness={0.26} />
           </mesh>
+          {([-0.14, 0.14] as const).map((x) => (
+            <mesh key={`sink-${x}`} position={[x, 0.14, -0.32]} castShadow>
+              <boxGeometry args={[0.08, 0.16, 0.08]} />
+              <Mat color="#1c2228" metalness={0.68} roughness={0.32} />
+            </mesh>
+          ))}
           {([-0.18, 0.18] as const).map((x) => (
             <group key={x}>
               <mesh position={[x, 0.01, 0.22]} rotation={[Math.PI / 2, 0, 0]} castShadow>
@@ -177,6 +213,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
                 <cylinderGeometry args={[0.055, 0.055, 0.1, 12]} />
                 <Mat color={def.color} eInt={0.85 + level * 0.18} />
               </mesh>
+              <PulseLight position={[x, 0.01, 0.78]} r={0.045} color={def.color} base={1.1 + level * 0.15} amp={0.35} />
             </group>
           ))}
           {level === 2 ? (
@@ -229,6 +266,11 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             <boxGeometry args={[0.16, 0.07, 0.28]} />
             <Mat color={def.color} eInt={0.85 + level * 0.2} />
           </mesh>
+          <mesh position={[0.22, -0.08, -0.18]} rotation={[0.4, 0, 0.6]} castShadow>
+            <cylinderGeometry args={[0.018, 0.018, 0.36, 6]} />
+            <Mat color="#1c2228" metalness={0.7} roughness={0.3} />
+          </mesh>
+          <PulseLight position={[0, 0.22, -0.22]} r={0.04} color={def.color} base={0.9} amp={0.4} speed={2.2} />
         </group>
       </group>
     );
@@ -270,6 +312,15 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <torusGeometry args={[0.21, 0.024, 8, 26]} />
           <Mat color={def.color} eInt={0.5} />
         </mesh>
+        {[0, 1, 2].map((i) => {
+          const a = (i / 3) * Math.PI * 2 + 0.2;
+          return (
+            <mesh key={`ins-${i}`} position={[Math.cos(a) * 0.12, 0.58, Math.sin(a) * 0.12]} rotation={[0.6, -a, 0]} castShadow>
+              <cylinderGeometry args={[0.03, 0.04, 0.1, 8]} />
+              <Mat color="#2a383e" metalness={0.55} roughness={0.34} />
+            </mesh>
+          );
+        })}
         <mesh position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.16, 0.02, 8, 22]} />
           <Mat color={def.color} eInt={0.62} />
@@ -298,18 +349,30 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           </mesh>
         ) : null}
         {level < 3 ? (
-          <mesh position={[0, 1.8, 0]}>
-            <octahedronGeometry args={[0.18 + level * 0.015, 0]} />
-            <Mat color={def.color} eInt={1.2 + level * 0.2} roughness={0.16} />
-          </mesh>
+          <group position={[0, 1.8, 0]}>
+            <mesh>
+              <octahedronGeometry args={[0.18 + level * 0.015, 0]} />
+              <Mat color={def.color} eInt={1.2 + level * 0.2} roughness={0.16} />
+            </mesh>
+            <PulseLight r={0.055} color={def.color} base={1.4} amp={0.45} />
+          </group>
         ) : (
           ([-0.14, 0.14] as const).map((x) => (
-            <mesh key={x} position={[x, 1.86, 0]}>
-              <octahedronGeometry args={[0.15, 0]} />
-              <Mat color={def.color} eInt={1.6} roughness={0.14} />
-            </mesh>
+            <group key={x} position={[x, 1.86, 0]}>
+              <mesh>
+                <octahedronGeometry args={[0.15, 0]} />
+                <Mat color={def.color} eInt={1.6} roughness={0.14} />
+              </mesh>
+              <PulseLight r={0.05} color={def.color} base={1.6} amp={0.5} speed={3.6} />
+            </group>
           ))
         )}
+        {[0, 1].map((i) => (
+          <mesh key={`cable-${i}`} position={[Math.cos(i * Math.PI) * 0.18, 0.42, Math.sin(i * Math.PI) * 0.18]} rotation={[0.35, i * Math.PI, 0]} castShadow>
+            <cylinderGeometry args={[0.016, 0.016, 0.42, 6]} />
+            <Mat color="#1c262a" metalness={0.65} roughness={0.32} />
+          </mesh>
+        ))}
       </group>
     );
   }
@@ -327,6 +390,15 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <Mat color="#3e4c58" metalness={0.48} roughness={0.36} />
         </mesh>
         <BoltStuds count={8} radius={0.5} y={0.16} color="#1c262e" />
+        {[0, 1, 2, 3].map((i) => {
+          const a = (i / 4) * Math.PI * 2 + 0.3;
+          return (
+            <mesh key={`ice-${i}`} position={[Math.cos(a) * 0.48, 0.18, Math.sin(a) * 0.48]} rotation={[0.7, 0, a]} castShadow>
+              <coneGeometry args={[0.035, 0.14, 5]} />
+              <Mat color={def.color} eInt={0.45} />
+            </mesh>
+          );
+        })}
         {[0, 1, 2].map((i) => {
           const a = (i / 3) * Math.PI * 2;
           return (
@@ -336,7 +408,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             </mesh>
           );
         })}
-        <group position={[0, 0.48, 0]} rotation={[-0.34, 0, 0]}>
+        <group ref={dish} position={[0, 0.48, 0]} rotation={[-0.34, 0, 0]}>
           <mesh castShadow>
             <sphereGeometry args={[0.54, 24, 12, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42]} />
             <Mat color="#5a6e82" metalness={0.38} roughness={0.3} side={DoubleSide} />
@@ -345,7 +417,25 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             <torusGeometry args={[0.52, 0.03, 8, 34]} />
             <Mat color={def.color} eInt={0.5 + level * 0.14} />
           </mesh>
-          <GlowOrb position={[0, 0.16, 0]} r={0.12} color={def.color} eInt={1.15} />
+          <PulseLight position={[0, 0.16, 0]} r={0.12} color={def.color} base={1.15} amp={0.4} speed={2.4} />
+          {[0, 1, 2, 3].map((i) => {
+            const a = (i / 4) * Math.PI * 2;
+            return (
+              <mesh key={`rim-${i}`} position={[Math.cos(a) * 0.48, 0.06, Math.sin(a) * 0.48]}>
+                <sphereGeometry args={[0.03, 8, 6]} />
+                <Mat color={def.color} eInt={0.7} />
+              </mesh>
+            );
+          })}
+          {[0, 1, 2, 3].map((i) => {
+            const a = (i / 4) * Math.PI * 2 + 0.2;
+            return (
+              <mesh key={`rim-${i}`} position={[Math.cos(a) * 0.46, 0.02, Math.sin(a) * 0.46]}>
+                <sphereGeometry args={[0.03, 8, 6]} />
+                <Mat color={def.color} eInt={0.7} />
+              </mesh>
+            );
+          })}
           <mesh position={[0, 0.02, 0]}>
             <cylinderGeometry args={[0.075, 0.1, 0.42, 12]} />
             <Mat color="#5f7181" metalness={0.52} roughness={0.26} />
@@ -401,6 +491,12 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <boxGeometry args={[0.54, 0.22, 0.36]} />
           <Mat color="#45464c" metalness={0.74} roughness={0.28} />
         </mesh>
+        {([-0.38, 0.38] as const).map((x) => (
+          <mesh key={`sled-${x}`} position={[x, 0.16, -0.04]} castShadow>
+            <boxGeometry args={[0.08, 0.1, 0.42]} />
+            <Mat color="#2a2b30" metalness={0.78} roughness={0.26} />
+          </mesh>
+        ))}
         <group position={[0, 0.46, 0.1]}>
           <mesh castShadow>
             <boxGeometry args={[0.22, 0.18, 1.54]} />
@@ -422,6 +518,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             <boxGeometry args={[0.28, 0.12, 0.12]} />
             <Mat color={def.color} eInt={1.05} />
           </mesh>
+          <PulseLight position={[0, 0.04, 1.08]} r={0.05} color={def.color} base={1.2} amp={0.45} speed={3.4} />
           {([-0.26, 0.26] as const).map((x) => (
             <mesh key={`coil-${x}`} position={[x, 0.02, -0.44]}>
               <cylinderGeometry args={[0.12, 0.12, 0.12, 12]} />
@@ -491,6 +588,12 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <Mat color="#2a3630" metalness={0.45} roughness={0.42} />
         </mesh>
       ))}
+      {[0.48, 0.74].map((y) => (
+        <mesh key={`wrap-${y}`} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.11, 0.014, 6, 16]} />
+          <Mat color={def.color} eInt={0.45} />
+        </mesh>
+      ))}
       <group ref={yaw} position={[0, 0.94, 0]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.36, 0.044, 8, 24]} />
@@ -532,7 +635,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             );
           })
         : null}
-      <GlowOrb position={[0, level >= 3 ? 1.52 : 1.42, 0]} r={level >= 3 ? 0.18 : 0.12} color={def.color} eInt={1.4 + level * 0.16} />
+      <PulseLight position={[0, level >= 3 ? 1.52 : 1.42, 0]} r={level >= 3 ? 0.18 : 0.12} color={def.color} base={1.4 + level * 0.16} amp={0.55} speed={2.8} />
     </group>
   );
 }
@@ -570,7 +673,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#1e4a36" roughness={0.48} metalness={0.1} />
         </mesh>
         {([-0.07, 0.07] as const).map((x) => (
-          <GlowOrb key={x} position={[x, 0.26, 0.36]} r={0.045} color="#b8ffd8" eInt={3.5} />
+          <PulseLight key={x} position={[x, 0.26, 0.36]} r={0.045} color="#b8ffd8" base={3.2} amp={0.7} speed={4.2} />
         ))}
         {([-1, 1] as const).map((s) => (
           <mesh key={s} position={[0.05 * s, 0.32, 0.3]} rotation={[0.55, 0, 0.4 * s]}>
@@ -614,9 +717,9 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
         ))}
         {([-0.07, 0.07] as const).map((x) => (
-          <GlowOrb key={`e${x}`} position={[x, 0.34, 0.38]} r={0.042} color="#6ad4a0" eInt={2.9} />
+          <PulseLight key={`e${x}`} position={[x, 0.34, 0.38]} r={0.042} color="#6ad4a0" base={2.6} amp={0.55} speed={3.8} />
         ))}
-        <GlowOrb position={[0, 0.42, 0]} r={0.09} color="#6ad4a0" eInt={1.5} />
+        <PulseLight position={[0, 0.42, 0]} r={0.09} color="#6ad4a0" base={1.5} amp={0.4} />
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.18, 0.0, -0.22].map((z, j) => (
@@ -661,11 +764,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#1a3a2c" roughness={0.4} />
         </mesh>
         {([-0.07, 0.07] as const).map((x) => (
-          <mesh key={`e${x}`} position={[x, 0.32, 0.38]}>
-            <sphereGeometry args={[0.04, 8, 8]} />
-            <Mat color="#6ad4a0" eInt={2.2} />
-          </mesh>
+          <PulseLight key={`e${x}`} position={[x, 0.32, 0.38]} r={0.04} color="#6ad4a0" base={2.0} amp={0.45} />
         ))}
+        <mesh position={[0, 0.56, -0.12]} rotation={[-0.4, 0, 0]} castShadow>
+          <coneGeometry args={[0.05, 0.22, 5]} />
+          <Mat color="#163428" roughness={0.4} />
+        </mesh>
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.14, -0.08, -0.26].map((z, j) => (
@@ -703,10 +807,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <coneGeometry args={[0.1, 0.28, 5]} />
           <Mat color="#7ee0b4" emissive="#8af0c4" eInt={0.9} />
         </mesh>
+        <PulseLight position={[0, 0.78, 0]} r={0.04} color="#b8ffd8" base={2.4} amp={0.5} speed={3.2} />
+        {([-0.08, 0.08] as const).map((x) => (
+          <PulseLight key={`e${x}`} position={[x, 0.3, 0.38]} r={0.035} color="#6ad4a0" base={2.1} amp={0.4} />
+        ))}
         {([-0.34, 0.34] as const).map((x) => (
           <mesh key={x} position={[x, 0.48, 0.14]} rotation={[0.15, 0, x > 0 ? -0.85 : 0.85]} castShadow>
             <boxGeometry args={[0.07, 0.42, 0.26]} />
             <Mat color="#1a3a2c" metalness={0.28} roughness={0.42} />
+          </mesh>
+        ))}
+        {([-0.18, 0.18] as const).map((x) => (
+          <mesh key={`jaw-${x}`} position={[x, 0.2, 0.34]} rotation={[0.7, 0, x * 1.4]} castShadow>
+            <boxGeometry args={[0.045, 0.04, 0.16]} />
+            <Mat color="#122820" roughness={0.46} />
           </mesh>
         ))}
         {[-0.9, -0.3, 0.3, 0.9].map((a) => (
@@ -754,10 +868,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#7ee0b4" emissive="#8af0c4" eInt={0.9} />
           </mesh>
         ))}
-        <mesh position={[0, 0.74, 0]}>
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <Mat color="#8af0c4" eInt={2.6} />
-        </mesh>
+        <PulseLight position={[0, 0.74, 0]} r={0.13} color="#8af0c4" base={2.6} amp={0.5} speed={2.2} />
+        {([-0.28, 0.28] as const).map((x) => (
+          <mesh key={`plate-${x}`} position={[x, 0.42, 0]} rotation={[0, 0, x > 0 ? -0.35 : 0.35]} castShadow>
+            <boxGeometry args={[0.12, 0.28, 0.36]} />
+            <Mat color="#1e4a38" metalness={0.22} roughness={0.44} />
+          </mesh>
+        ))}
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.16, -0.06, -0.28].map((z, j) => (
@@ -793,10 +910,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#9af0c8" emissive="#b8ffd8" eInt={1.2} />
           </mesh>
         ))}
-        <mesh position={[0, 0.78, 0]}>
-          <sphereGeometry args={[0.16, 10, 8]} />
-          <Mat color="#b8ffd8" eInt={2.8} />
-        </mesh>
+        <PulseLight position={[0, 0.78, 0]} r={0.16} color="#b8ffd8" base={2.8} amp={0.55} speed={1.8} />
+        {([-0.32, 0.32] as const).map((x) => (
+          <mesh key={`pauldron-${x}`} position={[x, 0.52, 0]} rotation={[0, 0, x > 0 ? -0.4 : 0.4]} castShadow>
+            <boxGeometry args={[0.14, 0.32, 0.4]} />
+            <Mat color="#245844" metalness={0.2} roughness={0.42} />
+          </mesh>
+        ))}
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.2, 0.02, -0.18, -0.36].map((z, j) => (
@@ -822,7 +942,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <dodecahedronGeometry args={[0.16, 0]} />
           <Mat color="#2a6a52" roughness={0.4} emissive="#3dcaa0" eInt={0.4} />
         </mesh>
-        <GlowOrb r={0.1} color="#a8f0d4" eInt={2.7} />
+        <PulseLight r={0.1} color="#a8f0d4" base={2.5} amp={0.55} speed={2.6} />
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a = (i / 6) * Math.PI * 2;
           return (
@@ -843,7 +963,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <icosahedronGeometry args={[0.32, 1]} />
           <meshStandardMaterial color="#6ad4a8" emissive="#3dcaa0" emissiveIntensity={1.7} roughness={0.26} transparent opacity={0.9} />
         </mesh>
-        <GlowOrb r={0.13} color="#d8ffe8" eInt={3.1} />
+        <PulseLight r={0.13} color="#d8ffe8" base={2.8} amp={0.6} speed={2.2} />
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a = (i / 6) * Math.PI * 2;
           return (
@@ -881,6 +1001,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <cylinderGeometry args={[0.07, 0.09, 0.08, 8]} />
           <Mat color="#c46a3a" eInt={2.5} />
         </mesh>
+        <PulseLight position={[0, 0.16, 0]} r={0.045} color="#e08848" base={2.2} amp={0.5} speed={4.4} />
+        {([-0.16, 0.16] as const).map((x) => (
+          <mesh key={`fin-${x}`} position={[x, 0.02, -0.04]} castShadow>
+            <boxGeometry args={[0.06, 0.04, 0.16]} />
+            <Mat color="#2a2e32" metalness={0.72} roughness={0.3} />
+          </mesh>
+        ))}
         {[0, 1, 2, 3].map((i) => {
           const a = (i / 4) * Math.PI * 2 + 0.4;
           return (
@@ -919,6 +1046,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         <mesh position={[0, 0.82, 0.18]}>
           <boxGeometry args={[0.16, 0.045, 0.045]} />
           <Mat color="#e08848" eInt={2.7} />
+        </mesh>
+        <PulseLight position={[0, 0.82, 0.22]} r={0.03} color="#e08848" base={2.4} amp={0.45} speed={5.2} />
+        <mesh position={[0.2, 0.62, 0.02]} castShadow>
+          <boxGeometry args={[0.12, 0.1, 0.16]} />
+          <Mat color="#3a4048" metalness={0.76} roughness={0.28} />
         </mesh>
         <mesh position={[0.07, 1.0, -0.02]} rotation={[0.18, 0, 0]} castShadow>
           <cylinderGeometry args={[0.014, 0.014, 0.3, 6]} />
@@ -969,10 +1101,17 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <cylinderGeometry args={[0.06, 0.06, 0.08, 8]} />
           <Mat color="#c46a3a" eInt={2.2} />
         </mesh>
+        <PulseLight position={[0, 0.58, 0.78]} r={0.04} color="#e08848" base={2.0} amp={0.45} speed={3.6} />
         <mesh position={[0, 0.4, -0.3]} castShadow>
           <boxGeometry args={[0.28, 0.2, 0.16]} />
           <Mat color="#2a2e32" metalness={0.65} roughness={0.36} />
         </mesh>
+        {([-0.3, 0.3] as const).map((x) => (
+          <mesh key={`skirt-${x}`} position={[x, 0.28, -0.04]} castShadow>
+            <boxGeometry args={[0.08, 0.16, 0.36]} />
+            <Mat color="#3a4048" metalness={0.7} roughness={0.3} />
+          </mesh>
+        ))}
       </group>
     );
   }
@@ -996,6 +1135,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <boxGeometry args={[0.18, 0.18, 0.04]} />
           <Mat color="#c46a3a" eInt={1.9} />
         </mesh>
+        <PulseLight position={[0, 0.58, 0.32]} r={0.04} color="#e08848" base={1.8} amp={0.4} speed={3.2} />
+        {([-0.28, 0.28] as const).map((x) => (
+          <mesh key={`rivet-${x}`} position={[x, 0.78, 0.24]} castShadow>
+            <cylinderGeometry args={[0.03, 0.03, 0.05, 6]} />
+            <Mat color="#1c2026" metalness={0.82} roughness={0.2} />
+          </mesh>
+        ))}
         {([-0.18, 0.18] as const).map((x) => (
           <mesh key={x} position={[x, 0.18, 0]} castShadow>
             <boxGeometry args={[0.16, 0.34, 0.2]} />
@@ -1028,11 +1174,18 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2f3338" metalness={0.78} roughness={0.26} />
         </mesh>
         {[-0.2, 0, 0.2].map((x) => (
-          <mesh key={x} position={[x, 1.08, 0.02]} castShadow>
-            <boxGeometry args={[0.07, 0.16, 0.07]} />
-            <Mat color="#c46a3a" eInt={1.6} />
-          </mesh>
+          <group key={x}>
+            <mesh position={[x, 1.08, 0.02]} castShadow>
+              <boxGeometry args={[0.07, 0.16, 0.07]} />
+              <Mat color="#c46a3a" eInt={1.6} />
+            </mesh>
+            <PulseLight position={[x, 1.18, 0.02]} r={0.028} color="#e08848" base={1.7} amp={0.4} speed={2.8} />
+          </group>
         ))}
+        <mesh position={[0, 0.58, 0.2]} castShadow>
+          <boxGeometry args={[0.22, 0.12, 0.06]} />
+          <Mat color="#2a2e34" metalness={0.76} roughness={0.26} />
+        </mesh>
         <mesh position={[0.14, 0.22, 0]} castShadow>
           <boxGeometry args={[0.14, 0.44, 0.16]} />
           <Mat color="#3a4048" metalness={0.7} roughness={0.32} />
@@ -1063,10 +1216,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#1f2328" metalness={0.84} roughness={0.2} />
         </mesh>
         {([-0.28, 0.28] as const).map((x) => (
-          <mesh key={`c${x}`} position={[x, 1.16, 0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.07, 0.1, 0.5, 8]} />
-            <Mat color="#c46a3a" eInt={1.9} />
-          </mesh>
+          <group key={`c${x}`}>
+            <mesh position={[x, 1.16, 0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.1, 0.5, 8]} />
+              <Mat color="#c46a3a" eInt={1.9} />
+            </mesh>
+            <PulseLight position={[x, 1.16, 0.58]} r={0.04} color="#e08848" base={2.0} amp={0.45} speed={3.1} />
+          </group>
         ))}
         {[-0.22, 0, 0.22].map((x) => (
           <mesh key={x} position={[x, 1.3, 0]} castShadow>
@@ -1074,6 +1230,10 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#e08848" eInt={1.7} />
           </mesh>
         ))}
+        <mesh position={[0, 0.72, 0.22]} castShadow>
+          <boxGeometry args={[0.28, 0.1, 0.08]} />
+          <Mat color="#2a2e34" metalness={0.8} roughness={0.22} />
+        </mesh>
         <mesh position={[0.16, 0.22, 0]} castShadow>
           <boxGeometry args={[0.16, 0.44, 0.18]} />
           <Mat color="#2a2e34" metalness={0.76} />
@@ -1106,11 +1266,18 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a4048" metalness={0.6} roughness={0.35} />
         </mesh>
         {([-0.08, 0.08] as const).map((x) => (
-          <mesh key={x} position={[x, -0.04, 0.26]}>
-            <boxGeometry args={[0.07, 0.05, 0.2]} />
-            <Mat color="#e08848" eInt={2.5} />
-          </mesh>
+          <group key={x}>
+            <mesh position={[x, -0.04, 0.26]}>
+              <boxGeometry args={[0.07, 0.05, 0.2]} />
+              <Mat color="#e08848" eInt={2.5} />
+            </mesh>
+            <PulseLight position={[x, -0.04, 0.38]} r={0.028} color="#e08848" base={2.2} amp={0.5} speed={5.4} />
+          </group>
         ))}
+        <mesh position={[0, 0.12, 0.18]} castShadow>
+          <boxGeometry args={[0.1, 0.05, 0.12]} />
+          <Mat color="#2a2e34" metalness={0.72} roughness={0.28} />
+        </mesh>
         <Rotor position={[0.3, 0.1, 0.08]} width={0.4} />
         <Rotor position={[-0.3, 0.1, 0.08]} width={0.4} />
       </HoverFloat>
@@ -1140,6 +1307,13 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <coneGeometry args={[0.05, 0.26, 6]} />
           <Mat color="#e08848" eInt={2.4} />
         </mesh>
+        <PulseLight position={[0, 0.02, 0.66]} r={0.03} color="#e08848" base={2.3} amp={0.5} speed={6.2} />
+        {([-1, 1] as const).map((s) => (
+          <mesh key={s} position={[0.12 * s, 0.01, 0.28]} rotation={[0, 0.2 * s, 0.15 * s]} castShadow>
+            <boxGeometry args={[0.16, 0.02, 0.08]} />
+            <Mat color="#4a3030" metalness={0.68} roughness={0.3} />
+          </mesh>
+        ))}
         <Rotor position={[0, 0.08, -0.28]} width={0.34} />
       </HoverFloat>
     );
@@ -1152,10 +1326,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <coneGeometry args={[0.16, 0.62, 6]} />
           <meshStandardMaterial color="#6aa0a8" emissive="#8ec8d0" emissiveIntensity={1.05} transparent opacity={0.82} roughness={0.24} />
         </mesh>
-        <mesh position={[0, 0.3, 0]}>
-          <sphereGeometry args={[0.08, 10, 8]} />
-          <Mat color="#cfeaf0" eInt={3} />
-        </mesh>
+        <PulseLight position={[0, 0.3, 0]} r={0.08} color="#cfeaf0" base={3} amp={0.6} speed={2.4} />
         {[0, 1, 2].map((i) => {
           const a = (i / 3) * Math.PI * 2;
           return (
@@ -1176,14 +1347,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <octahedronGeometry args={[0.28, 0]} />
           <meshStandardMaterial color="#7ab4bc" emissive="#8ec8d0" emissiveIntensity={1.4} transparent opacity={0.88} roughness={0.18} />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[0.1, 10, 8]} />
-          <Mat color="#e8f6f8" eInt={3.2} />
-        </mesh>
+        <PulseLight r={0.1} color="#e8f6f8" base={3.2} amp={0.65} speed={2.1} />
         <mesh position={[0, -0.28, 0]} rotation={[Math.PI, 0, 0]}>
           <coneGeometry args={[0.16, 0.4, 6]} />
           <meshStandardMaterial color="#8ec8d0" transparent opacity={0.32} emissive="#8ec8d0" emissiveIntensity={0.85} />
         </mesh>
+        {[0, 1, 2].map((i) => {
+          const a = (i / 3) * Math.PI * 2 + 0.4;
+          return (
+            <mesh key={`shard-${i}`} position={[Math.cos(a) * 0.2, 0.08, Math.sin(a) * 0.2]} rotation={[0.4, a, 0.2]}>
+              <octahedronGeometry args={[0.06, 0]} />
+              <Mat color="#cfeaf0" eInt={1.6} />
+            </mesh>
+          );
+        })}
       </HoverFloat>
     );
   }
@@ -1199,10 +1376,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <boxGeometry args={[0.55, 0.18, 0.4]} />
           <Mat color="#5a686c" metalness={0.7} roughness={0.28} />
         </mesh>
-        <mesh position={[0, 0.62, 0]}>
-          <sphereGeometry args={[0.17, 10, 8]} />
-          <Mat color="#8ec8d0" eInt={2.8} />
-        </mesh>
+        <PulseLight position={[0, 0.62, 0]} r={0.17} color="#8ec8d0" base={2.8} amp={0.5} speed={2} />
         <mesh position={[0.22, 0.2, 0.1]} castShadow>
           <boxGeometry args={[0.14, 0.4, 0.14]} />
           <Mat color="#4a5858" metalness={0.55} />
@@ -1223,10 +1397,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.7} roughness={0.4} />
           </mesh>
         ))}
-        <mesh position={[0, 0.94, 0]}>
-          <sphereGeometry args={[0.11, 10, 8]} />
-          <Mat color="#b8e4ea" eInt={2.6} />
-        </mesh>
+        <PulseLight position={[0, 0.94, 0]} r={0.11} color="#b8e4ea" base={2.6} amp={0.45} speed={2.4} />
       </group>
     );
   }
@@ -1262,10 +1433,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
             <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.9} />
           </mesh>
         ))}
-        <mesh position={[0, 1.02, 0]}>
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <Mat color="#e8f6f8" eInt={3} />
-        </mesh>
+        <PulseLight position={[0, 1.02, 0]} r={0.13} color="#e8f6f8" base={3} amp={0.5} speed={1.8} />
         <mesh position={[0.24, 0.2, 0.1]} castShadow>
           <boxGeometry args={[0.16, 0.42, 0.16]} />
           <Mat color="#4a5858" metalness={0.6} />
@@ -1297,9 +1465,10 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <cylinderGeometry args={[0.05, 0.07, 0.28, 8]} />
           <Mat color="#6a787c" metalness={0.7} />
         </mesh>
-        <mesh position={[0.04, 0.46, 0]}>
-          <sphereGeometry args={[0.1, 8, 8]} />
-          <Mat color="#8ec8d0" eInt={2.7} />
+        <PulseLight position={[0.04, 0.46, 0]} r={0.1} color="#8ec8d0" base={2.7} amp={0.5} />
+        <mesh position={[-0.28, 0.32, 0.16]} rotation={[0.5, 0, -0.4]} castShadow>
+          <boxGeometry args={[0.06, 0.18, 0.2]} />
+          <Mat color="#2a4a3c" roughness={0.46} />
         </mesh>
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
@@ -1330,14 +1499,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <boxGeometry args={[0.2, 0.16, 0.2]} />
           <Mat color="#5a686c" metalness={0.76} roughness={0.24} />
         </mesh>
-        <mesh position={[-0.16, 0.5, 0.26]}>
-          <sphereGeometry args={[0.045, 8, 8]} />
-          <Mat color="#6ad4a0" eInt={2.6} />
-        </mesh>
+        <PulseLight position={[-0.16, 0.5, 0.26]} r={0.045} color="#6ad4a0" base={2.6} amp={0.5} speed={3.8} />
         <mesh position={[0.18, 0.48, 0.26]}>
           <boxGeometry args={[0.1, 0.035, 0.035]} />
           <Mat color="#8ec8d0" eInt={2.8} />
         </mesh>
+        <PulseLight position={[0.18, 0.48, 0.3]} r={0.028} color="#8ec8d0" base={2.6} amp={0.45} speed={4.2} />
         <mesh position={[-0.22, 0.56, 0.12]} rotation={[-0.3, 0, 0.35]} castShadow>
           <coneGeometry args={[0.05, 0.2, 5]} />
           <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.7} />
@@ -1346,7 +1513,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <cylinderGeometry args={[0.03, 0.04, 0.18, 8]} />
           <Mat color="#6a787c" metalness={0.72} />
         </mesh>
-        <GlowOrb position={[0.02, 0.38, 0.04]} r={0.075} color="#8ec8d0" eInt={2.5} />
+        <PulseLight position={[0.02, 0.38, 0.04]} r={0.075} color="#8ec8d0" base={2.3} amp={0.5} />
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.14, -0.16].map((z, j) => (
@@ -1415,6 +1582,19 @@ export function HexPad({
         <cylinderGeometry args={[0.68, 0.7, 0.024, 6]} />
         <meshStandardMaterial color="#2a3238" metalness={0.55} roughness={0.48} />
       </mesh>
+      <mesh position={[0, 0.018, 0]} receiveShadow>
+        <cylinderGeometry args={[0.72, 0.74, 0.012, 6]} />
+        <meshStandardMaterial color="#1a2026" metalness={0.62} roughness={0.42} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5].map((i) => {
+        const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+        return (
+          <mesh key={`stud-${i}`} position={[Math.cos(a) * 0.64, 0.04, Math.sin(a) * 0.64]}>
+            <cylinderGeometry args={[0.028, 0.032, 0.04, 6]} />
+            <meshStandardMaterial color={emissive} emissive={emissive} emissiveIntensity={occupied ? 0.12 : 0.55} metalness={0.4} roughness={0.32} />
+          </mesh>
+        );
+      })}
       <mesh ref={breathe} rotation={[-Math.PI / 2, 0, 0]} position={[0, h + 0.006, 0]}>
         <ringGeometry args={[occupied ? 0.5 : 0.44, 0.56, 6]} />
         <meshBasicMaterial color={emissive} transparent opacity={0.5} depthWrite={false} toneMapped={false} />
@@ -1500,6 +1680,16 @@ export function NexusCore({ color, health, hitGen = 0 }: { color: string; health
         <ringGeometry args={[0.72, 0.95, 8]} />
         <Mat color={hot} eInt={0.4} />
       </mesh>
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2;
+        return (
+          <mesh key={`inlay-${i}`} position={[Math.cos(a) * 0.58, 0.18, Math.sin(a) * 0.58]} rotation={[0, -a, 0]}>
+            <boxGeometry args={[0.08, 0.02, 0.42]} />
+            <Mat color={hot} eInt={0.55} />
+          </mesh>
+        );
+      })}
+      <PulseLight position={[0, 1.42, 0]} r={0.06} color={hot} base={1.2} amp={0.4} speed={1.8} />
       <mesh ref={ring} position={[0, 1.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.92, 0.028, 8, 48]} />
         <Mat color={hot} eInt={0.85} />
@@ -1550,10 +1740,16 @@ export function SpawnGate({ color }: { color: string }) {
       {[0, 1, 2, 3].map((i) => {
         const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
         return (
-          <mesh key={i} position={[Math.cos(a) * 0.78, 0.55, Math.sin(a) * 0.78]} rotation={[0, -a, 0]} castShadow>
-            <boxGeometry args={[0.14, 1.1, 0.2]} />
-            <Mat color="#2a3238" metalness={0.68} roughness={0.34} />
-          </mesh>
+          <group key={i} position={[Math.cos(a) * 0.78, 0.55, Math.sin(a) * 0.78]} rotation={[0, -a, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.14, 1.1, 0.2]} />
+              <Mat color="#2a3238" metalness={0.68} roughness={0.34} />
+            </mesh>
+            <mesh position={[0, 0.58, 0]}>
+              <boxGeometry args={[0.16, 0.08, 0.22]} />
+              <Mat color={color} eInt={0.7} />
+            </mesh>
+          </group>
         );
       })}
       <mesh position={[0, 0.08, 0]} receiveShadow>
@@ -1572,11 +1768,15 @@ export function SpawnGate({ color }: { color: string }) {
         <circleGeometry args={[0.5, 24]} />
         <meshBasicMaterial color={color} transparent opacity={0.3} depthWrite={false} />
       </mesh>
+      <mesh position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.62, 0.018, 8, 28]} />
+        <Mat color={color} eInt={0.7} />
+      </mesh>
       <mesh ref={beam} position={[0, 2.5, 0]}>
         <cylinderGeometry args={[0.05, 0.24, 2.7, 10]} />
         <meshBasicMaterial color={color} transparent opacity={0.24} depthWrite={false} />
       </mesh>
-      <GlowOrb position={[0, 1.12, 0]} r={0.17} color={color} eInt={2.1} />
+      <PulseLight position={[0, 1.12, 0]} r={0.17} color={color} base={2.0} amp={0.55} speed={2.8} />
     </group>
   );
 }
@@ -1674,11 +1874,11 @@ export function HexField({
       <meshStandardMaterial
         color={color}
         emissive={accent}
-        emissiveIntensity={0.02}
+        emissiveIntensity={0.05}
         roughness={0.9}
         metalness={0.08}
         transparent
-        opacity={0.07}
+        opacity={0.12}
       />
     </instancedMesh>
   );
@@ -1743,7 +1943,7 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
                   </mesh>
                 );
               })}
-              <GlowOrb position={[0, h + 0.08, 0]} r={0.07} color="#7cf0c4" eInt={1.8} />
+              <PulseLight position={[0, h + 0.08, 0]} r={0.07} color="#7cf0c4" base={1.8} amp={0.45} speed={2.1} />
             </group>
           );
         }
@@ -1818,6 +2018,7 @@ export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }
                 <cylinderGeometry args={[0.19, 0.19, 0.08, 8]} />
                 <Mat color="#c45a28" eInt={1.1} metalness={0.4} roughness={0.3} />
               </mesh>
+              <PulseLight position={[0, h + 0.14, 0]} r={0.06} color="#e07a38" base={1.4} amp={0.4} speed={2.4} />
             </group>
           );
         }
@@ -1892,6 +2093,7 @@ export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number
                 <cylinderGeometry args={[0.1, 0.14, 0.84, 6]} />
                 <Mat color="#2a343c" metalness={0.74} roughness={0.3} />
               </mesh>
+              <PulseLight position={[0, 0.88, 0]} r={0.08} color="#8ec8d0" base={1.6} amp={0.4} speed={2.2} />
               <mesh position={[0, 0.88, 0]}>
                 <octahedronGeometry args={[0.14, 0]} />
                 <Mat color="#8ec8d0" eInt={1.4} />
@@ -1943,10 +2145,7 @@ export function DecorField({ id, spots }: { id: MapId; spots: FieldSpot[] }) {
                   <capsuleGeometry args={[0.022, 0.2, 4, 5]} />
                   <Mat color="#2a6a52" roughness={0.4} emissive="#3dcaa0" eInt={0.24} />
                 </mesh>
-                <mesh position={[0.118, 0.27, 0.05]}>
-                  <sphereGeometry args={[0.036, 6, 6]} />
-                  <Mat color="#7cf0c4" eInt={1.5} />
-                </mesh>
+                <PulseLight position={[0.118, 0.27, 0.05]} r={0.036} color="#7cf0c4" base={1.6} amp={0.4} speed={2.6} />
               </>
             ) : null}
           </group>

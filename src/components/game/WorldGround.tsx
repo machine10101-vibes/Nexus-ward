@@ -109,7 +109,7 @@ function makeBowl(arenaR: number, _squash: number, style: MapId, res: number) {
     const blotch = Math.sin(x * 0.36 + y * 0.29) * Math.cos(y * 0.24) * 0.1;
     const crack = Math.max(0, 0.12 - Math.abs(Math.sin(x * 0.55) * Math.cos(y * 0.48))) * 0.35;
     const k = clamp(speckle + grain + blotch - rim * 0.18 - crack, 0.52, 1.12);
-    const tint = style === "mycelion" ? [0.94, 1.06, 0.9] : style === "forge" ? [1.1, 0.95, 0.84] : [0.88, 0.98, 1.1];
+    const tint = style === "mycelion" ? [0.88, 1.12, 0.86] : style === "forge" ? [1.18, 0.9, 0.76] : [0.82, 0.96, 1.16];
     cols[i * 3] = k * tint[0];
     cols[i * 3 + 1] = k * tint[1];
     cols[i * 3 + 2] = k * tint[2];
@@ -283,7 +283,7 @@ function ArenaLip({
   emissive: string;
 }) {
   const mesh = useRef<InstancedMesh>(null);
-  const count = 48;
+  const count = 64;
   useLayoutEffect(() => {
     const m = mesh.current;
     if (!m) return;
@@ -291,9 +291,9 @@ function ArenaLip({
     const r = arenaR + 0.72;
     for (let i = 0; i < count; i++) {
       const a = (i / count) * Math.PI * 2;
-      dummy.position.set(Math.cos(a) * r, 0.08 + (i % 3) * 0.04, Math.sin(a) * r * squash);
+      dummy.position.set(Math.cos(a) * r, 0.1 + (i % 3) * 0.05, Math.sin(a) * r * squash);
       dummy.rotation.set(0, -a, (i % 2) * 0.12);
-      dummy.scale.set(0.9 + (i % 4) * 0.15, 0.7 + (i % 3) * 0.25, 0.55);
+      dummy.scale.set(0.95 + (i % 4) * 0.16, 0.85 + (i % 3) * 0.28, 0.58);
       dummy.updateMatrix();
       m.setMatrixAt(i, dummy.matrix);
     }
@@ -301,7 +301,7 @@ function ArenaLip({
   }, [arenaR, squash]);
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
-      <boxGeometry args={[0.42, 0.22, 0.28]} />
+      <boxGeometry args={[0.46, 0.28, 0.3]} />
       <meshStandardMaterial
         color={mapId === "forge" ? "#2a221c" : mapId === "aegis" ? "#1c242c" : "#1a221c"}
         roughness={0.86}

@@ -54,7 +54,7 @@ export function GameGL() {
       {quality === "high" ? (
         <EffectComposer enableNormalPass={false}>
           <Bloom
-            intensity={inStudio ? 0.42 : inBattle ? (overclock ? 0.72 : 0.52) : 0.78}
+            intensity={inStudio ? 0.48 : inBattle ? (overclock ? 0.78 : 0.58) : 0.82}
             luminanceThreshold={0.62}
             mipmapBlur
           />

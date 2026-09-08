@@ -82,6 +82,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
         <torusGeometry args={[3.55, 0.01, 6, 64]} />
         <meshBasicMaterial color={pal.atmo} transparent opacity={0.5} />
       </mesh>
+      <mesh rotation={[Math.PI / 2.4, 0.08, -0.2]}>
+        <torusGeometry args={[4.22, 0.012, 6, 72]} />
+        <meshBasicMaterial color={pal.ring} transparent opacity={0.22} />
+      </mesh>
       {[0, 1, 2, 3].map((i) => {
         const a = (i / 4) * Math.PI * 2;
         return (

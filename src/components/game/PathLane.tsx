@@ -9,30 +9,28 @@ import {
 } from "three";
 import type { MapId } from "@/game/types";
 
-const HALF = 0.62;
-const LANE_Y = 0.014;
-const MARK_Y = 0.018;
+const HALF = 0.7;
+const LANE_Y = 0.012;
+const MARK_Y = 0.016;
 const SEGS = 180;
 
 type Waypoint = { x: number; z: number };
 
-/** Packed trail + a thin shoulder mark. Both sit flush on the play plane. */
+/** Packed trail on the play plane. The only cue is worn dirt and a dull curb. */
 export function PathLane({
   points,
   mapId,
   ground,
-  mark,
   metalness,
   roughness,
 }: {
   points: Waypoint[];
   mapId: MapId;
   ground: Texture;
-  mark: string;
   metalness: number;
   roughness: number;
 }) {
-  const { lane, edge } = useMemo(() => buildLane(points, mapId), [points, mapId]);
+  const { lane, curb } = useMemo(() => buildLane(points, mapId), [points, mapId]);
   const laneMap = useMemo(() => {
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
@@ -48,25 +46,22 @@ export function PathLane({
       <mesh geometry={lane} receiveShadow>
         <meshStandardMaterial
           map={laneMap}
-          color="#d8d4cc"
+          color={mapId === "forge" ? "#b08968" : mapId === "aegis" ? "#8b97a0" : "#7d8a78"}
           roughness={roughness}
           metalness={metalness}
           vertexColors
-          emissive={mark}
-          emissiveIntensity={0.045}
+          emissive="#000000"
+          emissiveIntensity={0}
         />
       </mesh>
-      {edge ? (
-        <mesh geometry={edge}>
+      {curb ? (
+        <mesh geometry={curb} receiveShadow>
           <meshStandardMaterial
-            color={mark}
-            emissive={mark}
-            emissiveIntensity={0.11}
-            roughness={0.72}
-            metalness={0.08}
-            transparent
-            opacity={0.38}
-            depthWrite={false}
+            color={mapId === "forge" ? "#3a2c22" : mapId === "aegis" ? "#2a3238" : "#243028"}
+            roughness={0.92}
+            metalness={0.04}
+            emissive="#000000"
+            emissiveIntensity={0}
           />
         </mesh>
       ) : null}
@@ -75,21 +70,19 @@ export function PathLane({
 }
 
 function buildLane(points: Waypoint[], mapId: MapId) {
-  if (points.length < 2) return { lane: null as BufferGeometry | null, edge: null as BufferGeometry | null };
+  if (points.length < 2) return { lane: null as BufferGeometry | null, curb: null as BufferGeometry | null };
   const pts = points.map((w) => new Vector3(w.x, 0, w.z));
   const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
   const frames = sampleFrames(curve);
-  const worn = mapId === "forge" ? 0.78 : mapId === "aegis" ? 0.84 : 0.8;
-  const shoulder = mapId === "forge" ? 0.94 : mapId === "aegis" ? 0.97 : 0.93;
+  const packed = mapId === "forge" ? 0.72 : mapId === "aegis" ? 0.78 : 0.74;
   return {
-    lane: strip(frames, [-HALF, -HALF * 0.42, 0, HALF * 0.42, HALF], LANE_Y, (u, v) => {
-      const rut = v > 0.18 && v < 0.38 || v > 0.62 && v < 0.82;
-      const edge = v < 0.08 || v > 0.92;
-      const k = rut ? worn * 0.82 : edge ? shoulder : worn;
-      return { u: u * 0.62, v, r: k, g: k * (mapId === "mycelion" ? 1.04 : 1), b: k * (mapId === "aegis" ? 1.06 : 0.97) };
+    lane: strip(frames, [-HALF * 0.9, -HALF * 0.38, 0, HALF * 0.38, HALF * 0.9], LANE_Y, (u, v) => {
+      const rut = (v > 0.2 && v < 0.38) || (v > 0.62 && v < 0.8);
+      const k = rut ? packed * 0.78 : packed;
+      return { u: u * 0.55, v, r: k, g: k, b: k };
     }),
-    edge: strip(frames, [-HALF * 0.96, -HALF * 0.88, HALF * 0.88, HALF * 0.96], MARK_Y, (u, v) => ({
-      u: u * 1.4,
+    curb: strip(frames, [-HALF, -HALF * 0.9, HALF * 0.9, HALF], MARK_Y, (u, v) => ({
+      u: u * 0.9,
       v,
       r: 1,
       g: 1,
@@ -144,7 +137,6 @@ function strip(
     const a = i * cols;
     const b = (i + 1) * cols;
     for (let c = 0; c < cols - 1; c++) {
-      // Skip the gap between the two shoulder pairs (edge strip has 4 verts: L L R R).
       if (cols === 4 && c === 1) continue;
       idx.push(a + c, b + c, a + c + 1, b + c, b + c + 1, a + c + 1);
     }

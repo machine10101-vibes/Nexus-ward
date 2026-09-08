@@ -254,9 +254,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         points={engine.waypoints}
         mapId={mapId}
         ground={art.ground}
-        mark={theme.pathEmissive}
-        metalness={tune.pathMetal * 0.35}
-        roughness={Math.min(0.96, tune.pathRough + 0.22)}
+        metalness={tune.pathMetal * 0.18}
+        roughness={Math.min(0.97, tune.pathRough + 0.28)}
       />
       <group position={[end.x, 0, end.z]}>
         <NexusCore color={theme.core} health={health} hitGen={leaked} />

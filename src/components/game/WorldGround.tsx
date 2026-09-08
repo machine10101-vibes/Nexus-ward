@@ -123,10 +123,10 @@ function glowPatch(shader: { fragmentShader: string }, strength: number) {
     #ifdef USE_MAP
       vec3 grit = texture2D(map, vMapUv * 3.7 + vec2(0.13, 0.07)).rgb;
       vec3 grit2 = texture2D(map, vMapUv * 8.4 + vec2(0.41, 0.28)).rgb;
-      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.58 + grit * 0.7), 0.4);
-      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.72 + grit2 * 0.46), 0.22);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.5 + grit * 0.86), 0.48);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.68 + grit2 * 0.55), 0.3);
     #endif
-    diffuseColor.rgb = diffuseColor.rgb * 1.58 + 0.03;
+    diffuseColor.rgb = diffuseColor.rgb * 1.28 + 0.02;
     float teal = max(diffuseColor.b * 0.88 + diffuseColor.g * 0.32 - diffuseColor.r * 0.72 - 0.18, 0.0);
     float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
     float vein = max(teal, ember);
@@ -219,8 +219,8 @@ export function WorldGround({
           roughness={roughness * 0.92}
           metalness={metalness + 0.06}
           emissive={emissive}
-          glow={glow * 1.15}
-          tint="#ffffff"
+          glow={glow * 0.42}
+          tint="#e8e4dc"
         />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.028, 0]}>
@@ -228,7 +228,7 @@ export function WorldGround({
         <meshStandardMaterial
           color={emissive}
           emissive={emissive}
-          emissiveIntensity={combat ? 0.62 : 0.32}
+          emissiveIntensity={combat ? 0.28 : 0.16}
           transparent
           opacity={0.78}
           roughness={0.35}
@@ -237,7 +237,7 @@ export function WorldGround({
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.034, 0]}>
         <torusGeometry args={[arenaR + 1.15, 0.04, 8, 96]} />
-        <meshStandardMaterial color={emissive} emissive={emissive} emissiveIntensity={0.5} metalness={0.55} roughness={0.28} />
+        <meshStandardMaterial color={emissive} emissive={emissive} emissiveIntensity={0.22} metalness={0.55} roughness={0.28} />
       </mesh>
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}

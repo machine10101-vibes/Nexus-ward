@@ -25,6 +25,7 @@ const ENEMY_ORDER: EnemyId[] = [
   "bloom",
   "titan",
   "colossus",
+  "thorn",
   "drone",
   "walker",
   "siege",
@@ -33,12 +34,14 @@ const ENEMY_ORDER: EnemyId[] = [
   "razor",
   "dread",
   "leviathan",
+  "sentry",
   "chimera",
   "wraith",
   "amalgam",
   "specter",
   "overlord",
   "sovereign",
+  "relic",
 ];
 
 const FACTION_GROUP: Record<EnemyId, string> = {
@@ -50,6 +53,7 @@ const FACTION_GROUP: Record<EnemyId, string> = {
   bloom: "Organic hosts",
   titan: "Organic hosts",
   colossus: "Organic hosts",
+  thorn: "Organic hosts",
   drone: "Mechanical hosts",
   walker: "Mechanical hosts",
   siege: "Mechanical hosts",
@@ -58,12 +62,14 @@ const FACTION_GROUP: Record<EnemyId, string> = {
   razor: "Mechanical hosts",
   dread: "Mechanical hosts",
   leviathan: "Mechanical hosts",
+  sentry: "Mechanical hosts",
   chimera: "Hybrid hosts",
   wraith: "Hybrid hosts",
   amalgam: "Hybrid hosts",
   specter: "Hybrid hosts",
   overlord: "Hybrid hosts",
   sovereign: "Hybrid hosts",
+  relic: "Hybrid hosts",
 };
 
 export const STUDIO_CATALOG: StudioEntry[] = [

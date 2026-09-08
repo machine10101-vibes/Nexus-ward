@@ -41,7 +41,7 @@ export function PathLane({
   metalness: number;
   roughness: number;
 }) {
-  const { lane, dots } = useMemo(() => buildLane(points, mapId), [points, mapId]);
+  const { lane, dots, shoulders } = useMemo(() => buildLane(points, mapId), [points, mapId]);
   const laneMap = useMemo(() => {
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
@@ -66,6 +66,7 @@ export function PathLane({
         />
       </mesh>
       <PathDots points={dots} color={DOT_COLOR[mapId]} />
+      <PathShoulders points={shoulders} mapId={mapId} />
     </group>
   );
 }
@@ -96,7 +97,7 @@ function PathDots({ points, color }: { points: Vector3[]; color: string }) {
 }
 
 function buildLane(points: Waypoint[], mapId: MapId) {
-  if (points.length < 2) return { lane: null as BufferGeometry | null, dots: [] as Vector3[] };
+  if (points.length < 2) return { lane: null as BufferGeometry | null, dots: [] as Vector3[], shoulders: [] as Vector3[] };
   const pts = points.map((w) => new Vector3(w.x, 0, w.z));
   const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
   const frames = sampleFrames(curve);
@@ -108,6 +109,13 @@ function buildLane(points: Waypoint[], mapId: MapId) {
     const p = curve.getPointAt((i + 0.5) / n);
     dots.push(new Vector3(p.x, DOT_Y, p.z));
   }
+  const shoulders: Vector3[] = [];
+  const step = Math.max(2, Math.floor(frames.length / 28));
+  for (let i = 2; i < frames.length - 2; i += step) {
+    const f = frames[i];
+    shoulders.push(new Vector3(f.p.x + f.side.x * (HALF + 0.12), 0.03, f.p.z + f.side.z * (HALF + 0.12)));
+    shoulders.push(new Vector3(f.p.x - f.side.x * (HALF + 0.12), 0.03, f.p.z - f.side.z * (HALF + 0.12)));
+  }
   return {
     lane: strip(frames, [-HALF, -HALF * 0.42, 0, HALF * 0.42, HALF], LANE_Y, (u, v) => {
       const rut = (v > 0.2 && v < 0.38) || (v > 0.62 && v < 0.8);
@@ -115,7 +123,37 @@ function buildLane(points: Waypoint[], mapId: MapId) {
       return { u: u * 0.55, v, r: k, g: k, b: k };
     }),
     dots,
+    shoulders,
   };
+}
+
+function PathShoulders({ points, mapId }: { points: Vector3[]; mapId: MapId }) {
+  const mesh = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const dummy = new Object3D();
+    for (let i = 0; i < points.length; i++) {
+      dummy.position.copy(points[i]);
+      dummy.rotation.set(0, i * 0.7, 0);
+      dummy.scale.set(0.7 + (i % 3) * 0.18, 0.55 + (i % 2) * 0.2, 0.55);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+    m.count = points.length;
+  }, [points]);
+  if (!points.length) return null;
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, points.length]}>
+      <dodecahedronGeometry args={[0.07, 0]} />
+      <meshStandardMaterial
+        color={mapId === "forge" ? "#4a3a2c" : mapId === "aegis" ? "#3a444c" : "#2c3830"}
+        roughness={0.88}
+        metalness={0.08}
+      />
+    </instancedMesh>
+  );
 }
 
 function sampleFrames(curve: CatmullRomCurve3) {

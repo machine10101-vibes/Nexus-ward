@@ -63,6 +63,53 @@ function Mat({
   );
 }
 
+function GlowOrb({
+  position,
+  r,
+  color,
+  eInt = 2,
+}: {
+  position?: Vec;
+  r: number;
+  color: string;
+  eInt?: number;
+}) {
+  return (
+    <mesh position={position}>
+      <sphereGeometry args={[r, 10, 8]} />
+      <Mat color={color} eInt={eInt} roughness={0.16} />
+    </mesh>
+  );
+}
+
+function BoltStuds({
+  count,
+  radius,
+  y,
+  color,
+  size = 0.035,
+}: {
+  count: number;
+  radius: number;
+  y: number;
+  color: string;
+  size?: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => {
+        const a = (i / count) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * radius, y, Math.sin(a) * radius]} castShadow>
+            <cylinderGeometry args={[size, size * 1.15, size * 1.4, 6]} />
+            <Mat color={color} metalness={0.72} roughness={0.28} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
 export function TowerModel({ type, level, ghost }: { type: TowerId; level: number; ghost?: boolean }) {
   const body = <TowerBody type={type} level={level} />;
   if (!ghost) return body;
@@ -76,76 +123,111 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     if (type === "tesla" && yaw.current) yaw.current.rotation.y += dt * 0.8;
   });
 
-  // Pulse — squat, wide, twin barrels forward. Reads as a low block from above.
+  // Pulse — squat armored block with twin plasma barrels. Reads as a low rectangle from above.
   if (type === "pulse") {
     return (
       <group>
-        <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.5, 0.58, 0.14, 6]} />
-          <Mat color="#3b444d" metalness={0.7} roughness={0.35} />
+        <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.54, 0.62, 0.12, 6]} />
+          <Mat color="#2c333a" metalness={0.78} roughness={0.32} />
         </mesh>
-        <mesh position={[0, 0.22, 0]} castShadow>
-          <cylinderGeometry args={[0.3, 0.36, 0.18, 8]} />
-          <Mat color="#49535d" metalness={0.65} roughness={0.3} />
+        <mesh position={[0, 0.16, 0]} castShadow>
+          <cylinderGeometry args={[0.46, 0.5, 0.1, 6]} />
+          <Mat color="#3a434c" metalness={0.72} roughness={0.3} />
         </mesh>
-        <group ref={yaw} position={[0, 0.42, 0]}>
+        <BoltStuds count={6} radius={0.5} y={0.14} color="#1c2228" size={0.04} />
+        {([-0.42, 0.42] as const).map((x) => (
+          <mesh key={`vent-${x}`} position={[x, 0.2, -0.08]} castShadow>
+            <boxGeometry args={[0.1, 0.08, 0.28]} />
+            <Mat color="#1a2026" metalness={0.55} roughness={0.4} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.26, 0]} castShadow>
+          <cylinderGeometry args={[0.28, 0.34, 0.16, 8]} />
+          <Mat color="#4a555f" metalness={0.68} roughness={0.28} />
+        </mesh>
+        <group ref={yaw} position={[0, 0.46, 0]}>
           <mesh castShadow>
-            <boxGeometry args={[0.56, 0.2, 0.4]} />
-            <Mat color="#5c6771" metalness={0.55} roughness={0.32} />
+            <boxGeometry args={[0.6, 0.22, 0.44]} />
+            <Mat color="#5a6570" metalness={0.58} roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0, -0.2]} castShadow>
-            <boxGeometry args={[0.34, 0.26, 0.2]} />
-            <Mat color="#454f58" metalness={0.6} roughness={0.34} />
+          <mesh position={[0, 0.02, -0.24]} castShadow>
+            <boxGeometry args={[0.38, 0.3, 0.22]} />
+            <Mat color="#3e4750" metalness={0.64} roughness={0.32} />
           </mesh>
-          {([-0.17, 0.17] as const).map((x) => (
+          <mesh position={[0, 0.16, -0.18]} castShadow>
+            <boxGeometry args={[0.22, 0.1, 0.16]} />
+            <Mat color="#2a323a" metalness={0.7} roughness={0.26} />
+          </mesh>
+          {([-0.18, 0.18] as const).map((x) => (
             <group key={x}>
-              <mesh position={[x, 0.01, 0.36]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-                <cylinderGeometry args={[0.085, 0.09, 0.62, 10]} />
-                <Mat color="#6b7681" metalness={0.6} roughness={0.28} />
+              <mesh position={[x, 0.01, 0.22]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.1, 0.11, 0.28, 12]} />
+                <Mat color="#4a545e" metalness={0.66} roughness={0.26} />
               </mesh>
-              <mesh position={[x, 0.01, 0.66]} rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.06, 0.06, 0.09, 10]} />
-                <Mat color={def.color} eInt={0.75 + level * 0.18} />
+              <mesh position={[x, 0.01, 0.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.078, 0.086, 0.36, 12]} />
+                <Mat color="#6b7681" metalness={0.62} roughness={0.24} />
+              </mesh>
+              <mesh position={[x, 0.01, 0.58]} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.07, 0.012, 6, 14]} />
+                <Mat color={def.color} eInt={0.55} />
+              </mesh>
+              <mesh position={[x, 0.01, 0.68]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.055, 0.055, 0.1, 12]} />
+                <Mat color={def.color} eInt={0.85 + level * 0.18} />
               </mesh>
             </group>
           ))}
           {level === 2 ? (
-            <mesh position={[0, 0.01, 0.4]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <cylinderGeometry args={[0.07, 0.078, 0.7, 10]} />
-              <Mat color="#73808b" metalness={0.62} roughness={0.26} />
-            </mesh>
+            <group>
+              <mesh position={[0, 0.01, 0.4]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.068, 0.076, 0.72, 12]} />
+                <Mat color="#73808b" metalness={0.64} roughness={0.22} />
+              </mesh>
+              <mesh position={[0, 0.01, 0.76]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.048, 0.048, 0.08, 12]} />
+                <Mat color={def.color} eInt={1.05} />
+              </mesh>
+            </group>
           ) : null}
           {level >= 3
-            ? ([-0.34, 0.34] as const).map((x) => (
-                <group key={x}>
-                  <mesh position={[x, 0.01, 0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-                    <cylinderGeometry args={[0.07, 0.076, 0.5, 10]} />
-                    <Mat color="#6b7681" metalness={0.6} roughness={0.28} />
+            ? ([-0.36, 0.36] as const).map((x) => (
+                <group key={`outer-${x}`}>
+                  <mesh position={[x, 0.01, 0.28]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                    <cylinderGeometry args={[0.066, 0.072, 0.52, 12]} />
+                    <Mat color="#6b7681" metalness={0.62} roughness={0.24} />
                   </mesh>
                   <mesh position={[x, 0.01, 0.56]} rotation={[Math.PI / 2, 0, 0]}>
-                    <cylinderGeometry args={[0.05, 0.05, 0.08, 10]} />
-                    <Mat color={def.color} eInt={0.95} />
+                    <cylinderGeometry args={[0.046, 0.046, 0.08, 12]} />
+                    <Mat color={def.color} eInt={1.05} />
                   </mesh>
                 </group>
               ))
             : null}
           {level >= 2
-            ? ([-0.36, 0.36] as const).map((x) => (
-                <mesh key={`armor-${x}`} position={[x, 0.02, -0.02]} castShadow>
-                  <boxGeometry args={[0.1, 0.28, 0.42]} />
-                  <Mat color="#3f4850" metalness={0.7} roughness={0.3} />
-                </mesh>
+            ? ([-0.38, 0.38] as const).map((x) => (
+                <group key={`armor-${x}`}>
+                  <mesh position={[x, 0.02, -0.02]} castShadow>
+                    <boxGeometry args={[0.12, 0.32, 0.46]} />
+                    <Mat color="#343c44" metalness={0.74} roughness={0.28} />
+                  </mesh>
+                  <mesh position={[x, 0.14, 0.08]}>
+                    <boxGeometry args={[0.04, 0.06, 0.16]} />
+                    <Mat color={def.color} eInt={0.7} />
+                  </mesh>
+                </group>
               ))
             : null}
           {level >= 3 ? (
-            <mesh position={[0, 0.2, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.22, 0.03, 8, 20]} />
-              <Mat color={def.color} eInt={1.05} />
+            <mesh position={[0, 0.22, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.24, 0.032, 8, 22]} />
+              <Mat color={def.color} eInt={1.15} />
             </mesh>
           ) : null}
-          <mesh position={[0, 0.16, -0.02]}>
-            <boxGeometry args={[0.14, 0.06, 0.24]} />
-            <Mat color={def.color} eInt={0.8 + level * 0.2} />
+          <mesh position={[0, 0.18, -0.02]}>
+            <boxGeometry args={[0.16, 0.07, 0.28]} />
+            <Mat color={def.color} eInt={0.85 + level * 0.2} />
           </mesh>
         </group>
       </group>
@@ -157,63 +239,74 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     return (
       <group>
         <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.34, 0.44, 0.14, 6]} />
-          <Mat color="#39464b" metalness={0.6} roughness={0.4} />
+          <cylinderGeometry args={[0.36, 0.48, 0.14, 6]} />
+          <Mat color="#2c383e" metalness={0.68} roughness={0.36} />
         </mesh>
+        <mesh position={[0, 0.18, 0]} castShadow>
+          <cylinderGeometry args={[0.26, 0.32, 0.1, 8]} />
+          <Mat color="#3a484e" metalness={0.64} roughness={0.32} />
+        </mesh>
+        <BoltStuds count={6} radius={0.4} y={0.12} color="#1c262a" />
         {[0, 1, 2].map((i) => {
           const a = (i / 3) * Math.PI * 2 + 0.4;
           return (
-            <mesh key={i} position={[Math.cos(a) * 0.26, 0.26, Math.sin(a) * 0.26]} rotation={[0, -a, 0.22]} castShadow>
-              <boxGeometry args={[0.06, 0.42, 0.06]} />
-              <Mat color="#414f56" metalness={0.6} roughness={0.34} />
+            <mesh key={i} position={[Math.cos(a) * 0.28, 0.3, Math.sin(a) * 0.28]} rotation={[0, -a, 0.22]} castShadow>
+              <boxGeometry args={[0.07, 0.48, 0.07]} />
+              <Mat color="#3a4a52" metalness={0.64} roughness={0.3} />
             </mesh>
           );
         })}
         <mesh position={[0, 0.9, 0]} castShadow>
-          <cylinderGeometry args={[0.055, 0.13, 1.6, 8]} />
-          <Mat color="#4a5c64" metalness={0.55} roughness={0.28} />
+          <cylinderGeometry args={[0.05, 0.14, 1.62, 10]} />
+          <Mat color="#44565e" metalness={0.58} roughness={0.26} />
         </mesh>
+        {[0.48, 0.88, 1.28].map((y) => (
+          <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.09 + (1.28 - y) * 0.08, 0.016, 8, 20]} />
+            <Mat color="#2a383e" metalness={0.7} roughness={0.28} />
+          </mesh>
+        ))}
         <mesh position={[0, 0.72, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.2, 0.022, 8, 24]} />
-          <Mat color={def.color} eInt={0.42} />
+          <torusGeometry args={[0.21, 0.024, 8, 26]} />
+          <Mat color={def.color} eInt={0.5} />
         </mesh>
         <mesh position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.15, 0.018, 8, 20]} />
-          <Mat color={def.color} eInt={0.55} />
+          <torusGeometry args={[0.16, 0.02, 8, 22]} />
+          <Mat color={def.color} eInt={0.62} />
         </mesh>
         {level >= 2 ? (
           <mesh position={[0, 1.42, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.11, 0.02, 8, 18]} />
-            <Mat color={def.color} eInt={0.72} />
+            <torusGeometry args={[0.12, 0.022, 8, 20]} />
+            <Mat color={def.color} eInt={0.8} />
           </mesh>
         ) : null}
         {level >= 2
           ? [0, 1, 2].map((i) => {
               const a = (i / 3) * Math.PI * 2 + 1.1;
               return (
-                <mesh key={`fin-${i}`} position={[Math.cos(a) * 0.2, 0.52, Math.sin(a) * 0.2]} rotation={[0, -a, 0.48]} castShadow>
-                  <boxGeometry args={[0.045, 0.34, 0.045]} />
-                  <Mat color="#35444b" metalness={0.62} roughness={0.3} />
+                <mesh key={`fin-${i}`} position={[Math.cos(a) * 0.22, 0.54, Math.sin(a) * 0.22]} rotation={[0, -a, 0.48]} castShadow>
+                  <boxGeometry args={[0.05, 0.38, 0.05]} />
+                  <Mat color="#2e3e46" metalness={0.66} roughness={0.28} />
                 </mesh>
               );
             })
           : null}
         {level >= 3 ? (
           <mesh position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.38, 0.028, 8, 28]} />
-            <Mat color={def.color} eInt={0.7} />
+            <torusGeometry args={[0.4, 0.03, 8, 30]} />
+            <Mat color={def.color} eInt={0.78} />
           </mesh>
         ) : null}
         {level < 3 ? (
-          <mesh position={[0, 1.78, 0]}>
-            <octahedronGeometry args={[0.17 + level * 0.015, 0]} />
-            <Mat color={def.color} eInt={1.15 + level * 0.2} roughness={0.2} />
+          <mesh position={[0, 1.8, 0]}>
+            <octahedronGeometry args={[0.18 + level * 0.015, 0]} />
+            <Mat color={def.color} eInt={1.2 + level * 0.2} roughness={0.16} />
           </mesh>
         ) : (
-          ([-0.13, 0.13] as const).map((x) => (
-            <mesh key={x} position={[x, 1.84, 0]}>
-              <octahedronGeometry args={[0.145, 0]} />
-              <Mat color={def.color} eInt={1.55} roughness={0.18} />
+          ([-0.14, 0.14] as const).map((x) => (
+            <mesh key={x} position={[x, 1.86, 0]}>
+              <octahedronGeometry args={[0.15, 0]} />
+              <Mat color={def.color} eInt={1.6} roughness={0.14} />
             </mesh>
           ))
         )}
@@ -226,50 +319,52 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     return (
       <group>
         <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[0.46, 0.56, 0.2, 8]} />
-          <Mat color="#3a444e" metalness={0.5} roughness={0.42} />
+          <cylinderGeometry args={[0.48, 0.58, 0.2, 8]} />
+          <Mat color="#2e3842" metalness={0.52} roughness={0.4} />
         </mesh>
+        <mesh position={[0, 0.22, 0]} castShadow>
+          <cylinderGeometry args={[0.36, 0.42, 0.08, 8]} />
+          <Mat color="#3e4c58" metalness={0.48} roughness={0.36} />
+        </mesh>
+        <BoltStuds count={8} radius={0.5} y={0.16} color="#1c262e" />
         {[0, 1, 2].map((i) => {
           const a = (i / 3) * Math.PI * 2;
           return (
-            <mesh key={i} position={[Math.cos(a) * 0.3, 0.28, Math.sin(a) * 0.3]} castShadow>
-              <boxGeometry args={[0.07, 0.24, 0.07]} />
-              <Mat color="#4a5563" metalness={0.62} roughness={0.3} />
+            <mesh key={i} position={[Math.cos(a) * 0.32, 0.3, Math.sin(a) * 0.32]} castShadow>
+              <boxGeometry args={[0.08, 0.28, 0.08]} />
+              <Mat color="#44525e" metalness={0.64} roughness={0.28} />
             </mesh>
           );
         })}
-        <group position={[0, 0.46, 0]} rotation={[-0.34, 0, 0]}>
+        <group position={[0, 0.48, 0]} rotation={[-0.34, 0, 0]}>
           <mesh castShadow>
-            <sphereGeometry args={[0.52, 22, 10, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42]} />
-            <Mat color="#55677a" metalness={0.42} roughness={0.34} side={DoubleSide} />
+            <sphereGeometry args={[0.54, 24, 12, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42]} />
+            <Mat color="#5a6e82" metalness={0.38} roughness={0.3} side={DoubleSide} />
           </mesh>
           <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-            <torusGeometry args={[0.5, 0.026, 8, 32]} />
-            <Mat color={def.color} eInt={0.45 + level * 0.14} />
+            <torusGeometry args={[0.52, 0.03, 8, 34]} />
+            <Mat color={def.color} eInt={0.5 + level * 0.14} />
           </mesh>
-          <mesh position={[0, 0.14, 0]}>
-            <sphereGeometry args={[0.11, 12, 12]} />
-            <Mat color={def.color} eInt={1.0} />
-          </mesh>
+          <GlowOrb position={[0, 0.16, 0]} r={0.12} color={def.color} eInt={1.15} />
           <mesh position={[0, 0.02, 0]}>
-            <cylinderGeometry args={[0.07, 0.09, 0.4, 10]} />
-            <Mat color="#5f7181" metalness={0.5} roughness={0.28} />
+            <cylinderGeometry args={[0.075, 0.1, 0.42, 12]} />
+            <Mat color="#5f7181" metalness={0.52} roughness={0.26} />
           </mesh>
           {level >= 2
             ? [0, 1, 2].map((i) => {
                 const a = (i / 3) * Math.PI * 2 + 0.55;
                 return (
-                  <mesh key={`brace-${i}`} position={[Math.cos(a) * 0.4, 0.02, Math.sin(a) * 0.4]} rotation={[0.2, -a, 0.55]} castShadow>
-                    <boxGeometry args={[0.05, 0.22, 0.05]} />
-                    <Mat color="#6a7c8c" metalness={0.55} roughness={0.28} />
+                  <mesh key={`brace-${i}`} position={[Math.cos(a) * 0.42, 0.02, Math.sin(a) * 0.42]} rotation={[0.2, -a, 0.55]} castShadow>
+                    <boxGeometry args={[0.055, 0.24, 0.055]} />
+                    <Mat color="#6a7c8c" metalness={0.58} roughness={0.26} />
                   </mesh>
                 );
               })
             : null}
           {level >= 3 ? (
             <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
-              <torusGeometry args={[0.64, 0.03, 8, 32]} />
-              <Mat color={def.color} eInt={0.85} />
+              <torusGeometry args={[0.66, 0.032, 8, 34]} />
+              <Mat color={def.color} eInt={0.92} />
             </mesh>
           ) : null}
         </group>
@@ -277,9 +372,9 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           ? [0, 1, 2, 3, 4, 5].map((i) => {
               const a = (i / 6) * Math.PI * 2;
               return (
-                <mesh key={`spike-${i}`} position={[Math.cos(a) * 0.5, 0.22, Math.sin(a) * 0.5]} rotation={[0.9, 0, a]} castShadow>
-                  <coneGeometry args={[0.045, 0.2, 6]} />
-                  <Mat color={def.color} eInt={0.7} />
+                <mesh key={`spike-${i}`} position={[Math.cos(a) * 0.52, 0.22, Math.sin(a) * 0.52]} rotation={[0.9, 0, a]} castShadow>
+                  <coneGeometry args={[0.05, 0.22, 6]} />
+                  <Mat color={def.color} eInt={0.78} />
                 </mesh>
               );
             })
@@ -292,62 +387,80 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
   if (type === "rail") {
     return (
       <group>
-        <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.74, 0.14, 0.5]} />
-          <Mat color="#3f4045" metalness={0.75} roughness={0.28} />
+        <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.82, 0.14, 0.54]} />
+          <Mat color="#2e2f34" metalness={0.8} roughness={0.26} />
         </mesh>
-        <mesh position={[0, 0.22, -0.16]} castShadow>
-          <boxGeometry args={[0.5, 0.2, 0.34]} />
-          <Mat color="#4b4c52" metalness={0.7} roughness={0.3} />
-        </mesh>
-        <group position={[0, 0.44, 0.1]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.2, 0.16, 1.5]} />
-            <Mat color="#5d5e63" metalness={0.72} roughness={0.24} />
+        {([-0.34, 0.34] as const).map((x) => (
+          <mesh key={`foot-${x}`} position={[x, 0.04, 0.18]} castShadow>
+            <boxGeometry args={[0.16, 0.08, 0.22]} />
+            <Mat color="#1c1d20" metalness={0.72} roughness={0.32} />
           </mesh>
-          {([-0.13, 0.13] as const).map((x) => (
-            <mesh key={x} position={[x, 0.11, 0.16]} castShadow>
-              <boxGeometry args={[0.05, 0.06, 1.62]} />
-              <Mat color={def.color} eInt={0.42 + level * 0.14} metalness={0.5} roughness={0.2} />
+        ))}
+        <mesh position={[0, 0.22, -0.16]} castShadow>
+          <boxGeometry args={[0.54, 0.22, 0.36]} />
+          <Mat color="#45464c" metalness={0.74} roughness={0.28} />
+        </mesh>
+        <group position={[0, 0.46, 0.1]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.22, 0.18, 1.54]} />
+            <Mat color="#585960" metalness={0.76} roughness={0.22} />
+          </mesh>
+          {([-0.14, 0.14] as const).map((x) => (
+            <mesh key={x} position={[x, 0.12, 0.16]} castShadow>
+              <boxGeometry args={[0.055, 0.065, 1.66]} />
+              <Mat color={def.color} eInt={0.48 + level * 0.14} metalness={0.52} roughness={0.18} />
             </mesh>
           ))}
-          <mesh position={[0, 0.03, 0.92]}>
-            <boxGeometry args={[0.26, 0.1, 0.1]} />
-            <Mat color={def.color} eInt={0.95} />
+          {[-0.32, 0, 0.32].map((z) => (
+            <mesh key={z} position={[0, 0.12, z]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.14, 0.016, 6, 16]} />
+              <Mat color="#2a2b30" metalness={0.7} roughness={0.24} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.04, 0.94]}>
+            <boxGeometry args={[0.28, 0.12, 0.12]} />
+            <Mat color={def.color} eInt={1.05} />
           </mesh>
-          {([-0.24, 0.24] as const).map((x) => (
-            <mesh key={x} position={[x, 0.02, -0.42]}>
-              <cylinderGeometry args={[0.11, 0.11, 0.1, 10]} />
-              <Mat color={def.color} eInt={0.7} />
+          {([-0.26, 0.26] as const).map((x) => (
+            <mesh key={`coil-${x}`} position={[x, 0.02, -0.44]}>
+              <cylinderGeometry args={[0.12, 0.12, 0.12, 12]} />
+              <Mat color={def.color} eInt={0.78} />
             </mesh>
           ))}
           {level >= 2
-            ? ([-0.38, 0.38] as const).map((x) => (
-                <mesh key={`cap-${x}`} position={[x, 0.04, -0.18]} castShadow>
-                  <boxGeometry args={[0.16, 0.2, 0.28]} />
-                  <Mat color="#35363b" metalness={0.78} roughness={0.24} />
-                </mesh>
+            ? ([-0.4, 0.4] as const).map((x) => (
+                <group key={`cap-${x}`}>
+                  <mesh position={[x, 0.04, -0.18]} castShadow>
+                    <boxGeometry args={[0.18, 0.22, 0.3]} />
+                    <Mat color="#2a2b30" metalness={0.82} roughness={0.22} />
+                  </mesh>
+                  <mesh position={[x, 0.16, -0.18]}>
+                    <cylinderGeometry args={[0.05, 0.05, 0.06, 8]} />
+                    <Mat color={def.color} eInt={0.9} />
+                  </mesh>
+                </group>
               ))
             : null}
           {level >= 2 ? (
-            <mesh position={[0, 0.2, 0.1]} castShadow>
-              <boxGeometry args={[0.04, 0.05, 1.48]} />
-              <Mat color={def.color} eInt={0.7} metalness={0.5} roughness={0.18} />
+            <mesh position={[0, 0.22, 0.1]} castShadow>
+              <boxGeometry args={[0.042, 0.052, 1.5]} />
+              <Mat color={def.color} eInt={0.75} metalness={0.52} roughness={0.16} />
             </mesh>
           ) : null}
           {level >= 3 ? (
             <>
-              <mesh position={[0, 0.28, 0.06]} castShadow>
-                <boxGeometry args={[0.035, 0.045, 1.36]} />
-                <Mat color={def.color} eInt={0.85} metalness={0.52} roughness={0.16} />
+              <mesh position={[0, 0.3, 0.06]} castShadow>
+                <boxGeometry args={[0.036, 0.048, 1.38]} />
+                <Mat color={def.color} eInt={0.9} metalness={0.54} roughness={0.14} />
               </mesh>
-              <mesh position={[0, 0.06, 1.02]} castShadow>
-                <boxGeometry args={[0.34, 0.2, 0.22]} />
-                <Mat color="#2f3034" metalness={0.8} roughness={0.22} />
+              <mesh position={[0, 0.06, 1.04]} castShadow>
+                <boxGeometry args={[0.36, 0.22, 0.24]} />
+                <Mat color="#26272c" metalness={0.84} roughness={0.2} />
               </mesh>
-              <mesh position={[0, 0.06, 1.16]}>
-                <boxGeometry args={[0.22, 0.12, 0.08]} />
-                <Mat color={def.color} eInt={1.15} />
+              <mesh position={[0, 0.06, 1.18]}>
+                <boxGeometry args={[0.24, 0.13, 0.09]} />
+                <Mat color={def.color} eInt={1.25} />
               </mesh>
             </>
           ) : null}
@@ -359,41 +472,52 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
   // Tesla Spire — stacked toroids on a mast. Reads as concentric rings from above.
   return (
     <group>
-      <mesh position={[0, 0.09, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.38, 0.46, 0.16, 8]} />
-        <Mat color="#3a4640" metalness={0.55} roughness={0.4} />
+      <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.4, 0.5, 0.16, 8]} />
+        <Mat color="#2c3834" metalness={0.6} roughness={0.38} />
       </mesh>
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <cylinderGeometry args={[0.09, 0.15, 0.9, 10]} />
-        <Mat color="#4a5a54" metalness={0.5} roughness={0.3} />
+      <mesh position={[0, 0.2, 0]} castShadow>
+        <cylinderGeometry args={[0.28, 0.34, 0.1, 8]} />
+        <Mat color="#3a4842" metalness={0.55} roughness={0.34} />
       </mesh>
-      <group ref={yaw} position={[0, 0.92, 0]}>
+      <BoltStuds count={8} radius={0.42} y={0.14} color="#1c2622" />
+      <mesh position={[0, 0.62, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.16, 0.92, 12]} />
+        <Mat color="#44564e" metalness={0.52} roughness={0.28} />
+      </mesh>
+      {[0.38, 0.62, 0.86].map((y) => (
+        <mesh key={y} position={[0, y, 0]}>
+          <cylinderGeometry args={[0.14, 0.14, 0.05, 10]} />
+          <Mat color="#2a3630" metalness={0.45} roughness={0.42} />
+        </mesh>
+      ))}
+      <group ref={yaw} position={[0, 0.94, 0]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.34, 0.042, 8, 22]} />
-          <Mat color={def.color} eInt={0.5} />
+          <torusGeometry args={[0.36, 0.044, 8, 24]} />
+          <Mat color={def.color} eInt={0.55} />
         </mesh>
         <mesh position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.25, 0.034, 8, 20]} />
-          <Mat color={def.color} eInt={0.65} />
+          <torusGeometry args={[0.26, 0.036, 8, 22]} />
+          <Mat color={def.color} eInt={0.7} />
         </mesh>
-        <mesh position={[0, 0.37, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.16, 0.028, 8, 18]} />
-          <Mat color={def.color} eInt={0.8} />
+        <mesh position={[0, 0.38, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.17, 0.03, 8, 20]} />
+          <Mat color={def.color} eInt={0.88} />
         </mesh>
         <mesh position={[0, -0.18, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.42, 0.03, 8, 24]} />
-          <Mat color={def.color} eInt={0.35} />
+          <torusGeometry args={[0.44, 0.032, 8, 26]} />
+          <Mat color={def.color} eInt={0.4} />
         </mesh>
         {level >= 2 ? (
-          <mesh position={[0, 0.54, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.2, 0.03, 8, 18]} />
-            <Mat color={def.color} eInt={0.9} />
+          <mesh position={[0, 0.56, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.21, 0.032, 8, 20]} />
+            <Mat color={def.color} eInt={0.98} />
           </mesh>
         ) : null}
         {level >= 3 ? (
           <mesh position={[0, -0.08, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.54, 0.028, 8, 28]} />
-            <Mat color={def.color} eInt={0.55} />
+            <torusGeometry args={[0.56, 0.03, 8, 30]} />
+            <Mat color={def.color} eInt={0.62} />
           </mesh>
         ) : null}
       </group>
@@ -401,17 +525,14 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
         ? [0, 1, 2, 3, 4, 5].map((i) => {
             const a = (i / 6) * Math.PI * 2;
             return (
-              <mesh key={`stud-${i}`} position={[Math.cos(a) * 0.4, 0.2, Math.sin(a) * 0.4]} castShadow>
-                <cylinderGeometry args={[0.045, 0.05, 0.12, 8]} />
-                <Mat color="#2f3a34" metalness={0.6} roughness={0.34} />
+              <mesh key={`stud-${i}`} position={[Math.cos(a) * 0.42, 0.22, Math.sin(a) * 0.42]} castShadow>
+                <cylinderGeometry args={[0.048, 0.054, 0.14, 8]} />
+                <Mat color="#2a3630" metalness={0.62} roughness={0.32} />
               </mesh>
             );
           })
         : null}
-      <mesh position={[0, level >= 3 ? 1.48 : 1.4, 0]}>
-        <sphereGeometry args={[level >= 3 ? 0.17 : 0.11, 12, 12]} />
-        <Mat color={def.color} eInt={1.35 + level * 0.15} />
-      </mesh>
+      <GlowOrb position={[0, level >= 3 ? 1.52 : 1.42, 0]} r={level >= 3 ? 0.18 : 0.12} color={def.color} eInt={1.4 + level * 0.16} />
     </group>
   );
 }
@@ -432,23 +553,28 @@ export function EnemyModel({ type }: { type: EnemyId }) {
   if (type === "mite") {
     return (
       <group scale={0.86}>
-        <mesh position={[0, 0.22, 0.02]} castShadow>
-          <sphereGeometry args={[0.22, 10, 8]} />
-          <Mat color="#3d8f62" roughness={0.58} metalness={0.08} />
+        <mesh position={[0, 0.2, -0.06]} castShadow>
+          <sphereGeometry args={[0.2, 12, 10]} />
+          <Mat color="#2f7a54" roughness={0.56} metalness={0.08} />
         </mesh>
-        <mesh position={[0, 0.2, 0.22]} castShadow>
-          <sphereGeometry args={[0.14, 8, 8]} />
-          <Mat color="#348058" roughness={0.52} metalness={0.06} />
+        <mesh position={[0, 0.22, 0.08]} castShadow>
+          <sphereGeometry args={[0.18, 12, 10]} />
+          <Mat color="#3d8f62" roughness={0.54} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 0.2, 0.26]} castShadow>
+          <sphereGeometry args={[0.13, 10, 8]} />
+          <Mat color="#2a6a4a" roughness={0.5} metalness={0.06} />
+        </mesh>
+        <mesh position={[0, 0.3, 0.04]} castShadow>
+          <sphereGeometry args={[0.12, 8, 6]} />
+          <Mat color="#1e4a36" roughness={0.48} metalness={0.1} />
         </mesh>
         {([-0.07, 0.07] as const).map((x) => (
-          <mesh key={x} position={[x, 0.26, 0.32]}>
-            <sphereGeometry args={[0.05, 8, 8]} />
-            <Mat color="#b8ffd8" eInt={3.4} />
-          </mesh>
+          <GlowOrb key={x} position={[x, 0.26, 0.36]} r={0.045} color="#b8ffd8" eInt={3.5} />
         ))}
         {([-1, 1] as const).map((s) => (
-          <mesh key={s} position={[0.05 * s, 0.3, 0.28]} rotation={[0.5, 0, 0.35 * s]}>
-            <cylinderGeometry args={[0.012, 0.012, 0.22, 5]} />
+          <mesh key={s} position={[0.05 * s, 0.32, 0.3]} rotation={[0.55, 0, 0.4 * s]}>
+            <cylinderGeometry args={[0.01, 0.016, 0.24, 5]} />
             <Mat color="#1c3a2c" roughness={0.65} />
           </mesh>
         ))}
@@ -456,7 +582,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           {([-1, 1] as const).flatMap((s, i) =>
             [0.12, -0.04, -0.2].map((z, j) => (
               <mesh key={`${i}${j}`} position={[0.16 * s, 0.06, z]} rotation={[0.45, 0, 0.85 * s]}>
-                <boxGeometry args={[0.035, 0.22, 0.035]} />
+                <boxGeometry args={[0.032, 0.22, 0.032]} />
                 <Mat color="#1c3a2c" roughness={0.62} />
               </mesh>
             )),
@@ -469,35 +595,33 @@ export function EnemyModel({ type }: { type: EnemyId }) {
   if (type === "brood") {
     return (
       <group scale={1.12}>
-        <mesh position={[0, 0.3, -0.08]} castShadow>
-          <sphereGeometry args={[0.28, 12, 10]} />
-          <Mat color="#2f7a54" roughness={0.52} metalness={0.1} />
+        <mesh position={[0, 0.28, -0.12]} castShadow>
+          <sphereGeometry args={[0.26, 12, 10]} />
+          <Mat color="#246848" roughness={0.5} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0.28, 0.22]} castShadow>
-          <sphereGeometry args={[0.2, 10, 8]} />
-          <Mat color="#348058" roughness={0.5} metalness={0.08} />
+        <mesh position={[0, 0.3, 0.06]} castShadow>
+          <sphereGeometry args={[0.24, 12, 10]} />
+          <Mat color="#2f7a54" roughness={0.5} metalness={0.1} />
         </mesh>
-        {([-0.08, 0.08] as const).map((x) => (
-          <mesh key={x} position={[x, 0.22, 0.36]} rotation={[0.6, 0, x * 2]}>
-            <boxGeometry args={[0.05, 0.04, 0.16]} />
-            <Mat color="#1a4030" roughness={0.45} />
+        <mesh position={[0, 0.28, 0.26]} castShadow>
+          <sphereGeometry args={[0.18, 10, 8]} />
+          <Mat color="#348058" roughness={0.48} metalness={0.08} />
+        </mesh>
+        {([-0.09, 0.09] as const).map((x) => (
+          <mesh key={x} position={[x, 0.22, 0.4]} rotation={[0.65, 0, x * 2.2]}>
+            <boxGeometry args={[0.055, 0.045, 0.18]} />
+            <Mat color="#163428" roughness={0.42} />
           </mesh>
         ))}
         {([-0.07, 0.07] as const).map((x) => (
-          <mesh key={`e${x}`} position={[x, 0.34, 0.36]}>
-            <sphereGeometry args={[0.045, 8, 8]} />
-            <Mat color="#6ad4a0" eInt={2.8} />
-          </mesh>
+          <GlowOrb key={`e${x}`} position={[x, 0.34, 0.38]} r={0.042} color="#6ad4a0" eInt={2.9} />
         ))}
-        <mesh position={[0, 0.38, 0]}>
-          <sphereGeometry args={[0.1, 8, 8]} />
-          <Mat color="#6ad4a0" eInt={1.4} />
-        </mesh>
+        <GlowOrb position={[0, 0.42, 0]} r={0.09} color="#6ad4a0" eInt={1.5} />
         <WalkLegs>
           {([-1, 1] as const).flatMap((s, i) =>
             [0.18, 0.0, -0.22].map((z, j) => (
               <mesh key={`${i}${j}`} position={[0.22 * s, 0.08, z]} rotation={[0.4, 0, 0.7 * s]}>
-                <boxGeometry args={[0.05, 0.28, 0.05]} />
+                <boxGeometry args={[0.048, 0.28, 0.048]} />
                 <Mat color="#1c3a2c" roughness={0.6} />
               </mesh>
             )),
@@ -511,16 +635,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.42}>
         <mesh position={[0, 0.3, 0]} castShadow>
-          <sphereGeometry args={[0.3, 12, 10]} />
-          <Mat color="#2c6b4c" roughness={0.48} metalness={0.16} />
+          <sphereGeometry args={[0.3, 14, 12]} />
+          <Mat color="#2c6b4c" roughness={0.46} metalness={0.16} />
         </mesh>
         <mesh position={[0, 0.26, 0.26]} castShadow>
           <sphereGeometry args={[0.16, 10, 8]} />
-          <Mat color="#245844" roughness={0.46} metalness={0.14} />
+          <Mat color="#245844" roughness={0.44} metalness={0.14} />
         </mesh>
-        <mesh position={[0, 0.48, -0.02]} castShadow>
-          <boxGeometry args={[0.5, 0.16, 0.46]} />
-          <Mat color="#1e4a38" metalness={0.22} roughness={0.42} />
+        <mesh position={[0, 0.5, -0.02]} castShadow>
+          <boxGeometry args={[0.52, 0.18, 0.48]} />
+          <Mat color="#1e4a38" metalness={0.24} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 0.42, 0.18]} castShadow>
+          <boxGeometry args={[0.36, 0.08, 0.2]} />
+          <Mat color="#16382c" metalness={0.2} roughness={0.44} />
         </mesh>
         {([-0.26, 0.26] as const).map((x) => (
           <mesh key={x} position={[x, 0.4, 0]} rotation={[0, 0, x > 0 ? -0.45 : 0.45]} castShadow>
@@ -556,16 +684,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.58}>
         <mesh position={[0, 0.3, 0]} castShadow>
-          <sphereGeometry args={[0.3, 12, 10]} />
-          <Mat color="#245c40" roughness={0.46} metalness={0.14} />
+          <sphereGeometry args={[0.3, 14, 12]} />
+          <Mat color="#245c40" roughness={0.44} metalness={0.16} />
         </mesh>
         <mesh position={[0, 0.26, 0.24]} castShadow>
           <sphereGeometry args={[0.16, 10, 8]} />
-          <Mat color="#1c4a34" roughness={0.44} />
+          <Mat color="#1c4a34" roughness={0.42} />
         </mesh>
-        <mesh position={[0, 0.5, -0.02]} castShadow>
-          <boxGeometry args={[0.44, 0.14, 0.4]} />
-          <Mat color="#163828" metalness={0.24} roughness={0.4} />
+        <mesh position={[0, 0.52, -0.02]} castShadow>
+          <boxGeometry args={[0.46, 0.16, 0.42]} />
+          <Mat color="#163828" metalness={0.26} roughness={0.38} />
+        </mesh>
+        <mesh position={[0, 0.38, 0.2]} castShadow>
+          <boxGeometry args={[0.28, 0.08, 0.16]} />
+          <Mat color="#122820" metalness={0.22} roughness={0.4} />
         </mesh>
         <mesh position={[0, 0.66, 0]} castShadow>
           <coneGeometry args={[0.1, 0.28, 5]} />
@@ -601,16 +733,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.95}>
         <mesh position={[0, 0.3, 0]} castShadow>
-          <sphereGeometry args={[0.34, 12, 10]} />
-          <Mat color="#4aaa78" roughness={0.5} metalness={0.12} />
+          <sphereGeometry args={[0.34, 14, 12]} />
+          <Mat color="#4aaa78" roughness={0.48} metalness={0.14} />
         </mesh>
         <mesh position={[0, 0.24, 0.28]} castShadow>
           <sphereGeometry args={[0.18, 10, 8]} />
-          <Mat color="#3d8f62" roughness={0.48} />
+          <Mat color="#3d8f62" roughness={0.46} />
         </mesh>
-        <mesh position={[0, 0.52, -0.04]} castShadow>
-          <boxGeometry args={[0.5, 0.16, 0.46]} />
-          <Mat color="#245844" metalness={0.2} roughness={0.44} />
+        <mesh position={[0, 0.54, -0.04]} castShadow>
+          <boxGeometry args={[0.54, 0.18, 0.48]} />
+          <Mat color="#245844" metalness={0.22} roughness={0.42} />
+        </mesh>
+        <mesh position={[0, 0.42, 0.16]} castShadow>
+          <torusGeometry args={[0.22, 0.03, 6, 16]} />
+          <Mat color="#7ee0b4" eInt={0.7} />
         </mesh>
         {[-0.9, -0.3, 0.3, 0.9].map((a) => (
           <mesh key={a} position={[Math.sin(a) * 0.26, 0.64, Math.cos(a) * 0.22]} rotation={[-0.35, a, 0]} castShadow>
@@ -679,19 +815,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat>
         <mesh>
-          <icosahedronGeometry args={[0.26, 0]} />
-          <meshStandardMaterial color="#4aaa88" emissive="#3dcaa0" emissiveIntensity={1.25} roughness={0.32} transparent opacity={0.9} />
+          <icosahedronGeometry args={[0.28, 0]} />
+          <meshStandardMaterial color="#4aaa88" emissive="#3dcaa0" emissiveIntensity={1.35} roughness={0.3} transparent opacity={0.88} />
         </mesh>
         <mesh>
-          <sphereGeometry args={[0.1, 10, 8]} />
-          <Mat color="#a8f0d4" eInt={2.6} />
+          <dodecahedronGeometry args={[0.16, 0]} />
+          <Mat color="#2a6a52" roughness={0.4} emissive="#3dcaa0" eInt={0.4} />
         </mesh>
+        <GlowOrb r={0.1} color="#a8f0d4" eInt={2.7} />
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a = (i / 6) * Math.PI * 2;
           return (
-            <mesh key={i} position={[Math.cos(a) * 0.2, -0.08, Math.sin(a) * 0.2]} rotation={[0.8, a, 0]}>
-              <capsuleGeometry args={[0.02, 0.16, 3, 5]} />
-              <Mat color="#2a6a52" roughness={0.45} emissive="#3dcaa0" eInt={0.35} />
+            <mesh key={i} position={[Math.cos(a) * 0.22, -0.08, Math.sin(a) * 0.22]} rotation={[0.8, a, 0]}>
+              <capsuleGeometry args={[0.022, 0.18, 3, 5]} />
+              <Mat color="#2a6a52" roughness={0.42} emissive="#3dcaa0" eInt={0.4} />
             </mesh>
           );
         })}
@@ -703,19 +840,25 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat amp={0.1}>
         <mesh>
-          <icosahedronGeometry args={[0.3, 1]} />
-          <meshStandardMaterial color="#6ad4a8" emissive="#3dcaa0" emissiveIntensity={1.6} roughness={0.28} transparent opacity={0.92} />
+          <icosahedronGeometry args={[0.32, 1]} />
+          <meshStandardMaterial color="#6ad4a8" emissive="#3dcaa0" emissiveIntensity={1.7} roughness={0.26} transparent opacity={0.9} />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[0.12, 10, 8]} />
-          <Mat color="#d8ffe8" eInt={3} />
-        </mesh>
+        <GlowOrb r={0.13} color="#d8ffe8" eInt={3.1} />
         {[0, 1, 2, 3, 4, 5].map((i) => {
           const a = (i / 6) * Math.PI * 2;
           return (
-            <mesh key={i} position={[Math.cos(a) * 0.32, 0.02, Math.sin(a) * 0.32]} rotation={[0.2, a, 0.4]}>
-              <octahedronGeometry args={[0.13, 0]} />
-              <Mat color="#8af0c4" eInt={1.9} />
+            <mesh key={i} position={[Math.cos(a) * 0.34, 0.02, Math.sin(a) * 0.34]} rotation={[0.2, a, 0.4]}>
+              <octahedronGeometry args={[0.14, 0]} />
+              <Mat color="#8af0c4" eInt={2} />
+            </mesh>
+          );
+        })}
+        {[0, 1, 2].map((i) => {
+          const a = (i / 3) * Math.PI * 2 + 0.4;
+          return (
+            <mesh key={`inner-${i}`} position={[Math.cos(a) * 0.18, 0.12, Math.sin(a) * 0.18]}>
+              <octahedronGeometry args={[0.07, 0]} />
+              <Mat color="#d8ffe8" eInt={1.4} />
             </mesh>
           );
         })}
@@ -727,22 +870,30 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat amp={0.06}>
         <mesh castShadow>
-          <cylinderGeometry args={[0.26, 0.26, 0.09, 6]} />
-          <Mat color="#6a7078" metalness={0.78} roughness={0.26} />
+          <cylinderGeometry args={[0.26, 0.28, 0.1, 6]} />
+          <Mat color="#6a7078" metalness={0.8} roughness={0.24} />
+        </mesh>
+        <mesh position={[0, -0.04, 0]} castShadow>
+          <cylinderGeometry args={[0.18, 0.22, 0.06, 6]} />
+          <Mat color="#3a4048" metalness={0.76} roughness={0.28} />
         </mesh>
         <mesh position={[0, 0.1, 0]}>
           <cylinderGeometry args={[0.07, 0.09, 0.08, 8]} />
-          <Mat color="#c46a3a" eInt={2.4} />
+          <Mat color="#c46a3a" eInt={2.5} />
         </mesh>
         {[0, 1, 2, 3].map((i) => {
           const a = (i / 4) * Math.PI * 2 + 0.4;
           return (
-            <group key={i} position={[Math.cos(a) * 0.28, 0.05, Math.sin(a) * 0.28]} rotation={[0, -a, 0]}>
+            <group key={i} position={[Math.cos(a) * 0.3, 0.05, Math.sin(a) * 0.3]} rotation={[0, -a, 0]}>
+              <mesh position={[-0.08, 0, 0]} castShadow>
+                <boxGeometry args={[0.16, 0.03, 0.05]} />
+                <Mat color="#4a5058" metalness={0.7} roughness={0.3} />
+              </mesh>
               <mesh rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[0.055, 0.055, 0.03, 8]} />
-                <Mat color="#2a2e32" metalness={0.6} roughness={0.35} />
+                <Mat color="#2a2e32" metalness={0.62} roughness={0.34} />
               </mesh>
-              <Rotor position={[0, 0.03, 0]} width={0.32} />
+              <Rotor position={[0, 0.03, 0]} width={0.34} />
             </group>
           );
         })}
@@ -753,30 +904,36 @@ export function EnemyModel({ type }: { type: EnemyId }) {
   if (type === "walker") {
     return (
       <group>
-        <mesh position={[0, 0.52, 0]} castShadow>
-          <boxGeometry args={[0.34, 0.32, 0.26]} />
-          <Mat color="#5e666e" metalness={0.68} roughness={0.32} />
+        <mesh position={[0, 0.54, 0]} castShadow>
+          <boxGeometry args={[0.36, 0.34, 0.28]} />
+          <Mat color="#5e666e" metalness={0.72} roughness={0.3} />
         </mesh>
-        <mesh position={[0, 0.78, 0.04]} castShadow>
-          <boxGeometry args={[0.18, 0.2, 0.2]} />
-          <Mat color="#3e464e" metalness={0.7} roughness={0.28} />
+        <mesh position={[0, 0.54, 0.1]} castShadow>
+          <boxGeometry args={[0.22, 0.16, 0.08]} />
+          <Mat color="#3a4048" metalness={0.7} roughness={0.28} />
         </mesh>
-        <mesh position={[0, 0.8, 0.16]}>
-          <boxGeometry args={[0.16, 0.04, 0.04]} />
-          <Mat color="#e08848" eInt={2.6} />
+        <mesh position={[0, 0.8, 0.04]} castShadow>
+          <boxGeometry args={[0.2, 0.22, 0.22]} />
+          <Mat color="#3e464e" metalness={0.74} roughness={0.26} />
         </mesh>
-        <mesh position={[0.06, 0.96, -0.02]} rotation={[0.15, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.015, 0.015, 0.28, 6]} />
-          <Mat color="#2a2e32" metalness={0.7} />
+        <mesh position={[0, 0.82, 0.18]}>
+          <boxGeometry args={[0.16, 0.045, 0.045]} />
+          <Mat color="#e08848" eInt={2.7} />
         </mesh>
-        <mesh position={[0.12, 0.2, 0.02]} castShadow>
-          <boxGeometry args={[0.1, 0.4, 0.12]} />
-          <Mat color="#3a4048" metalness={0.7} roughness={0.32} />
+        <mesh position={[0.07, 1.0, -0.02]} rotation={[0.18, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.014, 0.014, 0.3, 6]} />
+          <Mat color="#2a2e32" metalness={0.72} />
         </mesh>
-        <mesh position={[-0.12, 0.2, -0.02]} castShadow>
-          <boxGeometry args={[0.1, 0.4, 0.12]} />
-          <Mat color="#3a4048" metalness={0.7} roughness={0.32} />
-        </mesh>
+        <WalkLegs>
+          <mesh position={[0.13, 0.2, 0.04]} castShadow>
+            <boxGeometry args={[0.1, 0.42, 0.12]} />
+            <Mat color="#3a4048" metalness={0.72} roughness={0.3} />
+          </mesh>
+          <mesh position={[-0.13, 0.2, -0.04]} castShadow>
+            <boxGeometry args={[0.1, 0.42, 0.12]} />
+            <Mat color="#3a4048" metalness={0.72} roughness={0.3} />
+          </mesh>
+        </WalkLegs>
       </group>
     );
   }
@@ -785,8 +942,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.18}>
         <mesh position={[0, 0.42, 0]} castShadow>
-          <boxGeometry args={[0.56, 0.28, 0.44]} />
-          <Mat color="#4e545c" metalness={0.72} roughness={0.3} />
+          <boxGeometry args={[0.58, 0.3, 0.46]} />
+          <Mat color="#4e545c" metalness={0.74} roughness={0.28} />
+        </mesh>
+        <mesh position={[0, 0.5, 0.16]} castShadow>
+          <boxGeometry args={[0.4, 0.1, 0.12]} />
+          <Mat color="#2a2e34" metalness={0.7} roughness={0.3} />
         </mesh>
         <mesh position={[0, 0.62, -0.06]} castShadow>
           <boxGeometry args={[0.36, 0.18, 0.3]} />
@@ -824,12 +985,16 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a4048" metalness={0.8} roughness={0.24} />
         </mesh>
         <mesh position={[0, 0.58, 0.22]} castShadow>
-          <boxGeometry args={[0.7, 0.5, 0.1]} />
-          <Mat color="#2a3038" metalness={0.82} roughness={0.2} />
+          <boxGeometry args={[0.72, 0.52, 0.1]} />
+          <Mat color="#2a3038" metalness={0.84} roughness={0.18} />
+        </mesh>
+        <mesh position={[0, 0.72, 0.24]} castShadow>
+          <boxGeometry args={[0.5, 0.08, 0.06]} />
+          <Mat color="#1c2026" metalness={0.8} roughness={0.22} />
         </mesh>
         <mesh position={[0, 0.58, 0.28]}>
           <boxGeometry args={[0.18, 0.18, 0.04]} />
-          <Mat color="#c46a3a" eInt={1.8} />
+          <Mat color="#c46a3a" eInt={1.9} />
         </mesh>
         {([-0.18, 0.18] as const).map((x) => (
           <mesh key={x} position={[x, 0.18, 0]} castShadow>
@@ -925,8 +1090,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat amp={0.05}>
         <mesh castShadow>
-          <boxGeometry args={[0.28, 0.12, 0.72]} />
-          <Mat color="#5a6068" metalness={0.7} roughness={0.28} />
+          <boxGeometry args={[0.3, 0.13, 0.76]} />
+          <Mat color="#5a6068" metalness={0.74} roughness={0.26} />
+        </mesh>
+        <mesh position={[0, 0.08, -0.08]} castShadow>
+          <boxGeometry args={[0.16, 0.08, 0.28]} />
+          <Mat color="#3a4048" metalness={0.7} roughness={0.3} />
         </mesh>
         <mesh position={[0.38, 0, -0.04]} rotation={[0, 0.15, 0.18]} castShadow>
           <boxGeometry args={[0.52, 0.04, 0.26]} />
@@ -952,8 +1121,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat amp={0.07}>
         <mesh castShadow>
-          <boxGeometry args={[0.14, 0.07, 1.02]} />
-          <Mat color="#6a5050" metalness={0.74} roughness={0.24} />
+          <boxGeometry args={[0.15, 0.075, 1.06]} />
+          <Mat color="#6a5050" metalness={0.76} roughness={0.22} />
+        </mesh>
+        <mesh position={[0, 0.04, 0.1]} castShadow>
+          <boxGeometry args={[0.08, 0.05, 0.36]} />
+          <Mat color="#3a2828" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[0.22, 0, -0.12]} rotation={[0, 0.45, 0.25]} castShadow>
           <boxGeometry args={[0.4, 0.03, 0.12]} />
@@ -1142,34 +1315,59 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     );
   }
 
+  if (type === "chimera") {
+    return (
+      <group scale={1.08}>
+        <mesh position={[0, 0.3, -0.04]} castShadow>
+          <sphereGeometry args={[0.24, 12, 10]} />
+          <Mat color="#3a5a4c" roughness={0.44} metalness={0.24} />
+        </mesh>
+        <mesh position={[-0.16, 0.42, 0.16]} castShadow>
+          <sphereGeometry args={[0.14, 10, 8]} />
+          <Mat color="#2a4a3c" roughness={0.48} />
+        </mesh>
+        <mesh position={[0.18, 0.44, 0.14]} castShadow>
+          <boxGeometry args={[0.2, 0.16, 0.2]} />
+          <Mat color="#5a686c" metalness={0.76} roughness={0.24} />
+        </mesh>
+        <mesh position={[-0.16, 0.5, 0.26]}>
+          <sphereGeometry args={[0.045, 8, 8]} />
+          <Mat color="#6ad4a0" eInt={2.6} />
+        </mesh>
+        <mesh position={[0.18, 0.48, 0.26]}>
+          <boxGeometry args={[0.1, 0.035, 0.035]} />
+          <Mat color="#8ec8d0" eInt={2.8} />
+        </mesh>
+        <mesh position={[-0.22, 0.56, 0.12]} rotation={[-0.3, 0, 0.35]} castShadow>
+          <coneGeometry args={[0.05, 0.2, 5]} />
+          <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.7} />
+        </mesh>
+        <mesh position={[0.26, 0.5, 0.08]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.03, 0.04, 0.18, 8]} />
+          <Mat color="#6a787c" metalness={0.72} />
+        </mesh>
+        <GlowOrb position={[0.02, 0.38, 0.04]} r={0.075} color="#8ec8d0" eInt={2.5} />
+        <WalkLegs>
+          {([-1, 1] as const).flatMap((s, i) =>
+            [0.14, -0.16].map((z, j) => (
+              <mesh key={`${i}${j}`} position={[0.17 * s, 0.08, z]} rotation={[0.35, 0, 0.55 * s]}>
+                <boxGeometry args={[0.055, 0.26, 0.055]} />
+                <Mat color={s < 0 ? "#2a4a3c" : "#3a484c"} metalness={s > 0 ? 0.6 : 0.2} roughness={0.42} />
+              </mesh>
+            )),
+          )}
+        </WalkLegs>
+      </group>
+    );
+  }
+
   return (
     <group>
       <mesh position={[0, 0.26, -0.04]} castShadow>
         <sphereGeometry args={[0.22, 12, 10]} />
         <Mat color="#3a5a4c" roughness={0.46} metalness={0.22} />
       </mesh>
-      <mesh position={[0.16, 0.32, 0.16]} castShadow>
-        <boxGeometry args={[0.2, 0.18, 0.2]} />
-        <Mat color="#5a686c" metalness={0.7} roughness={0.28} />
-      </mesh>
-      <mesh position={[-0.12, 0.28, 0.2]} castShadow>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <Mat color="#2a4a3c" roughness={0.5} />
-      </mesh>
-      <mesh position={[0.04, 0.34, 0.08]}>
-        <sphereGeometry args={[0.08, 8, 8]} />
-        <Mat color="#8ec8d0" eInt={2.4} />
-      </mesh>
-      <WalkLegs>
-        {([-1, 1] as const).flatMap((s, i) =>
-          [0.16, -0.14].map((z, j) => (
-            <mesh key={`${i}${j}`} position={[0.16 * s, 0.08, z]} rotation={[0.35, 0, 0.55 * s]}>
-              <boxGeometry args={[0.055, 0.24, 0.055]} />
-              <Mat color="#2a3a38" />
-            </mesh>
-          )),
-        )}
-      </WalkLegs>
+      <GlowOrb position={[0.04, 0.34, 0.08]} r={0.08} color="#8ec8d0" eInt={2.4} />
     </group>
   );
 }
@@ -1204,14 +1402,18 @@ export function HexPad({
   return (
     <group>
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.56, 0.62, h, 6]} />
+        <cylinderGeometry args={[0.56, 0.64, h, 6]} />
         <meshStandardMaterial
           color={occupied ? color : "#8d9aa2"}
-          metalness={0.5}
-          roughness={occupied ? 0.5 : 0.34}
+          metalness={occupied ? 0.42 : 0.58}
+          roughness={occupied ? 0.52 : 0.3}
           emissive={emissive}
           emissiveIntensity={glow}
         />
+      </mesh>
+      <mesh position={[0, 0.012, 0]} receiveShadow>
+        <cylinderGeometry args={[0.68, 0.7, 0.024, 6]} />
+        <meshStandardMaterial color="#2a3238" metalness={0.55} roughness={0.48} />
       </mesh>
       <mesh ref={breathe} rotation={[-Math.PI / 2, 0, 0]} position={[0, h + 0.006, 0]}>
         <ringGeometry args={[occupied ? 0.5 : 0.44, 0.56, 6]} />
@@ -1222,10 +1424,10 @@ export function HexPad({
           <circleGeometry args={[0.42, 6]} />
           <meshStandardMaterial
             color={color}
-            metalness={0.3}
-            roughness={0.68}
+            metalness={0.34}
+            roughness={0.62}
             emissive={emissive}
-            emissiveIntensity={hover || selected ? 0.5 : 0.24}
+            emissiveIntensity={hover || selected ? 0.55 : 0.28}
           />
         </mesh>
       ) : null}
@@ -1274,21 +1476,25 @@ export function NexusCore({ color, health, hitGen = 0 }: { color: string; health
   return (
     <group>
       <mesh position={[0, 0.05, 0]} receiveShadow>
-        <cylinderGeometry args={[1.75, 1.95, 0.1, 8]} />
-        <Mat color="#2a3038" metalness={0.7} roughness={0.42} />
+        <cylinderGeometry args={[1.78, 2.02, 0.1, 8]} />
+        <Mat color="#242a32" metalness={0.74} roughness={0.4} />
       </mesh>
-      {[0, 1, 2, 3].map((i) => {
-        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      <mesh position={[0, 0.1, 0]} receiveShadow>
+        <cylinderGeometry args={[1.42, 1.55, 0.06, 8]} />
+        <Mat color="#1c2228" metalness={0.7} roughness={0.36} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+        const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
         return (
-          <mesh key={i} position={[Math.cos(a) * 1.45, 0.32, Math.sin(a) * 1.45]} rotation={[0, -a, 0]} castShadow>
-            <boxGeometry args={[0.22, 0.46, 0.34]} />
-            <Mat color="#39414a" metalness={0.72} roughness={0.32} />
+          <mesh key={i} position={[Math.cos(a) * 1.52, i % 2 === 0 ? 0.38 : 0.26, Math.sin(a) * 1.52]} rotation={[0, -a, 0]} castShadow>
+            <boxGeometry args={[0.2, i % 2 === 0 ? 0.58 : 0.34, 0.3]} />
+            <Mat color="#364048" metalness={0.74} roughness={0.3} />
           </mesh>
         );
       })}
       <mesh position={[0, 0.16, 0]} receiveShadow>
-        <cylinderGeometry args={[0.95, 1.12, 0.22, 8]} />
-        <Mat color="#232830" metalness={0.78} roughness={0.28} />
+        <cylinderGeometry args={[0.98, 1.16, 0.22, 8]} />
+        <Mat color="#1e242c" metalness={0.8} roughness={0.26} />
       </mesh>
       <mesh position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.72, 0.95, 8]} />
@@ -1341,26 +1547,36 @@ export function SpawnGate({ color }: { color: string }) {
   });
   return (
     <group>
-      <mesh ref={a} position={[0, 1.05, 0]}>
-        <torusGeometry args={[0.72, 0.035, 8, 40]} />
-        <Mat color={color} eInt={1.35} />
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 0.78, 0.55, Math.sin(a) * 0.78]} rotation={[0, -a, 0]} castShadow>
+            <boxGeometry args={[0.14, 1.1, 0.2]} />
+            <Mat color="#2a3238" metalness={0.68} roughness={0.34} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 0.08, 0]} receiveShadow>
+        <cylinderGeometry args={[0.86, 0.94, 0.12, 8]} />
+        <Mat color="#1c2228" metalness={0.7} roughness={0.38} />
       </mesh>
-      <mesh ref={b} position={[0, 1.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.5, 0.028, 8, 28]} />
-        <Mat color={color} eInt={1.05} />
+      <mesh ref={a} position={[0, 1.12, 0]}>
+        <torusGeometry args={[0.74, 0.038, 8, 42]} />
+        <Mat color={color} eInt={1.4} />
       </mesh>
-      <mesh position={[0, 1.05, 0]}>
-        <circleGeometry args={[0.48, 24]} />
-        <meshBasicMaterial color={color} transparent opacity={0.28} depthWrite={false} />
+      <mesh ref={b} position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.52, 0.03, 8, 30]} />
+        <Mat color={color} eInt={1.1} />
       </mesh>
-      <mesh ref={beam} position={[0, 2.4, 0]}>
-        <cylinderGeometry args={[0.05, 0.22, 2.6, 10]} />
-        <meshBasicMaterial color={color} transparent opacity={0.22} depthWrite={false} />
+      <mesh position={[0, 1.12, 0]}>
+        <circleGeometry args={[0.5, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={0.3} depthWrite={false} />
       </mesh>
-      <mesh position={[0, 1.05, 0]}>
-        <sphereGeometry args={[0.16, 12, 12]} />
-        <Mat color={color} eInt={2} />
+      <mesh ref={beam} position={[0, 2.5, 0]}>
+        <cylinderGeometry args={[0.05, 0.24, 2.7, 10]} />
+        <meshBasicMaterial color={color} transparent opacity={0.24} depthWrite={false} />
       </mesh>
+      <GlowOrb position={[0, 1.12, 0]} r={0.17} color={color} eInt={2.1} />
     </group>
   );
 }
@@ -1476,7 +1692,7 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
   return (
     <group>
       {items.map((it, i) => {
-        const kind = i % 3;
+        const kind = i % 4;
         if (kind === 0) {
           const h = 1.1 + it.k * 1.5;
           return (
@@ -1508,6 +1724,27 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
               <icosahedronGeometry args={[0.36 + it.k * 0.3, 1]} />
               <Mat color="#22553f" roughness={0.28} metalness={0.12} emissive="#1f8a62" eInt={0.16} />
             </mesh>
+          );
+        }
+        if (kind === 2) {
+          const h = 0.7 + it.k * 0.9;
+          return (
+            <group key={i} position={it.pos} rotation={[0, it.a, 0]}>
+              <mesh position={[0, h / 2, 0]} castShadow>
+                <cylinderGeometry args={[0.09, 0.16, h, 7]} />
+                <Mat color="#163828" roughness={0.68} metalness={0.06} />
+              </mesh>
+              {[0, 1, 2, 3].map((n) => {
+                const a = (n / 4) * Math.PI * 2;
+                return (
+                  <mesh key={n} position={[Math.cos(a) * 0.22, h * 0.7, Math.sin(a) * 0.22]} rotation={[0.6, a, 0]} castShadow>
+                    <capsuleGeometry args={[0.04, 0.28, 3, 5]} />
+                    <Mat color="#2a6a52" roughness={0.4} emissive="#3dcaa0" eInt={0.35} />
+                  </mesh>
+                );
+              })}
+              <GlowOrb position={[0, h + 0.08, 0]} r={0.07} color="#7cf0c4" eInt={1.8} />
+            </group>
           );
         }
         return (
@@ -1607,7 +1844,7 @@ export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number
   return (
     <group>
       {items.map((it, i) => {
-        const kind = i % 3;
+        const kind = i % 4;
         if (kind === 0) {
           const h = 1.2 + it.k * 1.6;
           return (
@@ -1644,6 +1881,24 @@ export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number
                   transparent
                   opacity={0.7}
                 />
+              </mesh>
+            </group>
+          );
+        }
+        if (kind === 2) {
+          return (
+            <group key={i} position={it.pos} rotation={[0, it.a, 0]}>
+              <mesh position={[0, 0.42, 0]} castShadow>
+                <cylinderGeometry args={[0.1, 0.14, 0.84, 6]} />
+                <Mat color="#2a343c" metalness={0.74} roughness={0.3} />
+              </mesh>
+              <mesh position={[0, 0.88, 0]}>
+                <octahedronGeometry args={[0.14, 0]} />
+                <Mat color="#8ec8d0" eInt={1.4} />
+              </mesh>
+              <mesh position={[0.16, 0.28, 0]} rotation={[0, 0, 0.5]} castShadow>
+                <coneGeometry args={[0.08, 0.4, 5]} />
+                <meshStandardMaterial color="#6d8894" emissive="#8ec8d0" emissiveIntensity={0.4} roughness={0.18} transparent opacity={0.7} />
               </mesh>
             </group>
           );

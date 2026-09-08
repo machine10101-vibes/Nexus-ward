@@ -243,6 +243,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         roughness={tune.groundRough}
         metalness={tune.groundMetal}
         combat={combat}
+        keepClear={engine.waypoints}
       />
       <group position={[-11, 8.5, -22]} scale={1.05}>
         <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
@@ -319,7 +320,7 @@ function freeCellProps(map: MapDef) {
       const roll = rand();
       const k = rand();
       const a = rand() * Math.PI * 2;
-      if (roll > 0.22) continue;
+      if (roll > 0.38) continue;
       const w = cellToWorld(c, r, map.cols, map.rows);
       out.push({ x: w.x + (k - 0.5) * 1.5, z: w.z + (k - 0.5) * 1.5, k, a });
     }

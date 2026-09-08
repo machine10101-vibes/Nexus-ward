@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   BufferAttribute,
   BufferGeometry,
   CatmullRomCurve3,
+  Color,
+  InstancedMesh,
+  Object3D,
   RepeatWrapping,
   Vector3,
   type Texture,
@@ -10,13 +13,21 @@ import {
 import type { MapId } from "@/game/types";
 
 const HALF = 0.7;
-const LANE_Y = 0.012;
-const MARK_Y = 0.016;
+const LANE_Y = 0.01;
+const DOT_Y = 0.022;
 const SEGS = 180;
+const DOT_GAP = 0.4;
+const DOT_R = 0.075;
 
 type Waypoint = { x: number; z: number };
 
-/** Packed trail on the play plane. The only cue is worn dirt and a dull curb. */
+const DOT_COLOR: Record<MapId, string> = {
+  mycelion: "#c5d6c8",
+  forge: "#d2b48a",
+  aegis: "#c5d4da",
+};
+
+/** Packed trail on the play plane, marked by a dotted centerline. */
 export function PathLane({
   points,
   mapId,
@@ -30,7 +41,7 @@ export function PathLane({
   metalness: number;
   roughness: number;
 }) {
-  const { lane, curb } = useMemo(() => buildLane(points, mapId), [points, mapId]);
+  const { lane, dots } = useMemo(() => buildLane(points, mapId), [points, mapId]);
   const laneMap = useMemo(() => {
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
@@ -54,40 +65,56 @@ export function PathLane({
           emissiveIntensity={0}
         />
       </mesh>
-      {curb ? (
-        <mesh geometry={curb} receiveShadow>
-          <meshStandardMaterial
-            color={mapId === "forge" ? "#3a2c22" : mapId === "aegis" ? "#2a3238" : "#243028"}
-            roughness={0.92}
-            metalness={0.04}
-            emissive="#000000"
-            emissiveIntensity={0}
-          />
-        </mesh>
-      ) : null}
+      <PathDots points={dots} color={DOT_COLOR[mapId]} />
     </group>
   );
 }
 
+function PathDots({ points, color }: { points: Vector3[]; color: string }) {
+  const mesh = useRef<InstancedMesh>(null);
+  const tint = useMemo(() => new Color(color), [color]);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const dummy = new Object3D();
+    for (let i = 0; i < points.length; i++) {
+      dummy.position.copy(points[i]);
+      dummy.rotation.set(-Math.PI / 2, 0, 0);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+    m.count = points.length;
+  }, [points]);
+  if (!points.length) return null;
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, points.length]}>
+      <circleGeometry args={[DOT_R, 10]} />
+      <meshBasicMaterial color={tint} toneMapped={false} />
+    </instancedMesh>
+  );
+}
+
 function buildLane(points: Waypoint[], mapId: MapId) {
-  if (points.length < 2) return { lane: null as BufferGeometry | null, curb: null as BufferGeometry | null };
+  if (points.length < 2) return { lane: null as BufferGeometry | null, dots: [] as Vector3[] };
   const pts = points.map((w) => new Vector3(w.x, 0, w.z));
   const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
   const frames = sampleFrames(curve);
   const packed = mapId === "forge" ? 0.72 : mapId === "aegis" ? 0.78 : 0.74;
+  const len = frames[frames.length - 1]?.u ?? 0;
+  const n = Math.max(2, Math.floor(len / DOT_GAP));
+  const dots: Vector3[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = curve.getPointAt((i + 0.5) / n);
+    dots.push(new Vector3(p.x, DOT_Y, p.z));
+  }
   return {
-    lane: strip(frames, [-HALF * 0.9, -HALF * 0.38, 0, HALF * 0.38, HALF * 0.9], LANE_Y, (u, v) => {
+    lane: strip(frames, [-HALF, -HALF * 0.42, 0, HALF * 0.42, HALF], LANE_Y, (u, v) => {
       const rut = (v > 0.2 && v < 0.38) || (v > 0.62 && v < 0.8);
       const k = rut ? packed * 0.78 : packed;
       return { u: u * 0.55, v, r: k, g: k, b: k };
     }),
-    curb: strip(frames, [-HALF, -HALF * 0.9, HALF * 0.9, HALF], MARK_Y, (u, v) => ({
-      u: u * 0.9,
-      v,
-      r: 1,
-      g: 1,
-      b: 1,
-    })),
+    dots,
   };
 }
 
@@ -137,7 +164,6 @@ function strip(
     const a = i * cols;
     const b = (i + 1) * cols;
     for (let c = 0; c < cols - 1; c++) {
-      if (cols === 4 && c === 1) continue;
       idx.push(a + c, b + c, a + c + 1, b + c, b + c + 1, a + c + 1);
     }
   }

@@ -264,9 +264,52 @@ export function WorldGround({
           emissiveIntensity={0.04}
         />
       </mesh>
+      <ArenaLip mapId={mapId} arenaR={arenaR} squash={squash} emissive={emissive} />
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
     </group>
+  );
+}
+
+function ArenaLip({
+  mapId,
+  arenaR,
+  squash,
+  emissive,
+}: {
+  mapId: MapId;
+  arenaR: number;
+  squash: number;
+  emissive: string;
+}) {
+  const mesh = useRef<InstancedMesh>(null);
+  const count = 48;
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const dummy = new Object3D();
+    const r = arenaR + 0.72;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      dummy.position.set(Math.cos(a) * r, 0.08 + (i % 3) * 0.04, Math.sin(a) * r * squash);
+      dummy.rotation.set(0, -a, (i % 2) * 0.12);
+      dummy.scale.set(0.9 + (i % 4) * 0.15, 0.7 + (i % 3) * 0.25, 0.55);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+  }, [arenaR, squash]);
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
+      <boxGeometry args={[0.42, 0.22, 0.28]} />
+      <meshStandardMaterial
+        color={mapId === "forge" ? "#2a221c" : mapId === "aegis" ? "#1c242c" : "#1a221c"}
+        roughness={0.86}
+        metalness={0.14}
+        emissive={emissive}
+        emissiveIntensity={0.03}
+      />
+    </instancedMesh>
   );
 }
 

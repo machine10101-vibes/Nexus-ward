@@ -521,7 +521,7 @@ export function towerStats(def: TowerDef, level: number) {
 
 /**
  * Worlds separate on value first, hue second: near-black ground, a mid-value
- * arena floor, and the path carrying the only saturated light on the field.
+ * arena floor, and a packed trail that only carries a faint shoulder mark.
  */
 export const PLANET_THEME = {
   mycelion: {

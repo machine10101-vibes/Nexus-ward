@@ -3,13 +3,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import {
   AdditiveBlending,
-  CatmullRomCurve3,
-  TubeGeometry,
-  Vector3,
   type Group,
   type Mesh,
   type MeshBasicMaterial,
-  type MeshStandardMaterial,
 } from "three";
 import { engine } from "@/game/engine";
 import {
@@ -43,6 +39,7 @@ import {
   TowerModel,
 } from "./models";
 import { PlanetGlobe } from "./Planet";
+import { PathLane } from "./PathLane";
 import { WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld } from "@/game/maps";
@@ -202,28 +199,10 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const leaked = useGameStore((s) => s.hud.leaked);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const combat = useGameStore((s) => s.hud.phase) === "combat";
-  const { tube, rails, bed } = useMemo(() => {
-    const pts = engine.waypoints.map((w) => new Vector3(w.x, 0.08, w.z));
-    if (pts.length < 2) {
-      return { tube: null as TubeGeometry | null, rails: null as TubeGeometry | null, bed: null as TubeGeometry | null };
-    }
-    const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
-    const tube = new TubeGeometry(curve, 120, 0.32, 8, false);
-    const rails = new TubeGeometry(curve, 120, 0.09, 6, false);
-    const bed = new TubeGeometry(curve, 80, 0.5, 8, false);
-    return { tube, rails, bed };
-  }, [map.id, engine.waypoints.length]);
-
   const skip = useMemo(() => new Set(map.path.map((p) => `${p.c},${p.r}`)), [map]);
   const start = engine.startWorld();
   const end = engine.endWorld();
   const health = map.lives ? lives / map.lives : 1;
-  const { glow } = useMemo(() => {
-    const pts = engine.waypoints.map((w) => new Vector3(w.x, 0.08, w.z));
-    if (pts.length < 2) return { glow: null as TubeGeometry | null };
-    const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
-    return { glow: new TubeGeometry(curve, 80, 0.62, 8, false) };
-  }, [map.id, engine.waypoints.length]);
   const fieldProps = useMemo(() => freeCellProps(map), [map]);
 
   return (
@@ -249,7 +228,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       <directionalLight position={[-10, 5, -8]} intensity={tune.fill} color={theme.hemiSky} />
       <pointLight position={[0, 3.4, -12]} intensity={tune.rimIntensity} distance={30} color={tune.rimLight} />
       <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={theme.core} />
-      <pointLight position={[start.x, 2.2, start.z]} intensity={28} distance={11} color={theme.pathEmissive} />
+      <pointLight position={[start.x, 2.2, start.z]} intensity={14} distance={8} color={theme.pathEmissive} />
       {overclock ? <pointLight position={[0, 6, 0]} intensity={48} distance={34} color="#d7e6ee" /> : null}
       {quality === "high" ? <Stars radius={90} depth={28} count={900} factor={2.4} fade speed={0.16} /> : null}
       <WorldGround
@@ -270,37 +249,15 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       </group>
       <OverclockWash color={theme.padEmi} on={overclock} />
       <HexField cols={map.cols} rows={map.rows} color={theme.pad} accent={theme.padEmi} skip={skip} />
-      {glow ? (
-        <mesh geometry={glow}>
-          <meshBasicMaterial
-            color={theme.pathEmissive}
-            transparent
-            opacity={combat ? 0.22 : 0.12}
-            depthWrite={false}
-            blending={AdditiveBlending}
-          />
-        </mesh>
-      ) : null}
-      {bed ? (
-        <mesh geometry={bed} position={[0, -0.28, 0]} receiveShadow>
-          <meshStandardMaterial color={theme.ground} roughness={0.92} metalness={tune.groundMetal * 0.5} />
-        </mesh>
-      ) : null}
-      {tube ? (
-        <mesh geometry={tube} receiveShadow>
-          <meshStandardMaterial
-            color={theme.path}
-            metalness={tune.pathMetal}
-            roughness={tune.pathRough}
-            emissive={theme.pathEmissive}
-            emissiveIntensity={combat ? 0.38 : 0.22}
-          />
-        </mesh>
-      ) : null}
-      {rails ? (
-        <PulseRail geometry={rails} color={theme.pathEmissive} hot={combat || mapId !== "mycelion"} />
-      ) : null}
-      <PathCourier points={engine.waypoints} color={theme.pathEmissive} />
+      <PathLane
+        key={map.id}
+        points={engine.waypoints}
+        mapId={mapId}
+        ground={art.ground}
+        mark={theme.pathEmissive}
+        metalness={tune.pathMetal * 0.35}
+        roughness={Math.min(0.96, tune.pathRough + 0.22)}
+      />
       <group position={[end.x, 0, end.z]}>
         <NexusCore color={theme.core} health={health} hitGen={leaked} />
       </group>
@@ -315,9 +272,9 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         <DecorHybrid seed={33} count={quality === "high" ? 30 : 18} />
       )}
       <DecorField id={mapId} spots={fieldProps} />
-      {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 32 : 48} /> : null}
+      {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 16 : 22} /> : null}
       {quality === "high" ? (
-        <Sparkles count={36} scale={[28, 6, 22]} size={2.2} speed={0.28} color={theme.pathEmissive} opacity={0.45} />
+        <Sparkles count={18} scale={[28, 4, 22]} size={1.4} speed={0.18} color={theme.padEmi} opacity={0.18} />
       ) : null}
       {quality === "high" ? (
         <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={36} blur={2.2} far={9} />
@@ -369,52 +326,6 @@ function freeCellProps(map: MapDef) {
     }
   }
   return out;
-}
-
-function PulseRail({ geometry, color, hot }: { geometry: TubeGeometry; color: string; hot: boolean }) {
-  const mat = useRef<MeshStandardMaterial>(null);
-  useFrame((s) => {
-    if (!mat.current) return;
-    mat.current.emissiveIntensity = (hot ? 0.62 : 0.3) + Math.sin(s.clock.elapsedTime * 2.4) * 0.16;
-  });
-  return (
-    <mesh geometry={geometry} position={[0, 0.05, 0]}>
-      <meshStandardMaterial ref={mat} color={color} emissive={color} emissiveIntensity={hot ? 0.62 : 0.3} />
-    </mesh>
-  );
-}
-
-function PathCourier({ points, color }: { points: { x: number; z: number }[]; color: string }) {
-  const refs = useRef<(Mesh | null)[]>([]);
-  const pts = useMemo(() => points.map((w) => new Vector3(w.x, 0.22, w.z)), [points]);
-  useFrame((s) => {
-    if (pts.length < 2) return;
-    for (let k = 0; k < 3; k++) {
-      const mesh = refs.current[k];
-      if (!mesh) continue;
-      const t = (s.clock.elapsedTime * 0.14 + k / 3) % 1;
-      const i = t * (pts.length - 1);
-      const a = Math.floor(i);
-      const b = Math.min(pts.length - 1, a + 1);
-      mesh.position.lerpVectors(pts[a], pts[b], i - a);
-    }
-  });
-  if (pts.length < 2) return null;
-  return (
-    <group>
-      {[0, 1, 2].map((k) => (
-        <mesh
-          key={k}
-          ref={(el) => {
-            refs.current[k] = el;
-          }}
-        >
-          <sphereGeometry args={[0.1 - k * 0.018, 10, 10]} />
-          <meshBasicMaterial color={color} transparent opacity={0.9 - k * 0.18} depthWrite={false} />
-        </mesh>
-      ))}
-    </group>
-  );
 }
 
 function Pads() {

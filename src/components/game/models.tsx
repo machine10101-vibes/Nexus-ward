@@ -1311,11 +1311,11 @@ export function HexField({
       <meshStandardMaterial
         color={color}
         emissive={accent}
-        emissiveIntensity={0.06}
+        emissiveIntensity={0.03}
         roughness={0.9}
         metalness={0.08}
         transparent
-        opacity={0.34}
+        opacity={0.16}
       />
     </instancedMesh>
   );

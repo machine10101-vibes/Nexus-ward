@@ -69,8 +69,11 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
     const z = pos.getZ(i);
     const y = terrainElevation(x, z, arenaR, squash, style);
     pos.setY(i, y);
-    const shade = clamp(0.82 + y * 0.025, 0.7, 1);
-    ao.setRGB(shade, shade, shade);
+    const grain = Math.sin(x * 0.55) * Math.cos(z * 0.48) * 0.06 + Math.sin(x * 1.9 + z * 1.4) * 0.03;
+    const shade = clamp(0.78 + y * 0.03 + grain, 0.62, 1.04);
+    if (style === "forge") ao.setRGB(shade * 1.05, shade * 0.96, shade * 0.88);
+    else if (style === "aegis") ao.setRGB(shade * 0.92, shade * 0.98, shade * 1.06);
+    else ao.setRGB(shade * 0.95, shade * 1.03, shade * 0.92);
     cols[i * 3] = ao.r;
     cols[i * 3 + 1] = ao.g;
     cols[i * 3 + 2] = ao.b;
@@ -81,11 +84,11 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
 }
 
 function makeBowl(arenaR: number, squash: number, style: MapId) {
-  const g = new CircleGeometry(arenaR, 96);
+  const g = new CircleGeometry(arenaR, 128);
   const pos = g.attributes.position;
   const cols = new Float32Array(pos.count * 3);
   const uv = g.attributes.uv;
-  const tile = style === "forge" ? 3.4 : 2.8;
+  const tile = style === "forge" ? 5.2 : style === "aegis" ? 4.6 : 4.4;
   for (let i = 0; i < pos.count; i++) {
     // Circle sits in XY before we rotate it in the mesh.
     const x = pos.getX(i);
@@ -95,14 +98,17 @@ function makeBowl(arenaR: number, squash: number, style: MapId) {
     const rim = smooth(clamp((r - 0.72) / 0.28, 0, 1));
     const speckle =
       style === "mycelion"
-        ? 0.92 + Math.sin(x * 1.7) * Math.cos(y * 1.4) * 0.08
+        ? 0.9 + Math.sin(x * 1.7) * Math.cos(y * 1.4) * 0.07
         : style === "forge"
-          ? 0.88 + ((Math.sin(x * 3.1) * Math.sin(y * 3.1) + 1) * 0.06)
-          : 0.9 + Math.abs(Math.sin(x * 0.9 + y * 1.2)) * 0.1;
-    const k = (speckle - rim * 0.12) * (style === "aegis" ? 0.96 : 1);
-    cols[i * 3] = k;
-    cols[i * 3 + 1] = k;
-    cols[i * 3 + 2] = k;
+          ? 0.86 + ((Math.sin(x * 3.1) * Math.sin(y * 3.1) + 1) * 0.055)
+          : 0.88 + Math.abs(Math.sin(x * 0.9 + y * 1.2)) * 0.08;
+    const grain = Math.sin(x * 7.4) * Math.cos(y * 6.2) * 0.045 + Math.sin(x * 14.1 + y * 9.6) * 0.028;
+    const blotch = Math.sin(x * 0.36 + y * 0.29) * Math.cos(y * 0.24) * 0.08;
+    const k = clamp(speckle + grain + blotch - rim * 0.16, 0.62, 1.08);
+    const tint = style === "mycelion" ? [0.96, 1.04, 0.93] : style === "forge" ? [1.06, 0.97, 0.88] : [0.92, 0.98, 1.06];
+    cols[i * 3] = k * tint[0];
+    cols[i * 3 + 1] = k * tint[1];
+    cols[i * 3 + 2] = k * tint[2];
   }
   g.setAttribute("color", new Float32BufferAttribute(cols, 3));
   g.computeVertexNormals();
@@ -114,7 +120,13 @@ function glowPatch(shader: { fragmentShader: string }, strength: number) {
     "#include <emissivemap_fragment>",
     /* glsl */ `
     #include <emissivemap_fragment>
-    diffuseColor.rgb = diffuseColor.rgb * 1.72 + 0.035;
+    #ifdef USE_MAP
+      vec3 grit = texture2D(map, vMapUv * 3.7 + vec2(0.13, 0.07)).rgb;
+      vec3 grit2 = texture2D(map, vMapUv * 8.4 + vec2(0.41, 0.28)).rgb;
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.58 + grit * 0.7), 0.4);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (0.72 + grit2 * 0.46), 0.22);
+    #endif
+    diffuseColor.rgb = diffuseColor.rgb * 1.58 + 0.03;
     float teal = max(diffuseColor.b * 0.88 + diffuseColor.g * 0.32 - diffuseColor.r * 0.72 - 0.18, 0.0);
     float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
     float vein = max(teal, ember);
@@ -181,7 +193,7 @@ export function WorldGround({
   const groundW = cols * CELL + 26;
   const groundD = rows * CELL + 26;
   const hills = useMemo(
-    () => makeHills(groundW, groundD, arenaR, squash, mapId, quality === "high" ? 96 : 48),
+    () => makeHills(groundW, groundD, arenaR, squash, mapId, quality === "high" ? 120 : 56),
     [groundW, groundD, arenaR, squash, mapId, quality],
   );
   const bowl = useMemo(() => makeBowl(arenaR, squash, mapId), [arenaR, squash, mapId]);
@@ -189,7 +201,7 @@ export function WorldGround({
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
     tex.wrapT = RepeatWrapping;
-    tex.repeat.set(mapId === "forge" ? 8 : 6.5, mapId === "forge" ? 6.2 : 5);
+    tex.repeat.set(mapId === "forge" ? 10 : 8.2, mapId === "forge" ? 7.8 : 6.4);
     tex.needsUpdate = true;
     return tex;
   }, [ground, mapId]);

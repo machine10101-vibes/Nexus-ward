@@ -109,6 +109,40 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
               </mesh>
             </group>
           ))}
+          {level === 2 ? (
+            <mesh position={[0, 0.01, 0.4]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.078, 0.7, 10]} />
+              <Mat color="#73808b" metalness={0.62} roughness={0.26} />
+            </mesh>
+          ) : null}
+          {level >= 3
+            ? ([-0.34, 0.34] as const).map((x) => (
+                <group key={x}>
+                  <mesh position={[x, 0.01, 0.3]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                    <cylinderGeometry args={[0.07, 0.076, 0.5, 10]} />
+                    <Mat color="#6b7681" metalness={0.6} roughness={0.28} />
+                  </mesh>
+                  <mesh position={[x, 0.01, 0.56]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.05, 0.05, 0.08, 10]} />
+                    <Mat color={def.color} eInt={0.95} />
+                  </mesh>
+                </group>
+              ))
+            : null}
+          {level >= 2
+            ? ([-0.36, 0.36] as const).map((x) => (
+                <mesh key={`armor-${x}`} position={[x, 0.02, -0.02]} castShadow>
+                  <boxGeometry args={[0.1, 0.28, 0.42]} />
+                  <Mat color="#3f4850" metalness={0.7} roughness={0.3} />
+                </mesh>
+              ))
+            : null}
+          {level >= 3 ? (
+            <mesh position={[0, 0.2, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.22, 0.03, 8, 20]} />
+              <Mat color={def.color} eInt={1.05} />
+            </mesh>
+          ) : null}
           <mesh position={[0, 0.16, -0.02]}>
             <boxGeometry args={[0.14, 0.06, 0.24]} />
             <Mat color={def.color} eInt={0.8 + level * 0.2} />
@@ -147,10 +181,42 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <torusGeometry args={[0.15, 0.018, 8, 20]} />
           <Mat color={def.color} eInt={0.55} />
         </mesh>
-        <mesh position={[0, 1.78, 0]}>
-          <octahedronGeometry args={[0.17 + level * 0.015, 0]} />
-          <Mat color={def.color} eInt={1.15 + level * 0.2} roughness={0.2} />
-        </mesh>
+        {level >= 2 ? (
+          <mesh position={[0, 1.42, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.11, 0.02, 8, 18]} />
+            <Mat color={def.color} eInt={0.72} />
+          </mesh>
+        ) : null}
+        {level >= 2
+          ? [0, 1, 2].map((i) => {
+              const a = (i / 3) * Math.PI * 2 + 1.1;
+              return (
+                <mesh key={`fin-${i}`} position={[Math.cos(a) * 0.2, 0.52, Math.sin(a) * 0.2]} rotation={[0, -a, 0.48]} castShadow>
+                  <boxGeometry args={[0.045, 0.34, 0.045]} />
+                  <Mat color="#35444b" metalness={0.62} roughness={0.3} />
+                </mesh>
+              );
+            })
+          : null}
+        {level >= 3 ? (
+          <mesh position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.38, 0.028, 8, 28]} />
+            <Mat color={def.color} eInt={0.7} />
+          </mesh>
+        ) : null}
+        {level < 3 ? (
+          <mesh position={[0, 1.78, 0]}>
+            <octahedronGeometry args={[0.17 + level * 0.015, 0]} />
+            <Mat color={def.color} eInt={1.15 + level * 0.2} roughness={0.2} />
+          </mesh>
+        ) : (
+          ([-0.13, 0.13] as const).map((x) => (
+            <mesh key={x} position={[x, 1.84, 0]}>
+              <octahedronGeometry args={[0.145, 0]} />
+              <Mat color={def.color} eInt={1.55} roughness={0.18} />
+            </mesh>
+          ))
+        )}
       </group>
     );
   }
@@ -189,7 +255,35 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             <cylinderGeometry args={[0.07, 0.09, 0.4, 10]} />
             <Mat color="#5f7181" metalness={0.5} roughness={0.28} />
           </mesh>
+          {level >= 2
+            ? [0, 1, 2].map((i) => {
+                const a = (i / 3) * Math.PI * 2 + 0.55;
+                return (
+                  <mesh key={`brace-${i}`} position={[Math.cos(a) * 0.4, 0.02, Math.sin(a) * 0.4]} rotation={[0.2, -a, 0.55]} castShadow>
+                    <boxGeometry args={[0.05, 0.22, 0.05]} />
+                    <Mat color="#6a7c8c" metalness={0.55} roughness={0.28} />
+                  </mesh>
+                );
+              })
+            : null}
+          {level >= 3 ? (
+            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
+              <torusGeometry args={[0.64, 0.03, 8, 32]} />
+              <Mat color={def.color} eInt={0.85} />
+            </mesh>
+          ) : null}
         </group>
+        {level >= 3
+          ? [0, 1, 2, 3, 4, 5].map((i) => {
+              const a = (i / 6) * Math.PI * 2;
+              return (
+                <mesh key={`spike-${i}`} position={[Math.cos(a) * 0.5, 0.22, Math.sin(a) * 0.5]} rotation={[0.9, 0, a]} castShadow>
+                  <coneGeometry args={[0.045, 0.2, 6]} />
+                  <Mat color={def.color} eInt={0.7} />
+                </mesh>
+              );
+            })
+          : null}
       </group>
     );
   }
@@ -227,6 +321,36 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
               <Mat color={def.color} eInt={0.7} />
             </mesh>
           ))}
+          {level >= 2
+            ? ([-0.38, 0.38] as const).map((x) => (
+                <mesh key={`cap-${x}`} position={[x, 0.04, -0.18]} castShadow>
+                  <boxGeometry args={[0.16, 0.2, 0.28]} />
+                  <Mat color="#35363b" metalness={0.78} roughness={0.24} />
+                </mesh>
+              ))
+            : null}
+          {level >= 2 ? (
+            <mesh position={[0, 0.2, 0.1]} castShadow>
+              <boxGeometry args={[0.04, 0.05, 1.48]} />
+              <Mat color={def.color} eInt={0.7} metalness={0.5} roughness={0.18} />
+            </mesh>
+          ) : null}
+          {level >= 3 ? (
+            <>
+              <mesh position={[0, 0.28, 0.06]} castShadow>
+                <boxGeometry args={[0.035, 0.045, 1.36]} />
+                <Mat color={def.color} eInt={0.85} metalness={0.52} roughness={0.16} />
+              </mesh>
+              <mesh position={[0, 0.06, 1.02]} castShadow>
+                <boxGeometry args={[0.34, 0.2, 0.22]} />
+                <Mat color="#2f3034" metalness={0.8} roughness={0.22} />
+              </mesh>
+              <mesh position={[0, 0.06, 1.16]}>
+                <boxGeometry args={[0.22, 0.12, 0.08]} />
+                <Mat color={def.color} eInt={1.15} />
+              </mesh>
+            </>
+          ) : null}
         </group>
       </group>
     );
@@ -260,9 +384,32 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           <torusGeometry args={[0.42, 0.03, 8, 24]} />
           <Mat color={def.color} eInt={0.35} />
         </mesh>
+        {level >= 2 ? (
+          <mesh position={[0, 0.54, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.2, 0.03, 8, 18]} />
+            <Mat color={def.color} eInt={0.9} />
+          </mesh>
+        ) : null}
+        {level >= 3 ? (
+          <mesh position={[0, -0.08, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.54, 0.028, 8, 28]} />
+            <Mat color={def.color} eInt={0.55} />
+          </mesh>
+        ) : null}
       </group>
-      <mesh position={[0, 1.4, 0]}>
-        <sphereGeometry args={[0.11, 12, 12]} />
+      {level >= 2
+        ? [0, 1, 2, 3, 4, 5].map((i) => {
+            const a = (i / 6) * Math.PI * 2;
+            return (
+              <mesh key={`stud-${i}`} position={[Math.cos(a) * 0.4, 0.2, Math.sin(a) * 0.4]} castShadow>
+                <cylinderGeometry args={[0.045, 0.05, 0.12, 8]} />
+                <Mat color="#2f3a34" metalness={0.6} roughness={0.34} />
+              </mesh>
+            );
+          })
+        : null}
+      <mesh position={[0, level >= 3 ? 1.48 : 1.4, 0]}>
+        <sphereGeometry args={[level >= 3 ? 0.17 : 0.11, 12, 12]} />
         <Mat color={def.color} eInt={1.35 + level * 0.15} />
       </mesh>
     </group>

@@ -124,6 +124,11 @@ export function Hud() {
                 <span className="text-muted"> / {hud.waveTotal}</span>
               </p>
             </div>
+            {engine.activePathCount() > 1 ? (
+              <p className="mt-1 font-display text-2xs uppercase tracking-label text-accent">
+                {engine.activePathCount()} gates
+              </p>
+            ) : null}
             <span className="mx-auto mt-2 block h-1 w-full max-w-32 overflow-hidden rounded-full bg-surface-2">
               <span
                 className="block h-full rounded-full bg-accent transition-[width] duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)]"

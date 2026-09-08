@@ -99,6 +99,8 @@ export type MapDef = {
   cols: number;
   rows: number;
   path: Cell[];
+  /** Extra lanes that open every 10 incursions. */
+  branches?: Cell[][];
   pads: Cell[];
   startGold: number;
   lives: number;
@@ -123,6 +125,7 @@ export type Enemy = {
   z: number;
   yaw: number;
   wp: number;
+  pathId: number;
   progress: number;
   vx: number;
   vz: number;

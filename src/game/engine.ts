@@ -39,7 +39,9 @@ import type {
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
-type SpawnEvent = { t: number; type: EnemyId };
+type SpawnEvent = { t: number; type: EnemyId; pathId: number };
+
+const GATE_EVERY = 10;
 
 function dist2(ax: number, ay: number, bx: number, by: number) {
   const dx = ax - bx;
@@ -64,6 +66,7 @@ export class GameEngine {
   hoverPad: number | null = null;
 
   waypoints: { x: number; y: number; z: number }[] = [];
+  paths: { x: number; y: number; z: number }[][] = [];
   padWorld: { x: number; z: number }[] = [];
   occupied: number[] = [];
 
@@ -149,6 +152,7 @@ export class GameEngine {
       z: 0,
       yaw: 0,
       wp: 0,
+      pathId: 0,
       progress: 0,
       vx: 0,
       vz: 0,
@@ -250,10 +254,14 @@ export class GameEngine {
     this.spawnT = 0;
     this.remainingInWave = 0;
     this.resetPools();
-    this.waypoints = map.path.map((p) => {
-      const w = cellToWorld(p.c, p.r, map.cols, map.rows);
-      return { x: w.x, y: 0, z: w.z };
-    });
+    const cellPaths = [map.path, ...(map.branches ?? [])];
+    this.paths = cellPaths.map((cells) =>
+      cells.map((p) => {
+        const w = cellToWorld(p.c, p.r, map.cols, map.rows);
+        return { x: w.x, y: 0, z: w.z };
+      }),
+    );
+    this.waypoints = this.paths[0] ?? [];
     this.padWorld = map.pads.map((p) => cellToWorld(p.c, p.r, map.cols, map.rows));
     this.hudDirty = true;
     this.lastEvent = `${map.name} · core online`;
@@ -293,11 +301,14 @@ export class GameEngine {
     }
     const waveIndex = this.wave;
     const def = this.map.waves[waveIndex];
+    const gates = this.pathCountForIndex(waveIndex);
     this.spawnQueue = [];
+    let spawnN = 0;
     for (const g of def.groups) {
       const count = inflateSpawnCount(g.enemy, g.count, waveIndex);
       for (let i = 0; i < count; i++) {
-        this.spawnQueue.push({ t: g.delay + i * g.interval, type: g.enemy });
+        this.spawnQueue.push({ t: g.delay + i * g.interval, type: g.enemy, pathId: spawnN % gates });
+        spawnN += 1;
       }
     }
     this.spawnQueue.sort((a, b) => a.t - b.t);
@@ -307,7 +318,12 @@ export class GameEngine {
     this.phase = "combat";
     this.wave += 1;
     this.hudDirty = true;
-    this.lastEvent = bonus > 0 ? `Incursion ${this.wave} · +${bonus} early` : `Incursion ${this.wave} of ${this.map.waves.length}`;
+    const opened = waveIndex > 0 && waveIndex % GATE_EVERY === 0 && gates > 1;
+    this.lastEvent = opened
+      ? `Incursion ${this.wave} · gate ${gates} online`
+      : bonus > 0
+        ? `Incursion ${this.wave} · +${bonus} early`
+        : `Incursion ${this.wave} of ${this.map.waves.length}`;
     this.addTrauma(0.18);
     this.sfx = "wave";
     this.autoT = 0;
@@ -595,17 +611,24 @@ export class GameEngine {
   spawnStep(dt: number) {
     this.spawnT += dt;
     while (this.spawnI < this.spawnQueue.length && this.spawnQueue[this.spawnI].t <= this.spawnT) {
-      this.spawnEnemy(this.spawnQueue[this.spawnI].type);
+      const ev = this.spawnQueue[this.spawnI];
+      this.spawnEnemy(ev.type, undefined, ev.pathId);
       this.spawnI++;
     }
   }
 
-  spawnEnemy(type: EnemyId, at?: { x: number; z: number; y: number; wp: number; progress: number; lane: number; gold?: number }) {
+  spawnEnemy(
+    type: EnemyId,
+    at?: { x: number; z: number; y: number; wp: number; progress: number; lane: number; gold?: number; pathId?: number },
+    pathId = 0,
+  ) {
     const def = ENEMIES[type];
     const slot = this.enemies.find((e) => !e.alive);
     if (!slot) return;
-    const start = this.waypoints[0];
-    const next = this.waypoints[1] ?? start;
+    const pid = at?.pathId ?? pathId;
+    const wps = this.paths[pid] ?? this.waypoints;
+    const start = wps[0];
+    const next = wps[1] ?? start;
     const ddx = next.x - start.x;
     const ddz = next.z - start.z;
     const dlen = Math.hypot(ddx, ddz) || 1;
@@ -626,6 +649,7 @@ export class GameEngine {
     slot.y = at ? at.y : def.flying ? 1.55 : 0.28 * def.scale;
     slot.yaw = 0;
     slot.wp = at ? at.wp : 1;
+    slot.pathId = pid;
     slot.progress = at ? at.progress : 0;
     slot.vx = 0;
     slot.vz = 0;
@@ -642,10 +666,10 @@ export class GameEngine {
   }
 
   moveEnemies(dt: number) {
-    const wps = this.waypoints;
-    if (wps.length < 2) return;
     for (const e of this.enemies) {
       if (!e.alive) continue;
+      const wps = this.paths[e.pathId] ?? this.waypoints;
+      if (wps.length < 2) continue;
       if (this.time < e.slowUntil) {
         /* keep */
       } else {
@@ -997,6 +1021,7 @@ export class GameEngine {
         progress: e.progress,
         lane: lane + 0.12,
         gold: 2,
+        pathId: e.pathId,
       });
       this.spawnEnemy("mite", {
         x: e.x - 0.18,
@@ -1006,6 +1031,7 @@ export class GameEngine {
         progress: e.progress,
         lane: lane - 0.12,
         gold: 2,
+        pathId: e.pathId,
       });
     }
     e.alive = false;
@@ -1116,6 +1142,19 @@ export class GameEngine {
     this.hudDirty = true;
     this.lastEvent = `Wave ${this.wave} cleared`;
     if (this.combo >= 4) this.lastEvent = `Wave ${this.wave} cleared · combo ${this.combo}`;
+  }
+
+  pathCountForIndex(waveIndex: number) {
+    return Math.min(this.paths.length, 1 + Math.floor(waveIndex / GATE_EVERY));
+  }
+
+  activePathCount() {
+    const idx = this.phase === "combat" ? this.wave - 1 : this.wave;
+    return this.pathCountForIndex(Math.max(0, idx));
+  }
+
+  activePaths() {
+    return this.paths.slice(0, this.activePathCount());
   }
 
   endWorld() {

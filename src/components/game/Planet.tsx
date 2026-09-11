@@ -265,7 +265,9 @@ function applyPalette(
 ) {
   const pal = PALETTE_COLORS[id];
   const shape = WORLD_SHAPE[id];
-  uniforms.crustMap.value = art.planet;
+  // Seamless ground maps only. The *-planet.jpg files are pre-lit portraits of a
+  // whole globe on black — triplanar-wrapping those stamps flat planets into the sphere.
+  uniforms.crustMap.value = art.ground;
   (uniforms.colorA.value as Color).copy(pal.a);
   (uniforms.colorB.value as Color).copy(pal.b);
   (uniforms.colorC.value as Color).copy(pal.c);
@@ -302,7 +304,7 @@ export function PlanetGlobe({
 
   const uniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
-      crustMap: { value: lib.mycelion.planet },
+      crustMap: { value: lib.mycelion.ground },
       colorA: { value: PALETTE_COLORS.mycelion.a.clone() },
       colorB: { value: PALETTE_COLORS.mycelion.b.clone() },
       colorC: { value: PALETTE_COLORS.mycelion.c.clone() },
@@ -313,7 +315,7 @@ export function PlanetGlobe({
       iceAmt: { value: WORLD_SHAPE.mycelion.iceAmt },
       cloudCover: { value: WORLD_SHAPE.mycelion.cover },
     }),
-    [lib.mycelion.planet],
+    [lib.mycelion.ground],
   );
 
   const cloudUniforms = useMemo<ShaderMaterial["uniforms"]>(

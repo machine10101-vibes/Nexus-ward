@@ -85,7 +85,7 @@ void main() {
   vec3 crust = triplanar(crustMap, vP, 0.34) * 0.48
              + triplanar(crustMap, vP, 1.15) * 0.34
              + triplanar(crustMap, vP, 3.8) * 0.18;
-  crust = crust * 1.55 + 0.02;
+  crust = crust * 2.05 + 0.05;
   float bump = dot(crust, vec3(0.28, 0.5, 0.22));
   float ridge = ridged(pn * 3.4 + 0.2);
   vec3 Nw = normalize(vWorldN + vWorldN * ((bump - 0.48) * 0.55 + (ridge - 0.5) * 0.22));
@@ -101,17 +101,17 @@ void main() {
   float coast = smoothstep(landBias - 0.08, landBias + 0.02, n)
               * (1.0 - smoothstep(landBias + 0.06, landBias + 0.2, n));
   float depth = smoothstep(landBias - 0.32, landBias - 0.02, n);
-  vec3 deep = colorA * 0.42;
-  vec3 shelf = mix(colorA, colorB, 0.62);
+  vec3 deep = mix(colorA, colorB, 0.18) * 0.7;
+  vec3 shelf = mix(colorA, colorB, 0.82);
   vec3 ocean = mix(deep, shelf, depth);
   float ofres = pow(1.0 - max(dot(Nw, V), 0.0), 3.4);
   ocean = mix(ocean, mix(colorC, vec3(0.78, 0.88, 0.96), 0.45), ofres * (1.0 - land) * 0.42);
   ocean += colorC * pow(depth, 3.0) * 0.1;
 
   float mott = fbm(pn * 6.4 + 4.2);
-  vec3 dirt = mix(colorB * 0.32 + crust * 0.88, colorC * 0.18 + crust, mott);
-  vec3 high = mix(crust, dirt, 0.58);
-  high = mix(high, mix(colorB * 0.42, crust, 0.52), ridge * 0.5);
+  vec3 dirt = mix(colorB * 0.55 + crust * 0.7, colorC * 0.35 + crust, mott);
+  vec3 high = mix(crust, dirt, 0.7);
+  high = mix(high, mix(colorB * 0.62, crust, 0.4), ridge * 0.55);
   vec3 albedo = mix(ocean, high, land);
   albedo = mix(albedo, mix(colorC, crust, 0.38), coast * 0.62);
   float ice = smoothstep(0.62, 0.88, abs(pn.y)) * iceAmt * (0.5 + land * 0.5);
@@ -140,7 +140,7 @@ void main() {
   vein = max(vein, max(crust.r * 0.8 + crust.g * 0.22 - crust.b * 0.62 - 0.1, 0.0));
   float cities = smoothstep(0.72, 0.9, noise(pn * 36.0 + 4.0)) * land * (1.0 - ice);
 
-  vec3 lit = albedo * (0.028 + 1.18 * wrap * day);
+  vec3 lit = albedo * (0.04 + 1.42 * wrap * day);
   lit *= 1.0 - cld * day * 0.28;
   lit += spec * mix(colorC, vec3(0.92, 0.95, 1.0), 0.6);
   lit += colorC * vein * land * mix(0.1, 1.15, night);
@@ -266,9 +266,9 @@ const WORLD_SHAPE: Record<
   MapId,
   { landBias: number; iceAmt: number; cover: number; density: number; halo: number; mie: number; opacity: number }
 > = {
-  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.46, halo: 0.2, mie: 0.92, opacity: 0.58 },
-  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.52, halo: 0.24, mie: 1.12, opacity: 0.64 },
-  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.44, halo: 0.22, mie: 0.88, opacity: 0.5 },
+  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.4, halo: 0.16, mie: 0.88, opacity: 0.52 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.46, halo: 0.2, mie: 1.05, opacity: 0.58 },
+  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.38, halo: 0.18, mie: 0.82, opacity: 0.46 },
 };
 
 const CLOUD_TINT: Record<MapId, Color> = {
@@ -412,7 +412,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.028}>
+      <mesh scale={1.018}>
         <sphereGeometry args={[radius, 80, 56]} />
         <shaderMaterial
           vertexShader={vert}
@@ -423,7 +423,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.075}>
+      <mesh scale={1.052}>
         <sphereGeometry args={[radius, 72, 48]} />
         <shaderMaterial
           vertexShader={vert}
@@ -435,7 +435,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.14}>
+      <mesh scale={1.088}>
         <sphereGeometry args={[radius, 56, 36]} />
         <shaderMaterial
           vertexShader={vert}

@@ -16,6 +16,33 @@ import {
 } from "three";
 import { CELL } from "@/game/config";
 import type { MapId } from "@/game/types";
+import { SPACE_VERT, STAR_GLSL } from "./spaceField";
+
+const battleSkyFrag = /* glsl */ `
+uniform sampler2D sky;
+uniform vec3 fogCol;
+uniform vec3 accent;
+uniform float time;
+varying vec3 vP;
+varying vec2 vUv;
+${STAR_GLSL}
+void main() {
+  vec3 n = normalize(vP);
+  vec3 tex = texture2D(sky, vec2(vUv.x + 0.12, vUv.y * 0.78 + 0.14)).rgb * 1.12;
+  float h = n.y;
+  float haze = smoothstep(0.08, -0.1, h);
+  float lum = dot(tex, vec3(0.3, 0.52, 0.18));
+  vec3 nebula = tex * tex * 0.28 * smoothstep(0.12, 0.5, lum);
+  vec3 col = mix(tex * 0.82 + nebula, fogCol, haze * 0.62);
+  col = mix(col, fogCol * 0.52, smoothstep(-0.05, -0.55, h));
+  float skyAmt = smoothstep(0.02, 0.28, h);
+  col += milkyLane(n, mix(accent, tex, 0.4)) * skyAmt;
+  col += starField(n, time) * skyAmt;
+  float rim = pow(1.0 - abs(h), 5.0);
+  col += accent * rim * 0.14;
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
 
 const RIM = 3.2;
 
@@ -377,32 +404,23 @@ function SkyShell({ map, fog, accent }: { map: Texture; fog: string; accent: str
       sky: { value: map },
       fogCol: { value: new Color(fog) },
       accent: { value: new Color(accent) },
+      time: { value: 0 },
     }),
     [map, fog, accent],
   );
+  useFrame((state) => {
+    uniforms.time.value = state.clock.elapsedTime;
+  });
   return (
     <mesh>
-      <sphereGeometry args={[78, 48, 32]} />
+      <sphereGeometry args={[92, 56, 36]} />
       <shaderMaterial
         side={BackSide}
         depthWrite={false}
         uniforms={uniforms}
-        vertexShader={`varying vec3 vP; varying vec2 vUv; void main(){ vP = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`}
-        fragmentShader={`
-          uniform sampler2D sky; uniform vec3 fogCol; uniform vec3 accent;
-          varying vec3 vP; varying vec2 vUv;
-          void main() {
-            vec3 n = normalize(vP);
-            vec3 tex = texture2D(sky, vec2(vUv.x + 0.12, vUv.y * 0.78 + 0.14)).rgb * 1.18;
-            float h = n.y;
-            float haze = smoothstep(0.06, -0.08, h);
-            vec3 col = mix(tex, fogCol, haze * 0.62);
-            col = mix(col, fogCol * 0.55, smoothstep(-0.05, -0.55, h));
-            float rim = pow(1.0 - abs(h), 5.0);
-            col += accent * rim * 0.14;
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `}
+        vertexShader={SPACE_VERT}
+        fragmentShader={battleSkyFrag}
+        toneMapped={false}
       />
     </mesh>
   );

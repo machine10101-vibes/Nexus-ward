@@ -249,7 +249,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         );
       })}
       {overclock ? <pointLight position={[0, 6, 0]} intensity={48} distance={34} color="#d7e6ee" /> : null}
-      {quality === "high" ? <Stars radius={90} depth={28} count={900} factor={2.4} fade speed={0.16} /> : null}
+      {quality === "high" ? <Stars radius={110} depth={40} count={2200} factor={3.0} fade speed={0.12} /> : null}
+      {quality === "high" ? <Stars radius={150} depth={16} count={700} factor={1.35} fade speed={0.04} /> : null}
       <WorldGround
         mapId={mapId}
         cols={map.cols}

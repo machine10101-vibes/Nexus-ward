@@ -1,5 +1,5 @@
 import { Suspense, useLayoutEffect, useRef } from "react";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Stars } from "@react-three/drei";
 import { useGameStore } from "@/game/store";
 import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { PlanetGlobe } from "./Planet";
@@ -91,9 +91,12 @@ function StudioSubject({ id, variant }: { id: string; variant: number }) {
   }
   if (entry.world === "globe" && entry.map) {
     return (
-      <group position={[0, 1.15, 0]}>
-        <PlanetGlobe id={entry.map} radius={1.15} spin={0.08} />
-      </group>
+      <>
+        <Stars radius={36} depth={14} count={700} factor={2.4} fade speed={0.2} />
+        <group position={[0, 1.15, 0]}>
+          <PlanetGlobe id={entry.map} radius={1.15} spin={0.08} />
+        </group>
+      </>
     );
   }
   if (entry.world === "core") {

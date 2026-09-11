@@ -32,8 +32,8 @@ export function GameGL() {
         inStudio
           ? { position: [3.1, 2.15, 4.05], fov: 42, near: 0.08, far: 80 }
           : inBattle
-            ? { position: [0, 15.5, 17.5], fov: 40, near: 0.1, far: 140 }
-            : { position: [0, 0.35, 8.2], fov: 40, near: 0.1, far: 90 }
+            ? { position: [0, 15.5, 17.5], fov: 40, near: 0.1, far: 190 }
+            : { position: [0, 0.35, 8.2], fov: 40, near: 0.1, far: 180 }
       }
       gl={{
         antialias: quality === "high",
@@ -54,7 +54,7 @@ export function GameGL() {
       {quality === "high" ? (
         <EffectComposer enableNormalPass={false}>
           <Bloom
-            intensity={inStudio ? 0.48 : inBattle ? (overclock ? 0.78 : 0.58) : 0.82}
+            intensity={inStudio ? 0.42 : inBattle ? (overclock ? 0.78 : 0.58) : 0.58}
             luminanceThreshold={0.62}
             mipmapBlur
           />

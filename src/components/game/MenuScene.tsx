@@ -235,7 +235,7 @@ function PlanetRings({ color }: { color: string }) {
     if (ref.current) ref.current.rotation.z += dt * 0.012;
   });
   return (
-    <group rotation={[1.08, 0.16, 0.05]}>
+    <group rotation={[0.78, 0.2, 0.06]}>
       <mesh ref={ref}>
         <ringGeometry args={[3.02, 5.05, 192, 64]} />
         <shaderMaterial

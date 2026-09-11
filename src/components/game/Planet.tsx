@@ -221,8 +221,8 @@ void main() {
   vec3 L = normalize(sunDir);
   vec3 pn = normalize(vP);
   float ndotv = clamp(abs(dot(Nv, V)), 0.0, 1.0);
-  float rim = pow(1.0 - ndotv, 5.4);
-  float hair = pow(1.0 - ndotv, 9.5);
+  float rim = pow(1.0 - ndotv, 4.7);
+  float hair = pow(1.0 - ndotv, 8.2);
   float ndl = dot(Nw, L);
   float dusk = exp(-ndl * ndl * 16.0);
   float day = smoothstep(-0.18, 0.32, ndl);
@@ -235,9 +235,9 @@ void main() {
   float az = atan(pn.z, pn.x);
   float curtains = 0.5 + 0.5 * sin(az * 9.0 + time * 0.32 + pn.y * 6.0);
   col += air * vec3(0.45, 0.95, 0.7) * pole * curtains * iceAmt * rim * 0.4;
-  float a = (rim * 0.55 + hair * 0.45) * density * (0.4 + dusk * 0.5);
+  float a = (rim * 0.62 + hair * 0.5) * density * (0.45 + dusk * 0.5);
   a *= 0.55 + day * 0.45;
-  gl_FragColor = vec4(col, clamp(a, 0.0, 0.55));
+  gl_FragColor = vec4(col, clamp(a, 0.0, 0.6));
 }
 `;
 
@@ -258,9 +258,9 @@ const WORLD_SHAPE: Record<
   MapId,
   { landBias: number; iceAmt: number; cover: number; density: number; mie: number; opacity: number }
 > = {
-  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.85, mie: 0.9, opacity: 0.52 },
-  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.95, mie: 1.1, opacity: 0.58 },
-  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.8, mie: 0.85, opacity: 0.46 },
+  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 1.15, mie: 1.05, opacity: 0.52 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 1.28, mie: 1.2, opacity: 0.58 },
+  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 1.1, mie: 1.0, opacity: 0.46 },
 };
 
 const CLOUD_TINT: Record<MapId, Color> = {
@@ -384,7 +384,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.022}>
+      <mesh scale={1.028}>
         <sphereGeometry args={[radius, 80, 56]} />
         <shaderMaterial
           vertexShader={vert}

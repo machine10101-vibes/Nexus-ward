@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BackSide, Color, Vector3, type Mesh, type ShaderMaterial } from "three";
+import { AdditiveBlending, BackSide, Color, Vector3, type Mesh, type ShaderMaterial } from "three";
 import type { MapId } from "@/game/types";
 import { useWorldLibrary } from "./worldArt";
 
@@ -146,12 +146,12 @@ void main() {
   lit += colorC * vein * land * mix(0.1, 1.15, night);
   lit += colorC * cities * night * 0.55;
   lit += albedo * dusk * 0.16;
-  lit += atmo * dusk * 0.22;
-  lit += atmo * vec3(1.25, 0.72, 0.42) * dusk * coast * 0.18;
+  lit += atmo * dusk * 0.1;
+  lit += atmo * vec3(1.2, 0.7, 0.4) * dusk * coast * 0.1;
 
-  float fres = pow(1.0 - max(dot(Nv, V), 0.0), 2.8);
-  lit += atmo * fres * (0.08 + day * 0.08 + dusk * 0.28);
-  lit += atmo * pow(fres, 5.0) * 0.08;
+  float fres = pow(1.0 - max(dot(Nv, V), 0.0), 3.2);
+  lit += mix(atmo, vec3(0.55, 0.62, 0.7), 0.45) * fres * (0.04 + dusk * 0.16);
+  lit += atmo * pow(fres, 6.0) * 0.04;
   lit += albedo * night * 0.035;
 
   gl_FragColor = vec4(lit, 1.0);
@@ -204,7 +204,6 @@ void main() {
 `;
 
 const atmoFrag = /* glsl */ `
-uniform sampler2D skyMap;
 uniform vec3 atmo;
 uniform vec3 sunDir;
 uniform float density;
@@ -221,31 +220,24 @@ void main() {
   vec3 V = normalize(vView);
   vec3 L = normalize(sunDir);
   vec3 pn = normalize(vP);
-  float ndotv = abs(dot(Nv, V));
-  float limb = pow(max(1.0 - ndotv, 0.0), 3.35);
-  float face = pow(max(1.0 - ndotv, 0.0), 8.5);
+  float ndotv = clamp(abs(dot(Nv, V)), 0.0, 1.0);
+  float rim = pow(1.0 - ndotv, 5.4);
+  float hair = pow(1.0 - ndotv, 9.5);
   float ndl = dot(Nw, L);
-  float dusk = exp(-ndl * ndl * 7.2);
-  float day = smoothstep(-0.28, 0.36, ndl);
-  vec2 skyUv = vec2(atan(pn.z, pn.x) * 0.1591549 + 0.5, pn.y * 0.48 + 0.5);
-  vec3 sky = texture2D(skyMap, skyUv).rgb;
-  vec3 rayleigh = mix(atmo * 0.55, atmo * 1.18, day);
-  rayleigh = mix(rayleigh, sky, 0.16);
-  float sunGlow = pow(max(ndl, 0.0), 2.2) * mie;
-  float mieLobe = pow(max(dot(reflect(-L, Nw), V), 0.0), 6.5) * mie;
-  vec3 sunset = atmo * vec3(1.32, 0.66, 0.34);
-  vec3 col = mix(rayleigh, sunset, dusk * 0.72);
-  col += sky * sunGlow * 0.16;
-  col += atmo * mieLobe * 0.55;
-  col += atmo * vec3(0.7, 0.55, 1.05) * pow(limb, 1.6) * 0.16;
-  float pole = smoothstep(0.62, 0.95, abs(pn.y));
+  float dusk = exp(-ndl * ndl * 16.0);
+  float day = smoothstep(-0.18, 0.32, ndl);
+  vec3 air = mix(atmo, vec3(0.52, 0.6, 0.68), 0.48) * 0.55;
+  vec3 sunset = vec3(1.12, 0.4, 0.14) * (0.45 + length(atmo) * 0.35);
+  vec3 col = mix(air, sunset, dusk * rim);
+  col *= 0.28 + day * 0.72;
+  col += air * hair * mie * 0.35;
+  float pole = smoothstep(0.72, 0.96, abs(pn.y));
   float az = atan(pn.z, pn.x);
-  float curtains = 0.5 + 0.5 * sin(az * 10.0 + time * 0.38 + pn.y * 7.0);
-  curtains *= 0.55 + 0.45 * sin(az * 6.5 - time * 0.22);
-  col += atmo * vec3(0.55, 1.05, 0.78) * pole * curtains * iceAmt * 0.45;
-  float a = (limb * 0.82 + face * 0.06) * density * (0.55 + dusk * 0.7 + sunGlow * 0.18);
-  a += pole * curtains * iceAmt * limb * 0.12;
-  gl_FragColor = vec4(col, clamp(a, 0.0, 0.78));
+  float curtains = 0.5 + 0.5 * sin(az * 9.0 + time * 0.32 + pn.y * 6.0);
+  col += air * vec3(0.45, 0.95, 0.7) * pole * curtains * iceAmt * rim * 0.4;
+  float a = (rim * 0.55 + hair * 0.45) * density * (0.4 + dusk * 0.5);
+  a *= 0.55 + day * 0.45;
+  gl_FragColor = vec4(col, clamp(a, 0.0, 0.55));
 }
 `;
 
@@ -264,11 +256,11 @@ const PALETTE_COLORS = Object.fromEntries(
 
 const WORLD_SHAPE: Record<
   MapId,
-  { landBias: number; iceAmt: number; cover: number; density: number; halo: number; mie: number; opacity: number }
+  { landBias: number; iceAmt: number; cover: number; density: number; mie: number; opacity: number }
 > = {
-  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.4, halo: 0.16, mie: 0.88, opacity: 0.52 },
-  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.46, halo: 0.2, mie: 1.05, opacity: 0.58 },
-  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.38, halo: 0.18, mie: 0.82, opacity: 0.46 },
+  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.85, mie: 0.9, opacity: 0.52 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.95, mie: 1.1, opacity: 0.58 },
+  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.8, mie: 0.85, opacity: 0.46 },
 };
 
 const CLOUD_TINT: Record<MapId, Color> = {
@@ -283,7 +275,6 @@ function applyPalette(
   uniforms: ShaderMaterial["uniforms"],
   cloudUniforms: ShaderMaterial["uniforms"],
   atmoUniforms: ShaderMaterial["uniforms"],
-  haloUniforms: ShaderMaterial["uniforms"],
   id: MapId,
   art: ReturnType<typeof useWorldLibrary>[MapId],
 ) {
@@ -308,11 +299,6 @@ function applyPalette(
   atmoUniforms.density.value = shape.density;
   atmoUniforms.mie.value = shape.mie;
   atmoUniforms.iceAmt.value = shape.iceAmt;
-  atmoUniforms.skyMap.value = art.sky;
-  haloUniforms.density.value = shape.halo;
-  haloUniforms.mie.value = shape.mie * 0.7;
-  haloUniforms.iceAmt.value = 0;
-  haloUniforms.skyMap.value = art.sky;
 }
 
 export function PlanetGlobe({
@@ -359,7 +345,6 @@ export function PlanetGlobe({
 
   const atmoUniforms = useMemo<ShaderMaterial["uniforms"]>(
     () => ({
-      skyMap: { value: lib.mycelion.sky },
       atmo: { value: PALETTE_COLORS.mycelion.atmo.clone() },
       sunDir: { value: SUN_DIR.clone() },
       density: { value: WORLD_SHAPE.mycelion.density },
@@ -367,25 +352,12 @@ export function PlanetGlobe({
       iceAmt: { value: WORLD_SHAPE.mycelion.iceAmt },
       time: { value: 0 },
     }),
-    [lib.mycelion.sky],
-  );
-
-  const haloUniforms = useMemo<ShaderMaterial["uniforms"]>(
-    () => ({
-      skyMap: { value: lib.mycelion.sky },
-      atmo: atmoUniforms.atmo,
-      sunDir: atmoUniforms.sunDir,
-      density: { value: WORLD_SHAPE.mycelion.halo },
-      mie: { value: WORLD_SHAPE.mycelion.mie * 0.7 },
-      iceAmt: { value: 0 },
-      time: atmoUniforms.time,
-    }),
-    [atmoUniforms, lib.mycelion.sky],
+    [],
   );
 
   useLayoutEffect(() => {
-    applyPalette(uniforms, cloudUniforms, atmoUniforms, haloUniforms, id, lib[id]);
-  }, [id, lib, uniforms, cloudUniforms, atmoUniforms, haloUniforms]);
+    applyPalette(uniforms, cloudUniforms, atmoUniforms, id, lib[id]);
+  }, [id, lib, uniforms, cloudUniforms, atmoUniforms]);
 
   useFrame((state, dt) => {
     uniforms.time.value = state.clock.elapsedTime;
@@ -412,7 +384,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.018}>
+      <mesh scale={1.022}>
         <sphereGeometry args={[radius, 80, 56]} />
         <shaderMaterial
           vertexShader={vert}
@@ -420,30 +392,8 @@ export function PlanetGlobe({
           uniforms={atmoUniforms}
           transparent
           depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-      <mesh scale={1.052}>
-        <sphereGeometry args={[radius, 72, 48]} />
-        <shaderMaterial
-          vertexShader={vert}
-          fragmentShader={atmoFrag}
-          uniforms={atmoUniforms}
-          transparent
-          depthWrite={false}
           side={BackSide}
-          toneMapped={false}
-        />
-      </mesh>
-      <mesh scale={1.088}>
-        <sphereGeometry args={[radius, 56, 36]} />
-        <shaderMaterial
-          vertexShader={vert}
-          fragmentShader={atmoFrag}
-          uniforms={haloUniforms}
-          transparent
-          depthWrite={false}
-          side={BackSide}
+          blending={AdditiveBlending}
           toneMapped={false}
         />
       </mesh>

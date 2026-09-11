@@ -75,23 +75,51 @@ void main() {
 }
 `;
 
+const ringVert = /* glsl */ `
+varying vec2 vUv;
+varying vec3 vWorld;
+void main() {
+  vUv = uv;
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}
+`;
+
 const ringFrag = /* glsl */ `
 uniform vec3 color;
+uniform vec3 sunDir;
 uniform float opacity;
-uniform float time;
+uniform float planetR;
 varying vec2 vUv;
+varying vec3 vWorld;
 ${STAR_GLSL}
 void main() {
   float r = vUv.y;
-  float a = vUv.x * 6.2831853;
-  float bands = 0.42 + 0.58 * sin(r * 92.0 + sfbm(vec3(r * 14.0, sin(a), cos(a))) * 6.0);
-  float gaps = smoothstep(0.12, 0.4, abs(sin(r * 18.0 + 0.4)));
-  gaps *= smoothstep(0.05, 0.22, abs(sin(r * 41.0)));
-  float dust = sfbm(vec3(r * 20.0, sin(a * 2.0) * 3.0, cos(a * 2.0) * 3.0 + time * 0.02));
-  float edge = smoothstep(0.0, 0.07, r) * smoothstep(1.0, 0.9, r);
-  float aout = bands * gaps * (0.18 + dust * 0.82) * edge * opacity;
-  vec3 col = mix(color, vec3(0.92, 0.9, 0.86), dust * 0.35);
-  gl_FragColor = vec4(col, clamp(aout, 0.0, 0.85));
+  float ang = vUv.x * 6.2831853;
+  float cassini = 1.0 - smoothstep(0.4, 0.43, r) * (1.0 - smoothstep(0.49, 0.52, r));
+  float encke = 1.0 - 0.65 * smoothstep(0.78, 0.788, r) * (1.0 - smoothstep(0.8, 0.808, r));
+  float stria = 0.62 + 0.38 * sin(r * 160.0 + sfbm(vec3(r * 18.0, 0.2, 0.0)) * 5.0);
+  stria *= 0.78 + 0.22 * sin(r * 520.0);
+  float dust = sfbm(vec3(r * 10.0, sin(ang) * 2.4, cos(ang) * 2.4));
+  float innerFade = smoothstep(0.0, 0.07, r);
+  float outerFade = smoothstep(1.0, 0.84, r);
+  float profile = mix(0.95, 0.42, smoothstep(0.5, 0.58, r));
+  float d = cassini * encke * stria * profile * innerFade * outerFade;
+  d *= 0.4 + dust * 0.6;
+
+  vec3 L = normalize(sunDir);
+  float t = dot(-vWorld, L);
+  float nearest = length(vWorld + L * max(t, 0.0));
+  float umbra = t > 0.0 ? smoothstep(planetR * 0.86, planetR * 1.22, nearest) : 1.0;
+  float lit = 0.22 + 0.78 * umbra;
+  lit *= 0.55 + 0.45 * max(dot(vec3(0.0, 0.0, 1.0), L) * 0.5 + 0.5, 0.0);
+
+  vec3 ice = mix(vec3(0.76, 0.74, 0.7), color, 0.18);
+  ice = mix(ice, vec3(0.94, 0.92, 0.86), dust * 0.28);
+  ice *= lit;
+  float a = d * opacity * (0.28 + umbra * 0.42);
+  gl_FragColor = vec4(ice, clamp(a, 0.0, 0.62));
 }
 `;
 
@@ -142,22 +170,7 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       <MenuSky lib={lib} preview={preview} />
       <SunGlint />
       <PlanetGlobe id={preview} />
-      <DustRing inner={3.18} outer={3.82} color={pal.ring} opacity={0.7} tilt={[1.02, 0.38, 0.18]} spin={0.035} />
-      <DustRing inner={3.92} outer={4.28} color={pal.atmo} opacity={0.38} tilt={[0.92, -0.22, 0.42]} spin={-0.022} />
-      <DustRing inner={4.36} outer={4.62} color={pal.ring} opacity={0.22} tilt={[1.08, 0.12, -0.16]} spin={0.016} />
-      <mesh rotation={[1.02, 0.38, 0.18]}>
-        <torusGeometry args={[3.48, 0.007, 6, 96]} />
-        <meshBasicMaterial color={pal.atmo} transparent opacity={0.28} />
-      </mesh>
-      {[0, 1, 2, 3].map((i) => {
-        const a = (i / 4) * Math.PI * 2;
-        return (
-          <mesh key={i} position={[Math.cos(a) * 3.46, Math.sin(a) * 0.55, Math.sin(a) * 3.46 * 0.35]}>
-            <boxGeometry args={[0.1, 0.06, 0.16]} />
-            <meshStandardMaterial color={pal.ring} emissive={pal.ring} emissiveIntensity={0.7} metalness={0.6} roughness={0.28} />
-          </mesh>
-        );
-      })}
+      <PlanetRings color={pal.ring} />
       <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
       <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
       <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
@@ -204,46 +217,34 @@ function MenuSky({ lib, preview }: { lib: WorldLibrary; preview: MapId }) {
   );
 }
 
-function DustRing({
-  inner,
-  outer,
-  color,
-  opacity,
-  tilt,
-  spin,
-}: {
-  inner: number;
-  outer: number;
-  color: string;
-  opacity: number;
-  tilt: [number, number, number];
-  spin: number;
-}) {
+function PlanetRings({ color }: { color: string }) {
   const ref = useRef<Mesh>(null);
   const uniforms = useMemo(
     () => ({
       color: { value: new Color(color) },
-      opacity: { value: opacity },
-      time: { value: 0 },
+      sunDir: { value: SUN_DIR.clone() },
+      opacity: { value: 1 },
+      planetR: { value: 2.35 },
     }),
-    [color, opacity],
+    [],
   );
-  useFrame((state, dt) => {
-    uniforms.time.value = state.clock.elapsedTime;
-    if (ref.current) ref.current.rotation.z += dt * spin;
+  useLayoutEffect(() => {
+    (uniforms.color.value as Color).set(color);
+  }, [color, uniforms]);
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.z += dt * 0.012;
   });
   return (
-    <group rotation={tilt}>
+    <group rotation={[1.08, 0.16, 0.05]}>
       <mesh ref={ref}>
-        <ringGeometry args={[inner, outer, 128, 18]} />
+        <ringGeometry args={[3.02, 5.05, 192, 64]} />
         <shaderMaterial
           uniforms={uniforms}
-          vertexShader={SPACE_VERT}
+          vertexShader={ringVert}
           fragmentShader={ringFrag}
           transparent
           depthWrite={false}
           side={DoubleSide}
-          blending={AdditiveBlending}
           toneMapped={false}
         />
       </mesh>

@@ -40,14 +40,15 @@ vec3 starLayer(vec3 dir, float scale, float thresh, float size) {
   tint = mix(tint, vec3(1.0, 0.96, 0.92), smoothstep(0.85, 1.0, h));
   float mag = pow(max(h - thresh, 0.0) / max(1.0 - thresh, 1e-4), 2.2);
   float core = pow(m, 3.4);
-  return tint * (m * 0.45 + core * 1.8) * (0.22 + mag * 3.4) * keep;
+  return tint * (m * 0.85 + core * 2.6) * (0.45 + mag * 4.2) * keep;
 }
 vec3 starField(vec3 dir, float time) {
-  vec3 s = starLayer(dir, 42.0, 0.972, 0.2)
-         + starLayer(dir, 88.0, 0.986, 0.11)
-         + starLayer(dir, 164.0, 0.993, 0.065)
-         + starLayer(dir, 260.0, 0.9965, 0.04);
-  float tw = 0.78 + 0.22 * sin(time * 1.7 + shash(floor(dir * 80.0)) * 40.0);
+  vec3 s = starLayer(dir, 28.0, 0.958, 0.32)
+         + starLayer(dir, 52.0, 0.974, 0.2)
+         + starLayer(dir, 96.0, 0.986, 0.12)
+         + starLayer(dir, 170.0, 0.993, 0.07)
+         + starLayer(dir, 260.0, 0.9965, 0.045);
+  float tw = 0.82 + 0.18 * sin(time * 1.7 + shash(floor(dir * 80.0)) * 40.0);
   return s * tw;
 }
 vec3 milkyLane(vec3 dir, vec3 dustCol) {

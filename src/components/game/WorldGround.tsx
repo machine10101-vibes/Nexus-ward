@@ -37,7 +37,7 @@ void main() {
   col = mix(col, fogCol * 0.52, smoothstep(-0.05, -0.55, h));
   float skyAmt = smoothstep(0.02, 0.28, h);
   col += milkyLane(n, mix(accent, tex, 0.4)) * skyAmt;
-  col += starField(n, time) * skyAmt;
+  col += starField(n, time) * skyAmt * 1.25;
   float rim = pow(1.0 - abs(h), 5.0);
   col += accent * rim * 0.14;
   gl_FragColor = vec4(col, 1.0);

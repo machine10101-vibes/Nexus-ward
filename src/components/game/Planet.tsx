@@ -85,7 +85,7 @@ void main() {
   vec3 crust = triplanar(crustMap, vP, 0.34) * 0.48
              + triplanar(crustMap, vP, 1.15) * 0.34
              + triplanar(crustMap, vP, 3.8) * 0.18;
-  crust = crust * 1.38 + 0.03;
+  crust = crust * 1.55 + 0.02;
   float bump = dot(crust, vec3(0.28, 0.5, 0.22));
   float ridge = ridged(pn * 3.4 + 0.2);
   vec3 Nw = normalize(vWorldN + vWorldN * ((bump - 0.48) * 0.55 + (ridge - 0.5) * 0.22));
@@ -120,9 +120,9 @@ void main() {
   albedo = mix(albedo, mix(vec3(0.82, 0.9, 0.96), crust, 0.14), clamp(ice, 0.0, 1.0));
 
   float ndl = dot(Nw, L);
-  float day = smoothstep(-0.12, 0.38, ndl);
-  float dusk = exp(-ndl * ndl * 8.5);
-  float wrap = max(ndl * 0.62 + 0.38, 0.0);
+  float day = smoothstep(-0.05, 0.22, ndl);
+  float dusk = exp(-ndl * ndl * 10.0);
+  float wrap = max(ndl * 0.88 + 0.1, 0.0);
   float night = 1.0 - day;
 
   vec3 H = normalize(L + V);
@@ -140,8 +140,8 @@ void main() {
   vein = max(vein, max(crust.r * 0.8 + crust.g * 0.22 - crust.b * 0.62 - 0.1, 0.0));
   float cities = smoothstep(0.72, 0.9, noise(pn * 36.0 + 4.0)) * land * (1.0 - ice);
 
-  vec3 lit = albedo * (0.045 + 1.02 * wrap * day);
-  lit *= 1.0 - cld * day * 0.4;
+  vec3 lit = albedo * (0.028 + 1.18 * wrap * day);
+  lit *= 1.0 - cld * day * 0.28;
   lit += spec * mix(colorC, vec3(0.92, 0.95, 1.0), 0.6);
   lit += colorC * vein * land * mix(0.1, 1.15, night);
   lit += colorC * cities * night * 0.55;
@@ -149,10 +149,10 @@ void main() {
   lit += atmo * dusk * 0.22;
   lit += atmo * vec3(1.25, 0.72, 0.42) * dusk * coast * 0.18;
 
-  float fres = pow(1.0 - max(dot(Nv, V), 0.0), 2.4);
-  lit += atmo * fres * (0.16 + day * 0.18 + dusk * 0.4);
-  lit += atmo * pow(fres, 4.0) * 0.14;
-  lit += albedo * night * 0.04;
+  float fres = pow(1.0 - max(dot(Nv, V), 0.0), 2.8);
+  lit += atmo * fres * (0.08 + day * 0.08 + dusk * 0.28);
+  lit += atmo * pow(fres, 5.0) * 0.08;
+  lit += albedo * night * 0.035;
 
   gl_FragColor = vec4(lit, 1.0);
 }
@@ -197,9 +197,9 @@ void main() {
   col += mix(vec3(1.0), atmo, 0.3) * lining * 0.48;
   col = mix(col, atmo * vec3(1.28, 0.74, 0.42), dusk * 0.48);
   col *= 0.48 + day * 0.58;
-  float a = (mask * 0.72 + wisps * 0.28) * opacity * (0.2 + heads * 0.42) * (0.38 + day * 0.62);
-  a *= 0.46 + fres * 0.54;
-  gl_FragColor = vec4(col, a);
+  float a = (heads * 0.55 + wisps * 0.22 + mask * 0.18) * opacity * (0.16 + heads * 0.5) * (0.28 + day * 0.72);
+  a *= 0.34 + fres * 0.4;
+  gl_FragColor = vec4(col, clamp(a, 0.0, 0.72));
 }
 `;
 
@@ -222,31 +222,30 @@ void main() {
   vec3 L = normalize(sunDir);
   vec3 pn = normalize(vP);
   float ndotv = abs(dot(Nv, V));
-  float fres = pow(1.0 - ndotv, 2.05);
-  float thick = pow(1.0 - ndotv, 1.15);
+  float limb = pow(max(1.0 - ndotv, 0.0), 3.35);
+  float face = pow(max(1.0 - ndotv, 0.0), 8.5);
   float ndl = dot(Nw, L);
-  float dusk = exp(-ndl * ndl * 6.4);
+  float dusk = exp(-ndl * ndl * 7.2);
   float day = smoothstep(-0.28, 0.36, ndl);
   vec2 skyUv = vec2(atan(pn.z, pn.x) * 0.1591549 + 0.5, pn.y * 0.48 + 0.5);
   vec3 sky = texture2D(skyMap, skyUv).rgb;
-  vec3 rayleigh = mix(atmo * 0.48, atmo * 1.22, day);
-  rayleigh = mix(rayleigh, sky, 0.28);
-  float sunGlow = pow(max(ndl, 0.0), 1.8) * mie;
-  float mieLobe = pow(max(dot(reflect(-L, Nw), V), 0.0), 5.5) * mie;
-  vec3 sunset = atmo * vec3(1.35, 0.68, 0.36);
-  vec3 col = mix(rayleigh, sunset, dusk * 0.68);
-  col += sky * sunGlow * 0.28;
-  col += atmo * mieLobe * 0.62;
-  col += atmo * vec3(0.7, 0.55, 1.05) * pow(fres, 3.2) * 0.18;
-  float pole = smoothstep(0.58, 0.94, abs(pn.y));
+  vec3 rayleigh = mix(atmo * 0.55, atmo * 1.18, day);
+  rayleigh = mix(rayleigh, sky, 0.16);
+  float sunGlow = pow(max(ndl, 0.0), 2.2) * mie;
+  float mieLobe = pow(max(dot(reflect(-L, Nw), V), 0.0), 6.5) * mie;
+  vec3 sunset = atmo * vec3(1.32, 0.66, 0.34);
+  vec3 col = mix(rayleigh, sunset, dusk * 0.72);
+  col += sky * sunGlow * 0.16;
+  col += atmo * mieLobe * 0.55;
+  col += atmo * vec3(0.7, 0.55, 1.05) * pow(limb, 1.6) * 0.16;
+  float pole = smoothstep(0.62, 0.95, abs(pn.y));
   float az = atan(pn.z, pn.x);
   float curtains = 0.5 + 0.5 * sin(az * 10.0 + time * 0.38 + pn.y * 7.0);
   curtains *= 0.55 + 0.45 * sin(az * 6.5 - time * 0.22);
-  col += atmo * vec3(0.55, 1.05, 0.78) * pole * curtains * iceAmt * 0.7;
-  float a = thick * density * (0.38 + dusk * 0.86 + sunGlow * 0.3);
-  a *= 0.78 + pow(fres, 1.8) * 0.48;
-  a += pole * curtains * iceAmt * 0.1;
-  gl_FragColor = vec4(col, clamp(a, 0.0, 0.94));
+  col += atmo * vec3(0.55, 1.05, 0.78) * pole * curtains * iceAmt * 0.45;
+  float a = (limb * 0.82 + face * 0.06) * density * (0.55 + dusk * 0.7 + sunGlow * 0.18);
+  a += pole * curtains * iceAmt * limb * 0.12;
+  gl_FragColor = vec4(col, clamp(a, 0.0, 0.78));
 }
 `;
 
@@ -267,9 +266,9 @@ const WORLD_SHAPE: Record<
   MapId,
   { landBias: number; iceAmt: number; cover: number; density: number; halo: number; mie: number; opacity: number }
 > = {
-  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.56, density: 0.7, halo: 0.42, mie: 1.18, opacity: 0.94 },
-  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.64, density: 0.8, halo: 0.5, mie: 1.48, opacity: 1.08 },
-  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.48, density: 0.68, halo: 0.48, mie: 1.08, opacity: 0.84 },
+  mycelion: { landBias: 0.4, iceAmt: 0.18, cover: 0.66, density: 0.46, halo: 0.2, mie: 0.92, opacity: 0.58 },
+  forge: { landBias: 0.34, iceAmt: 0.0, cover: 0.72, density: 0.52, halo: 0.24, mie: 1.12, opacity: 0.64 },
+  aegis: { landBias: 0.44, iceAmt: 0.44, cover: 0.68, density: 0.44, halo: 0.22, mie: 0.88, opacity: 0.5 },
 };
 
 const CLOUD_TINT: Record<MapId, Color> = {
@@ -402,7 +401,7 @@ export function PlanetGlobe({
         <sphereGeometry args={[radius, 112, 80]} />
         <shaderMaterial vertexShader={vert} fragmentShader={frag} uniforms={uniforms} toneMapped={false} />
       </mesh>
-      <mesh ref={clouds} scale={1.016}>
+      <mesh ref={clouds} scale={1.012}>
         <sphereGeometry args={[radius, 96, 64]} />
         <shaderMaterial
           vertexShader={vert}
@@ -413,7 +412,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.052}>
+      <mesh scale={1.028}>
         <sphereGeometry args={[radius, 80, 56]} />
         <shaderMaterial
           vertexShader={vert}
@@ -424,7 +423,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.13}>
+      <mesh scale={1.075}>
         <sphereGeometry args={[radius, 72, 48]} />
         <shaderMaterial
           vertexShader={vert}
@@ -436,7 +435,7 @@ export function PlanetGlobe({
           toneMapped={false}
         />
       </mesh>
-      <mesh scale={1.34}>
+      <mesh scale={1.14}>
         <sphereGeometry args={[radius, 56, 36]} />
         <shaderMaterial
           vertexShader={vert}

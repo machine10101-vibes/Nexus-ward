@@ -24,11 +24,11 @@ const skyFrag = /* glsl */ `
     vec3 nebula = tex * tex * 0.38;
     nebula *= smoothstep(0.1, 0.48, lum);
     nebula *= 0.55 + 0.45 * sfbm(n * 2.4);
-    vec3 space = mix(vec3(0.01, 0.012, 0.02), fogCol * 0.22, 0.35);
-    vec3 col = space + nebula * 0.72;
-    col += milkyLane(n, mix(accent, tex, 0.45));
-    col += starField(n, time);
-    col += accent * pow(1.0 - abs(n.y), 7.5) * 0.07;
+    vec3 space = mix(vec3(0.004, 0.005, 0.01), fogCol * 0.12, 0.25);
+    vec3 col = space + nebula * 0.42;
+    col += milkyLane(n, mix(accent, tex, 0.35));
+    col += starField(n, time) * 1.35;
+    col += accent * pow(1.0 - abs(n.y), 8.5) * 0.045;
     col += accent * vec3(1.15, 0.78, 0.55) * pow(max(dot(n, normalize(vec3(0.55, 0.42, 0.28))), 0.0), 48.0) * 0.55;
     gl_FragColor = vec4(col, 1.0);
   }
@@ -142,12 +142,12 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       <MenuSky lib={lib} preview={preview} />
       <SunGlint />
       <PlanetGlobe id={preview} />
-      <DustRing inner={3.22} outer={3.72} color={pal.ring} opacity={0.42} tilt={[Math.PI / 2.6, 0.2, 0.3]} spin={0.035} />
-      <DustRing inner={3.82} outer={4.18} color={pal.atmo} opacity={0.22} tilt={[Math.PI / 2.2, -0.15, 0.5]} spin={-0.022} />
-      <DustRing inner={4.28} outer={4.55} color={pal.ring} opacity={0.14} tilt={[Math.PI / 2.4, 0.08, -0.2]} spin={0.016} />
-      <mesh rotation={[Math.PI / 2.6, 0.2, 0.3]}>
-        <torusGeometry args={[3.48, 0.008, 6, 96]} />
-        <meshBasicMaterial color={pal.atmo} transparent opacity={0.38} />
+      <DustRing inner={3.18} outer={3.82} color={pal.ring} opacity={0.7} tilt={[1.02, 0.38, 0.18]} spin={0.035} />
+      <DustRing inner={3.92} outer={4.28} color={pal.atmo} opacity={0.38} tilt={[0.92, -0.22, 0.42]} spin={-0.022} />
+      <DustRing inner={4.36} outer={4.62} color={pal.ring} opacity={0.22} tilt={[1.08, 0.12, -0.16]} spin={0.016} />
+      <mesh rotation={[1.02, 0.38, 0.18]}>
+        <torusGeometry args={[3.48, 0.007, 6, 96]} />
+        <meshBasicMaterial color={pal.atmo} transparent opacity={0.28} />
       </mesh>
       {[0, 1, 2, 3].map((i) => {
         const a = (i / 4) * Math.PI * 2;
@@ -158,9 +158,9 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
           </mesh>
         );
       })}
-      <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.26} tint="#c6ccd2" />
-      <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.14} tint="#8a9098" />
-      <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.085} tint={pal.atmo} glow />
+      <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
+      <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
+      <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
     </>
   );
 }

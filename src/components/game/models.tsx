@@ -919,12 +919,18 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <sphereGeometry args={[0.18, 12, 10]} />
           <Mat color="#1c4a34" roughness={0.42} metalness={0.14} />
         </mesh>
-        <Scute position={[0, 0.42, 0]} rotation={[0.1, 0, 0]} size={[0.28, 0.08, 0.22]} color="#122820" />
-        <Scute position={[0, 0.4, 0.26]} rotation={[0.2, 0, 0]} size={[0.26, 0.07, 0.18]} color="#163828" />
-        {([-0.22, 0.22] as const).map((x) => (
-          <mesh key={x} position={[x, 0.4, 0.12]} rotation={[0.1, 0, x > 0 ? -0.7 : 0.7]} castShadow>
-            <boxGeometry args={[0.06, 0.28, 0.18]} />
-            <Mat color="#1a3a2c" metalness={0.28} roughness={0.42} />
+        <mesh position={[0, 0.4, 0.02]} rotation={[0.12, 0, 0]} scale={[1.15, 0.38, 1]} castShadow>
+          <sphereGeometry args={[0.16, 10, 8]} />
+          <Mat color="#122820" roughness={0.5} metalness={0.14} />
+        </mesh>
+        <mesh position={[0, 0.4, 0.24]} rotation={[0.22, 0, 0]} scale={[1.05, 0.35, 0.9]} castShadow>
+          <sphereGeometry args={[0.14, 10, 8]} />
+          <Mat color="#163828" roughness={0.48} metalness={0.12} />
+        </mesh>
+        {([-0.2, 0.2] as const).map((x) => (
+          <mesh key={x} position={[x, 0.36, 0.08]} rotation={[0.08, 0, x > 0 ? -0.55 : 0.55]} scale={[0.45, 0.7, 1]} castShadow>
+            <sphereGeometry args={[0.14, 8, 6]} />
+            <Mat color="#1a3a2c" metalness={0.22} roughness={0.46} />
           </mesh>
         ))}
         <Mandibles color="#122820" y={0.22} z={0.44} spread={0.1} len={0.2} />
@@ -960,11 +966,14 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <sphereGeometry args={[0.16, 10, 8]} />
           <Mat color="#3d8f62" roughness={0.46} />
         </mesh>
-        <Scute position={[0, 0.48, 0]} rotation={[0.08, 0, 0]} size={[0.5, 0.12, 0.46]} color="#245844" />
-        {([-0.28, 0.28] as const).map((x) => (
-          <mesh key={`plate-${x}`} position={[x, 0.4, 0.04]} rotation={[0, 0, x > 0 ? -0.4 : 0.4]} castShadow>
-            <boxGeometry args={[0.12, 0.26, 0.34]} />
-            <Mat color="#1e4a38" metalness={0.22} roughness={0.44} />
+        <mesh position={[0, 0.46, 0]} rotation={[0.08, 0, 0]} scale={[1.3, 0.4, 1.2]} castShadow>
+          <sphereGeometry args={[0.22, 12, 10]} />
+          <Mat color="#245844" roughness={0.48} metalness={0.14} />
+        </mesh>
+        {([-0.26, 0.26] as const).map((x) => (
+          <mesh key={`plate-${x}`} position={[x, 0.38, 0.04]} rotation={[0, 0, x > 0 ? -0.42 : 0.42]} scale={[0.45, 0.65, 1.1]} castShadow>
+            <sphereGeometry args={[0.18, 10, 8]} />
+            <Mat color="#1e4a38" metalness={0.2} roughness={0.46} />
           </mesh>
         ))}
         {[-0.18, 0, 0.18].map((x) => (
@@ -1003,13 +1012,22 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <sphereGeometry args={[0.24, 12, 10]} />
           <Mat color="#3d8f62" roughness={0.48} metalness={0.12} />
         </mesh>
-        <Scute position={[0, 0.54, 0.08]} rotation={[0.1, 0, 0]} size={[0.52, 0.12, 0.36]} color="#245844" />
-        <Scute position={[0, 0.56, -0.22]} rotation={[0.04, 0, 0]} size={[0.58, 0.14, 0.4]} color="#1e4a38" />
-        <Scute position={[0, 0.5, -0.5]} rotation={[-0.08, 0, 0]} size={[0.48, 0.1, 0.28]} color="#245844" />
-        {([-0.34, 0.34] as const).map((x) => (
-          <mesh key={`pauldron-${x}`} position={[x, 0.46, -0.04]} rotation={[0.05, 0, x > 0 ? -0.38 : 0.38]} castShadow>
-            <boxGeometry args={[0.16, 0.3, 0.48]} />
-            <Mat color="#1e4a38" metalness={0.22} roughness={0.42} />
+        <mesh position={[0, 0.5, 0.08]} rotation={[0.1, 0, 0]} scale={[1.35, 0.42, 1.1]} castShadow>
+          <sphereGeometry args={[0.22, 12, 10]} />
+          <Mat color="#245844" roughness={0.48} metalness={0.14} />
+        </mesh>
+        <mesh position={[0, 0.52, -0.22]} rotation={[0.04, 0, 0]} scale={[1.45, 0.46, 1.2]} castShadow>
+          <sphereGeometry args={[0.24, 12, 10]} />
+          <Mat color="#1e4a38" roughness={0.46} metalness={0.16} />
+        </mesh>
+        <mesh position={[0, 0.46, -0.5]} rotation={[-0.08, 0, 0]} scale={[1.2, 0.38, 1]} castShadow>
+          <sphereGeometry args={[0.2, 10, 8]} />
+          <Mat color="#245844" roughness={0.5} metalness={0.12} />
+        </mesh>
+        {([-0.3, 0.3] as const).map((x) => (
+          <mesh key={`pauldron-${x}`} position={[x, 0.42, -0.04]} rotation={[0.05, 0, x > 0 ? -0.4 : 0.4]} scale={[0.5, 0.7, 1.15]} castShadow>
+            <sphereGeometry args={[0.22, 10, 8]} />
+            <Mat color="#1e4a38" metalness={0.2} roughness={0.44} />
           </mesh>
         ))}
         {[-0.16, 0, 0.16].map((x) => (
@@ -1286,21 +1304,21 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <boxGeometry args={[0.34, 0.46, 0.26]} />
           <Mat color="#3a4048" metalness={0.8} roughness={0.24} />
         </mesh>
-        <mesh position={[0, 0.8, -0.06]} castShadow>
-          <boxGeometry args={[0.22, 0.18, 0.2]} />
+        <mesh position={[0, 0.84, -0.04]} castShadow>
+          <boxGeometry args={[0.24, 0.2, 0.22]} />
           <Mat color="#2a3038" metalness={0.78} roughness={0.24} />
         </mesh>
-        <mesh position={[0, 0.82, 0.08]}>
-          <boxGeometry args={[0.16, 0.05, 0.04]} />
+        <mesh position={[0, 0.88, 0.1]}>
+          <boxGeometry args={[0.16, 0.06, 0.04]} />
           <Mat color="#e08848" eInt={2.2} />
         </mesh>
-        <PulseLight position={[0, 0.82, 0.12]} r={0.025} color="#e08848" base={2} amp={0.4} speed={3.4} />
+        <PulseLight position={[0, 0.88, 0.14]} r={0.025} color="#e08848" base={2} amp={0.4} speed={3.4} />
         <mesh position={[0.22, 0.52, 0.02]} rotation={[0.15, 0, 0.35]} castShadow>
           <boxGeometry args={[0.1, 0.22, 0.12]} />
           <Mat color="#4a5058" metalness={0.74} roughness={0.26} />
         </mesh>
-        <mesh position={[0, 0.54, 0.22]} rotation={[-0.08, 0, 0]} castShadow>
-          <boxGeometry args={[0.78, 0.86, 0.08]} />
+        <mesh position={[0, 0.48, 0.24]} rotation={[-0.12, 0, 0]} castShadow>
+          <boxGeometry args={[0.68, 0.64, 0.08]} />
           <Mat color="#cbd5e1" metalness={0.88} roughness={0.16} />
         </mesh>
         <mesh position={[0, 0.56, 0.27]} castShadow>

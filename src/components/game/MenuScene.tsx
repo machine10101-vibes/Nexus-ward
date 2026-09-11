@@ -97,16 +97,14 @@ ${STAR_GLSL}
 void main() {
   float r = vUv.y;
   float ang = vUv.x * 6.2831853;
-  float cassini = 1.0 - smoothstep(0.4, 0.43, r) * (1.0 - smoothstep(0.49, 0.52, r));
-  float encke = 1.0 - 0.65 * smoothstep(0.78, 0.788, r) * (1.0 - smoothstep(0.8, 0.808, r));
-  float stria = 0.62 + 0.38 * sin(r * 160.0 + sfbm(vec3(r * 18.0, 0.2, 0.0)) * 5.0);
-  stria *= 0.78 + 0.22 * sin(r * 520.0);
-  float dust = sfbm(vec3(r * 10.0, sin(ang) * 2.4, cos(ang) * 2.4));
-  float innerFade = smoothstep(0.0, 0.07, r);
-  float outerFade = smoothstep(1.0, 0.84, r);
-  float profile = mix(0.95, 0.42, smoothstep(0.5, 0.58, r));
-  float d = cassini * encke * stria * profile * innerFade * outerFade;
-  d *= 0.4 + dust * 0.6;
+  float cassini = 1.0 - smoothstep(0.42, 0.46, r) * (1.0 - smoothstep(0.52, 0.56, r));
+  float stria = 0.78 + 0.22 * sin(r * 28.0 + sfbm(vec3(r * 8.0, 0.2, 0.0)) * 2.4);
+  float dust = sfbm(vec3(r * 7.0, sin(ang) * 1.6, cos(ang) * 1.6));
+  float innerFade = smoothstep(0.0, 0.1, r);
+  float outerFade = smoothstep(1.0, 0.8, r);
+  float profile = mix(0.88, 0.38, smoothstep(0.54, 0.62, r));
+  float d = cassini * stria * profile * innerFade * outerFade;
+  d *= 0.5 + dust * 0.5;
 
   vec3 L = normalize(sunDir);
   float t = dot(-vWorld, L);
@@ -118,8 +116,9 @@ void main() {
   vec3 ice = mix(vec3(0.76, 0.74, 0.7), color, 0.18);
   ice = mix(ice, vec3(0.94, 0.92, 0.86), dust * 0.28);
   ice *= lit;
-  float a = d * opacity * (0.28 + umbra * 0.42);
-  gl_FragColor = vec4(ice, clamp(a, 0.0, 0.62));
+  float a = d * opacity * (0.22 + umbra * 0.38);
+  if (a < 0.03) discard;
+  gl_FragColor = vec4(ice, clamp(a, 0.0, 0.5));
 }
 `;
 
@@ -235,9 +234,9 @@ function PlanetRings({ color }: { color: string }) {
     if (ref.current) ref.current.rotation.z += dt * 0.012;
   });
   return (
-    <group rotation={[0.78, 0.2, 0.06]}>
+    <group rotation={[0.58, 0.18, 0.05]}>
       <mesh ref={ref}>
-        <ringGeometry args={[3.02, 5.05, 192, 64]} />
+        <ringGeometry args={[3.2, 4.55, 192, 48]} />
         <shaderMaterial
           uniforms={uniforms}
           vertexShader={ringVert}

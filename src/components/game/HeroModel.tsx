@@ -156,30 +156,34 @@ function Humanoid({
 function FighterBody({ accent, heavy, great }: { accent: string; heavy: boolean; great: boolean }) {
   return (
     <Humanoid
-      skin="#c4a888"
-      plate={heavy ? "#3e4650" : "#5c636c"}
-      cloth="#2a3038"
+      skin="#d2b094"
+      plate={heavy ? "#8a929c" : "#9aa4ae"}
+      cloth="#4a525c"
       helm={
         <group>
-          <mesh position={[0, 1.62, 0.02]} castShadow>
-            <sphereGeometry args={[0.125, 14, 12]} />
-            <Skin color={heavy ? "#3a424c" : "#4a525c"} metalness={0.78} roughness={0.22} />
+          <mesh position={[0, 1.64, 0]} castShadow>
+            <sphereGeometry args={[0.122, 14, 12]} />
+            <Skin color={heavy ? "#7a8490" : "#b0b8c0"} metalness={0.82} roughness={0.2} />
           </mesh>
-          <mesh position={[0, 1.58, 0.1]}>
-            <boxGeometry args={[0.16, 0.03, 0.04]} />
-            <Skin color={accent} metalness={0.7} roughness={0.18} eInt={0.85} />
+          <mesh position={[0, 1.56, 0.1]} castShadow>
+            <boxGeometry args={[0.17, 0.045, 0.05]} />
+            <Skin color={accent} metalness={0.55} roughness={0.16} eInt={1.1} />
+          </mesh>
+          <mesh position={[0, 1.5, 0.08]} scale={[1, 0.45, 0.7]}>
+            <sphereGeometry args={[0.09, 10, 8]} />
+            <Skin color="#1a1410" roughness={0.45} />
           </mesh>
         </group>
       }
     >
       <mesh position={[0, 1.22, 0.12]} castShadow>
         <boxGeometry args={[0.28, 0.22, 0.06]} />
-        <Skin color={heavy ? "#2f363e" : "#3a424a"} metalness={0.72} roughness={0.26} />
+        <Skin color={heavy ? "#6a727c" : "#c0c6cc"} metalness={0.78} roughness={0.22} />
       </mesh>
       {([-0.2, 0.2] as const).map((x) => (
         <mesh key={x} position={[x, 1.32, 0.02]} rotation={[0, 0, x > 0 ? -0.35 : 0.35]} castShadow>
           <boxGeometry args={[0.16, 0.16, 0.18]} />
-          <Skin color={heavy ? "#323840" : "#454c54"} metalness={0.74} roughness={0.24} />
+          <Skin color={heavy ? "#707880" : "#b8c0c8"} metalness={0.8} roughness={0.2} />
         </mesh>
       ))}
       <mesh position={[0.34, 0.82, 0.16]} rotation={[1.15, 0.2, 0.15]} castShadow>
@@ -201,14 +205,14 @@ function FighterBody({ accent, heavy, great }: { accent: string; heavy: boolean;
 function RangerBody({ accent, heavy, long }: { accent: string; heavy: boolean; long: boolean }) {
   return (
     <Humanoid
-      skin="#b89272"
-      plate={heavy ? "#3a4a50" : "#4a555c"}
-      cloth="#2a3438"
+      skin="#c4a07c"
+      plate={heavy ? "#6a7a80" : "#7a8a90"}
+      cloth="#4a5a58"
       helm={
         <group>
           <mesh position={[0, 1.6, 0.01]} castShadow>
             <sphereGeometry args={[0.118, 14, 12]} />
-            <Skin color="#2c3438" metalness={0.55} roughness={0.34} />
+            <Skin color="#5a686c" metalness={0.55} roughness={0.34} />
           </mesh>
           <mesh position={[0, 1.585, 0.1]}>
             <boxGeometry args={[0.18, 0.035, 0.05]} />
@@ -248,9 +252,9 @@ function RangerBody({ accent, heavy, long }: { accent: string; heavy: boolean; l
 function MageBody({ accent, heavy, crozier }: { accent: string; heavy: boolean; crozier: boolean }) {
   return (
     <Humanoid
-      skin="#d0b8a0"
-      plate={heavy ? "#3a3450" : "#4a4460"}
-      cloth={heavy ? "#2a2440" : "#3a3458"}
+      skin="#e0c8b0"
+      plate={heavy ? "#6a6490" : "#7a74a0"}
+      cloth={heavy ? "#5a5480" : "#6a6498"}
       helm={
         <group>
           <mesh position={[0, 1.64, -0.02]} rotation={[-0.2, 0, 0]} castShadow>
@@ -266,7 +270,7 @@ function MageBody({ accent, heavy, crozier }: { accent: string; heavy: boolean; 
     >
       <mesh position={[0, 0.72, -0.04]} rotation={[0.15, 0, 0]} castShadow>
         <coneGeometry args={[0.28, 0.7, 8]} />
-        <Skin color={heavy ? "#241e40" : "#322c52"} metalness={0.08} roughness={0.68} />
+            <Skin color={heavy ? "#4a4470" : "#5a5490"} metalness={0.08} roughness={0.68} />
       </mesh>
       <group position={[-0.28, 0.95, 0.16]} rotation={[0.2, 0.15, 0.35]}>
         <mesh castShadow>

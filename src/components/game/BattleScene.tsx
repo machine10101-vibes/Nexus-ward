@@ -676,7 +676,7 @@ function HeroLayer() {
   });
   return (
     <group ref={group} position={[hero.x, hero.y, hero.z]}>
-      <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.05} />
+      <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.42} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <ringGeometry args={[0.28, 0.38, 20]} />
         <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />

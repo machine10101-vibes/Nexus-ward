@@ -4,6 +4,8 @@ import { useGameStore } from "@/game/store";
 import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { PlanetGlobe } from "./Planet";
 import { EnemyModel, HexPad, NexusCore, SpawnGate, TowerModel } from "./models";
+import { HeroModel } from "./HeroModel";
+import { HEROES } from "@/game/heroes";
 import { studioEntry } from "./studioCatalog";
 
 type StudioControls = {
@@ -78,6 +80,25 @@ export function StudioScene() {
 
 function StudioSubject({ id, variant }: { id: string; variant: number }) {
   const entry = studioEntry(id);
+  if (entry.kind === "hero" && entry.hero) {
+    const h = HEROES[entry.hero];
+    const cleared = variant >= 2;
+    const weapon = cleared
+      ? entry.hero === "fighter"
+        ? "void-greatblade"
+        : entry.hero === "ranger"
+          ? "rail-longarm"
+          : "nova-crozier"
+      : h.starterWeapon;
+    const armor = cleared
+      ? entry.hero === "fighter"
+        ? "aegis-plate"
+        : entry.hero === "ranger"
+          ? "ghost-harness"
+          : "star-silk"
+      : h.starterArmor;
+    return <HeroModel id={entry.hero} weapon={weapon} armor={armor} scale={1.2} />;
+  }
   if (entry.kind === "tower" && entry.tower) {
     return <TowerModel type={entry.tower} level={Math.min(3, Math.max(1, variant))} />;
   }

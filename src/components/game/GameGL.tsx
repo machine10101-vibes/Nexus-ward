@@ -18,6 +18,7 @@ export function GameGL() {
     phase !== "idle" &&
     screen !== "title" &&
     screen !== "select" &&
+    screen !== "hero" &&
     screen !== "briefing" &&
     screen !== "studio";
   const mode = inStudio ? "studio" : inBattle ? "battle" : "menu";

@@ -3,6 +3,7 @@ import { useGameStore, applyEnvironmentDefaults } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
 import { TOWER_ORDER } from "@/game/config";
+import type { ArtBind } from "@/game/save";
 import { Hud } from "./Hud";
 import { Overlays } from "./Overlays";
 
@@ -35,7 +36,7 @@ export function NexusWardApp() {
             s.pause();
           }
         } else if (s.screen === "paused") s.resume();
-        else if (s.screen === "help" || s.screen === "settings" || s.screen === "studio") s.closeOverlay();
+        else if (s.screen === "help" || s.screen === "settings" || s.screen === "studio" || s.screen === "loadout") s.closeOverlay();
         return;
       }
       if (e.code === "KeyV" && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -57,6 +58,15 @@ export function NexusWardApp() {
       if (e.code === "KeyE") {
         engine.castOverclock();
         s.syncHud();
+      }
+      const arts: ArtBind[] = ["art1", "art2", "art3"];
+      const artSlot = arts.findIndex((id) => s.settings.keys[id] === e.code);
+      if (artSlot >= 0) {
+        engine.castHeroAbility(artSlot as 0 | 1 | 2);
+        s.syncHud();
+      }
+      if (e.code === "KeyL") {
+        s.openLoadout();
       }
       if (e.code === "KeyF") {
         engine.cycleSpeed();

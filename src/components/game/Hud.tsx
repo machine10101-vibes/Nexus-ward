@@ -6,7 +6,10 @@ import {
   Pause,
   Play,
   Radio,
+  Shield,
   Snowflake,
+  Sparkles,
+  Sword,
   Waves,
   Zap,
 } from "lucide-react";
@@ -22,10 +25,12 @@ import {
   towerStats,
   upgradeCost,
 } from "@/game/config";
+import { HEROES } from "@/game/heroes";
+import { formatKey } from "@/game/save";
 import { engine } from "@/game/engine";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
-import type { Targeting, TowerId } from "@/game/types";
+import type { HeroId, Targeting, TowerId } from "@/game/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<TowerId, typeof Zap> = {
@@ -221,6 +226,7 @@ export function Hud() {
             >
               <FastForward className="size-4" />
             </AbilityIcon>
+            <WardenArts heroId={hud.heroId ?? "fighter"} cds={hud.heroArtCd} max={hud.heroArtMax} />
             {canWave ? (
               <button
                 type="button"
@@ -433,6 +439,43 @@ function StatusChip({ children, muted }: { children: ReactNode; muted?: boolean 
     >
       {children}
     </span>
+  );
+}
+
+function WardenArts({
+  heroId,
+  cds,
+  max,
+}: {
+  heroId: HeroId;
+  cds: [number, number, number];
+  max: [number, number, number];
+}) {
+  const keys = useGameStore((s) => s.settings.keys);
+  const binds = [keys.art1, keys.art2, keys.art3] as const;
+  return (
+    <>
+      {([0, 1, 2] as const).map((slot) => {
+        const art = HEROES[heroId].arts[slot];
+        const Icon = slot === 0 ? Sword : slot === 1 ? (heroId === "fighter" ? Shield : heroId === "ranger" ? Minus : Sparkles) : Zap;
+        return (
+          <AbilityIcon
+            key={slot}
+            label={art.name}
+            hint={formatKey(binds[slot])}
+            ready={cds[slot] <= 0}
+            cd={cds[slot]}
+            max={max[slot]}
+            onClick={() => {
+              engine.castHeroAbility(slot);
+              useGameStore.getState().syncHud();
+            }}
+          >
+            <Icon className="size-4" />
+          </AbilityIcon>
+        );
+      })}
+    </>
   );
 }
 

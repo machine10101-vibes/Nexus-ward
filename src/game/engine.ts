@@ -18,6 +18,7 @@ import {
   towerStats,
   upgradeCost,
 } from "./config";
+import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { MAPS, cellToWorld } from "./maps";
 import type {
   Beam,
@@ -30,12 +31,27 @@ import type {
   Enemy,
   EnemyId,
   Floater,
+  HeroId,
   MapDef,
   MapId,
   Targeting,
   Tower,
   TowerId,
 } from "./types";
+
+export type HeroState = {
+  id: HeroId;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  cooldown: number;
+  artCd: [number, number, number];
+  artMax: [number, number, number];
+  loadout: HeroLoadout;
+  stats: HeroStats;
+  swing: number;
+};
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
@@ -119,6 +135,19 @@ export class GameEngine {
   placeGen = 0;
   rankGen = 0;
   leakGen = 0;
+  hero: HeroState = {
+    id: "fighter",
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    cooldown: 0,
+    artCd: [0, 0, 0],
+    artMax: [16, 18, 20],
+    loadout: emptyLoadouts().fighter,
+    stats: heroStats("fighter", emptyLoadouts().fighter),
+    swing: 0,
+  };
 
   constructor() {
     this.resetPools();
@@ -230,7 +259,7 @@ export class GameEngine {
     return { slot, alive: false, kind: "frost", x: 0, z: 0, ttl: 0, maxTtl: 1, size: 1, color: "#fff" };
   }
 
-  load(id: MapId) {
+  load(id: MapId, heroId: HeroId = "fighter", loadout: HeroLoadout = emptyLoadouts()[heroId]) {
     const map = MAPS[id];
     this.map = map;
     this.phase = "build";
@@ -286,6 +315,43 @@ export class GameEngine {
     this.leakGen = 0;
     this.fireGen = 0;
     this.lastShooter = null;
+    this.placeHero(heroId, loadout);
+  }
+
+  placeHero(id: HeroId, loadout: HeroLoadout) {
+    const end = this.endWorld();
+    const prev = this.waypoints[this.waypoints.length - 2] ?? end;
+    const dx = end.x - prev.x;
+    const dz = end.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const ux = dx / len;
+    const uz = dz / len;
+    this.hero.id = id;
+    this.hero.loadout = { ...loadout };
+    this.hero.stats = heroStats(id, loadout);
+    this.hero.x = end.x - ux * 2.05 + -uz * 1.55;
+    this.hero.y = 0;
+    this.hero.z = end.z - uz * 2.05 + ux * 1.55;
+    this.hero.yaw = Math.atan2(dx, dz);
+    this.hero.cooldown = 0;
+    this.hero.artCd = [0, 0, 0];
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
+    this.hero.swing = 0;
+  }
+
+  applyHeroGear(loadout: HeroLoadout) {
+    this.hero.loadout = { ...loadout };
+    this.hero.stats = heroStats(this.hero.id, loadout);
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(this.hero.id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
+    this.hudDirty = true;
   }
 
   startWave() {
@@ -592,6 +658,10 @@ export class GameEngine {
     this.time += dt;
     if (this.surgeCd > 0) this.surgeCd = Math.max(0, this.surgeCd - dt);
     if (this.overclockCd > 0) this.overclockCd = Math.max(0, this.overclockCd - dt);
+    this.hero.artCd[0] = Math.max(0, this.hero.artCd[0] - dt);
+    this.hero.artCd[1] = Math.max(0, this.hero.artCd[1] - dt);
+    this.hero.artCd[2] = Math.max(0, this.hero.artCd[2] - dt);
+    if (this.hero.swing > 0) this.hero.swing = Math.max(0, this.hero.swing - dt);
     if (this.phase === "build") {
       this.buildClock += dt;
       if (this.autoWave && this.wave > 0 && this.wave < this.map.waves.length) {
@@ -604,6 +674,7 @@ export class GameEngine {
     if (this.phase === "combat") this.spawnStep(dt);
     this.moveEnemies(dt);
     this.tickTowers(dt);
+    this.tickHero(dt);
     this.moveBolts(dt);
     if (this.phase === "combat") this.checkWaveEnd();
   }
@@ -781,6 +852,216 @@ export class GameEngine {
       t.cooldown = 1 / (stats.fireRate * haste);
       this.sfx = "shoot";
     }
+  }
+
+  tickHero(dt: number) {
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return;
+    const h = this.hero;
+    const stats = h.stats;
+    h.cooldown = Math.max(0, h.cooldown - dt);
+    const target = this.pickHeroTarget(stats.range, stats.hitsFlying);
+    if (!target) return;
+    const dx = target.x - h.x;
+    const dz = target.z - h.z;
+    h.yaw = Math.atan2(dx, dz);
+    if (h.cooldown > 0) return;
+    this.fireHero(target);
+    const haste = this.time < this.overclockUntil ? 1.35 : 1;
+    h.cooldown = 1 / (stats.fireRate * haste);
+    h.swing = 0.22;
+    this.sfx = "shoot";
+    this.hudDirty = true;
+  }
+
+  pickHeroTarget(range: number, flying: boolean): Enemy | null {
+    const r2 = range * range;
+    let best: Enemy | null = null;
+    let bestScore = -Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      const d2 = dist2(this.hero.x, this.hero.z, e.x, e.z);
+      if (d2 > r2) continue;
+      const score = e.progress - d2 * 0.02;
+      if (score > bestScore) {
+        bestScore = score;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  fireHero(target: Enemy) {
+    const h = this.hero;
+    const stats = h.stats;
+    const kind = stats.kind;
+    const y = 1.15;
+    if (h.id === "fighter") {
+      this.spawnBurst(target.x, target.y + 0.35, target.z, 0.55, stats.color);
+      this.hurt(target, stats.damage, kind);
+      const splash = this.hero.loadout.weapon === "void-greatblade" ? 1.35 : 0.85;
+      for (const e of this.enemies) {
+        if (!e.alive || e.slot === target.slot || e.flying) continue;
+        if (dist2(target.x, target.z, e.x, e.z) <= splash * splash) this.hurt(e, stats.damage * 0.45, kind);
+      }
+    } else if (h.id === "ranger") {
+      const bolt = this.bolts.find((b) => !b.alive);
+      if (!bolt) {
+        this.hurt(target, stats.damage, kind);
+        return;
+      }
+      const dx = target.x - h.x;
+      const dy = target.y + 0.25 - y;
+      const dz = target.z - h.z;
+      const len = Math.hypot(dx, dy, dz) || 1;
+      const speed = 20;
+      bolt.alive = true;
+      bolt.kind = "bolt";
+      bolt.x = h.x;
+      bolt.y = y;
+      bolt.z = h.z;
+      bolt.vx = (dx / len) * speed;
+      bolt.vy = (dy / len) * speed;
+      bolt.vz = (dz / len) * speed;
+      bolt.speed = speed;
+      bolt.damage = stats.damage;
+      bolt.splash = 0;
+      bolt.slow = 0;
+      bolt.slowTime = 0;
+      bolt.targetSlot = target.slot;
+      bolt.ttl = 2.2;
+      bolt.color = stats.color;
+    } else {
+      this.spawnBeam(h.x, 1.35, h.z, target.x, target.y + 0.28, target.z, stats.color, 0.14, 0.07, "lance");
+      this.hurt(target, stats.damage, kind);
+    }
+  }
+
+  hostsInRange(range: number, flying: boolean) {
+    const r2 = range * range;
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      if (dist2(this.hero.x, this.hero.z, e.x, e.z) <= r2) out.push(e);
+    }
+    return out;
+  }
+
+  hostsOnLine(reach: number, width: number, flying: boolean) {
+    const h = this.hero;
+    const fx = Math.sin(h.yaw);
+    const fz = Math.cos(h.yaw);
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      const dx = e.x - h.x;
+      const dz = e.z - h.z;
+      const along = dx * fx + dz * fz;
+      const perp = Math.abs(dx * fz - dz * fx);
+      if (along > 0.15 && along < reach && perp < width) out.push(e);
+    }
+    return out;
+  }
+
+  castHeroAbility(slot: 0 | 1 | 2) {
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
+    const h = this.hero;
+    if (h.artCd[slot] > 0) return false;
+    const stats = h.stats;
+    const art = HEROES[h.id].arts[slot];
+    const cd = artCooldown(h.id, slot, h.loadout);
+    h.artCd[slot] = cd;
+    h.artMax[slot] = cd;
+    h.swing = 0.34;
+    let n = 0;
+    if (h.id === "fighter") {
+      if (slot === 0) {
+        const hit = this.hostsInRange(stats.range + 1.15, false);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 2.15, stats.kind);
+          n += 1;
+        }
+        this.spawnBurst(h.x + Math.sin(h.yaw) * 1.1, 0.7, h.z + Math.cos(h.yaw) * 1.1, 2.2, stats.color);
+      } else if (slot === 1) {
+        const hit = this.hostsInRange(stats.range + 1.55, false);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 1.35, stats.kind);
+          this.applySlow(e, 0.42, 2.4);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 0.45, h.z, 2.8, stats.color);
+      } else {
+        const hit = this.hostsOnLine(stats.range + 3.2, 0.85, false);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 2.6, stats.kind);
+          n += 1;
+        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        this.spawnBeam(h.x, 0.85, h.z, h.x + fx * 4.2, 0.7, h.z + fz * 4.2, stats.color, 0.2, 0.12, "rail");
+      }
+    } else if (h.id === "ranger") {
+      const marked = this.hostsInRange(stats.range + 1.4, true);
+      marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+      if (slot === 0) {
+        const shots = marked.slice(0, 5);
+        for (const e of shots) {
+          this.fireHero(e);
+          n += 1;
+        }
+      } else if (slot === 1) {
+        const line = this.hostsOnLine(stats.range + 2.4, 0.7, true);
+        for (const e of line) {
+          this.hurt(e, stats.damage * 2.8, stats.kind);
+          this.spawnBeam(h.x, 1.2, h.z, e.x, e.y + 0.25, e.z, stats.color, 0.12, 0.08, "rail");
+          n += 1;
+        }
+        if (!line.length) {
+          const fx = Math.sin(h.yaw);
+          const fz = Math.cos(h.yaw);
+          this.spawnBeam(h.x, 1.2, h.z, h.x + fx * (stats.range + 2), 1.1, h.z + fz * (stats.range + 2), stats.color, 0.12, 0.08, "rail");
+        }
+      } else {
+        const shots = marked.slice(0, 8);
+        for (const e of shots) {
+          this.hurt(e, stats.damage * 0.85, stats.kind);
+          this.fireHero(e);
+          n += 1;
+        }
+      }
+    } else if (slot === 0) {
+      const reach = 4.4 + (h.loadout.weapon === "nova-crozier" ? 0.6 : 0);
+      const hit = this.hostsInRange(reach, true);
+      for (const e of hit) {
+        this.hurt(e, stats.damage * 1.55, stats.kind);
+        n += 1;
+      }
+      this.spawnBurst(h.x, 1.1, h.z, 3.6, stats.color);
+    } else if (slot === 1) {
+      const marked = this.hostsInRange(stats.range + 1.2, true);
+      marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+      const shots = marked.slice(0, 4);
+      for (const e of shots) {
+        this.hurt(e, stats.damage * 1.25, stats.kind);
+        this.spawnBeam(h.x, 1.35, h.z, e.x, e.y + 0.28, e.z, stats.color, 0.16, 0.08, "lance");
+        n += 1;
+      }
+    } else {
+      const reach = 5.1 + (h.loadout.weapon === "nova-crozier" ? 0.5 : 0);
+      const hit = this.hostsInRange(reach, true);
+      for (const e of hit) {
+        this.hurt(e, stats.damage * 1.85, stats.kind);
+        n += 1;
+      }
+      this.spawnBurst(h.x, 1.2, h.z, 4.4, stats.color);
+    }
+    this.lastEvent = n ? `${art.name} · ${n}` : `${art.name} · empty`;
+    this.addTrauma(0.28);
+    this.sfx = "surge";
+    this.hudDirty = true;
+    return true;
   }
 
   pickTarget(t: Tower, range: number, flying: boolean): Enemy | null {

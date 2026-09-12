@@ -38,6 +38,7 @@ import {
   SpawnGate,
   TowerModel,
 } from "./models";
+import { HeroModel } from "./HeroModel";
 import { PlanetGlobe } from "./Planet";
 import { PathLane } from "./PathLane";
 import { WorldGround } from "./WorldGround";
@@ -120,7 +121,8 @@ export function BattleScene() {
     screen === "lost" ||
     screen === "help" ||
     screen === "settings" ||
-    screen === "studio";
+    screen === "studio" ||
+    screen === "loadout";
 
   useFrame((state, dt) => {
     engine.update(dt, paused);
@@ -143,6 +145,7 @@ export function BattleScene() {
         <World mapId={mapId} quality={quality} />
       </Suspense>
       <Pads />
+      <HeroLayer />
       <TowersLayer />
       <SynergyLinks />
       <EnemyLayer />
@@ -654,6 +657,30 @@ function SynergyLinks() {
           </mesh>
         );
       })}
+    </group>
+  );
+}
+
+function HeroLayer() {
+  const hero = engine.hero;
+  const stamp = useGameStore((s) => `${s.hud.heroId}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.weapon}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.armor}`);
+  void stamp;
+  const group = useRef<Group>(null);
+  useFrame(() => {
+    const g = group.current;
+    if (!g) return;
+    g.position.set(hero.x, hero.y, hero.z);
+    g.rotation.y = hero.yaw;
+    const punch = hero.swing > 0 ? 1 + hero.swing * 0.12 : 1;
+    g.scale.setScalar(punch);
+  });
+  return (
+    <group ref={group} position={[hero.x, hero.y, hero.z]}>
+      <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.15} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <ringGeometry args={[0.28, 0.38, 20]} />
+        <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
+      </mesh>
     </group>
   );
 }

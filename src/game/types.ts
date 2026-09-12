@@ -27,6 +27,21 @@ export type EnemyId =
   | "specter"
   | "sovereign"
   | "relic";
+export type HeroId = "fighter" | "ranger" | "mage";
+export type ItemSlot = "weapon" | "armor";
+export type ItemId =
+  | "ion-cleaver"
+  | "void-greatblade"
+  | "plate-cuirass"
+  | "aegis-plate"
+  | "pulse-rifle"
+  | "rail-longarm"
+  | "scout-weave"
+  | "ghost-harness"
+  | "aether-rod"
+  | "nova-crozier"
+  | "veil-mantle"
+  | "star-silk";
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type DamageKind = ProjectileKind | "surge";
@@ -39,6 +54,8 @@ export type Screen =
   | "paused"
   | "won"
   | "lost"
+  | "hero"
+  | "loadout"
   | "help"
   | "settings"
   | "studio";

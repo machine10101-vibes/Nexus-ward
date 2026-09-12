@@ -268,94 +268,125 @@ export function HeroModel({
 }
 
 function FighterBody({ accent, heavy, great }: { accent: string; heavy: boolean; great: boolean }) {
-  const steel = heavy ? "#6e7680" : "#9aa3ad";
-  const bright = heavy ? "#8a929c" : "#c4ccd4";
-  const dark = heavy ? "#4a525a" : "#5c646c";
+  const steel = heavy ? "#8a929c" : "#c8d0d8";
+  const bright = heavy ? "#b0b8c0" : "#e8eef4";
+  const dark = heavy ? "#3a424a" : "#4a5460";
   return (
     <Humanoid
       skin="#d4b094"
       shade="#b89074"
       plate={steel}
       cloth={dark}
-      bulk={heavy ? 1.14 : 1.08}
+      bulk={heavy ? 1.16 : 1.1}
       helm={
         <group>
-          <mesh position={[0, 1.66, 0]} castShadow>
-            <sphereGeometry args={[0.128, 18, 16]} />
-            <Skin color={bright} metalness={0.86} roughness={0.16} />
+          <mesh position={[0, 1.67, 0]} castShadow>
+            <sphereGeometry args={[0.132, 20, 16]} />
+            <Skin color={bright} metalness={0.88} roughness={0.14} />
           </mesh>
-          <mesh position={[0, 1.7, -0.02]} scale={[1, 0.55, 0.95]} castShadow>
-            <sphereGeometry args={[0.13, 14, 12]} />
+          <mesh position={[0, 1.72, -0.01]} scale={[1.02, 0.5, 1]} castShadow>
+            <sphereGeometry args={[0.13, 16, 12]} />
+            <Skin color={steel} metalness={0.86} roughness={0.16} />
+          </mesh>
+          <mesh position={[0, 1.57, 0.1]} rotation={[0.1, 0, 0]} castShadow>
+            <boxGeometry args={[0.2, 0.055, 0.06]} />
+            <Skin color={accent} metalness={0.55} roughness={0.12} eInt={1.6} />
+          </mesh>
+          <mesh position={[0, 1.57, 0.132]}>
+            <boxGeometry args={[0.16, 0.02, 0.016]} />
+            <Skin color="#fff6c4" metalness={0.25} roughness={0.08} eInt={2.1} />
+          </mesh>
+          <mesh position={[0.08, 1.54, 0.07]} rotation={[0.2, 0.55, 0]} scale={[0.55, 1, 0.7]} castShadow>
+            <sphereGeometry args={[0.08, 12, 10]} />
             <Skin color={steel} metalness={0.84} roughness={0.18} />
           </mesh>
-          <Plate pos={[0, 1.575, 0.108]} size={[0.16, 0.028, 0.04]} color={accent} metal={0.7} rough={0.12} />
-          <mesh position={[0, 1.575, 0.118]}>
-            <boxGeometry args={[0.14, 0.012, 0.012]} />
-            <Skin color="#fff4c8" metalness={0.4} roughness={0.1} eInt={1.35} />
+          <mesh position={[-0.08, 1.54, 0.07]} rotation={[0.2, -0.55, 0]} scale={[0.55, 1, 0.7]} castShadow>
+            <sphereGeometry args={[0.08, 12, 10]} />
+            <Skin color={steel} metalness={0.84} roughness={0.18} />
           </mesh>
-          <Plate pos={[0.07, 1.54, 0.08]} rot={[0.15, 0.4, 0]} size={[0.07, 0.1, 0.03]} color={steel} metal={0.82} />
-          <Plate pos={[-0.07, 1.54, 0.08]} rot={[0.15, -0.4, 0]} size={[0.07, 0.1, 0.03]} color={steel} metal={0.82} />
-          <mesh position={[0, 1.78, -0.02]} rotation={[0.15, 0, 0]} castShadow>
-            <boxGeometry args={[0.04, 0.08, 0.08]} />
-            <Skin color={accent} metalness={0.55} roughness={0.2} eInt={0.45} />
+          <mesh position={[0, 1.8, -0.01]} rotation={[0.2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.018, 0.03, 0.1, 8]} />
+            <Skin color={accent} metalness={0.6} roughness={0.18} eInt={0.7} />
           </mesh>
         </group>
       }
     >
-      <Plate pos={[0, 1.3, 0.13]} size={[0.26, 0.22, 0.06]} color={bright} metal={0.84} rough={0.16} />
-      <Plate pos={[0, 1.16, 0.12]} size={[0.2, 0.08, 0.05]} color={dark} metal={0.7} />
-      {[-0.07, 0.07].map((x) => (
-        <Plate key={x} pos={[x, 1.08, 0.1]} size={[0.06, 0.07, 0.04]} color={steel} metal={0.78} />
+      <mesh position={[0, 1.3, 0.1]} scale={[1.15, 0.85, 0.55]} castShadow>
+        <sphereGeometry args={[0.16, 16, 14]} />
+        <Skin color={bright} metalness={0.86} roughness={0.14} />
+      </mesh>
+      <mesh position={[0, 1.16, 0.08]} scale={[0.95, 0.45, 0.5]} castShadow>
+        <sphereGeometry args={[0.14, 14, 12]} />
+        <Skin color={dark} metalness={0.55} roughness={0.32} />
+      </mesh>
+      <mesh position={[0, 1.28, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.07, 0.012, 10, 18]} />
+        <Skin color={accent} metalness={0.55} roughness={0.16} eInt={0.85} />
+      </mesh>
+      {([-0.24, 0.24] as const).map((x) => (
+        <mesh key={x} position={[x, 1.42, 0.02]} scale={[1.15, 0.85, 1]} castShadow>
+          <sphereGeometry args={[0.11, 14, 12]} />
+          <Skin color={bright} metalness={0.86} roughness={0.14} />
+        </mesh>
       ))}
-      {([-0.22, 0.22] as const).map((x) => (
-        <group key={x}>
-          <mesh position={[x, 1.42, 0.02]} rotation={[0.1, 0, x > 0 ? -0.45 : 0.45]} castShadow>
-            <sphereGeometry args={[0.1, 12, 10]} />
-            <Skin color={bright} metalness={0.84} roughness={0.16} />
-          </mesh>
-          <Plate pos={[x * 1.15, 1.36, 0.06]} rot={[0.1, 0, x > 0 ? -0.3 : 0.3]} size={[0.14, 0.12, 0.1]} color={steel} />
-        </group>
-      ))}
-      <Plate pos={[0.12, 0.72, 0.08]} rot={[0.1, 0, 0.05]} size={[0.1, 0.16, 0.08]} color={steel} />
-      <Plate pos={[-0.12, 0.72, 0.08]} rot={[0.1, 0, -0.05]} size={[0.1, 0.16, 0.08]} color={steel} />
-      <Plate pos={[0.11, 0.3, 0.07]} size={[0.1, 0.22, 0.09]} color={bright} metal={0.8} />
-      <Plate pos={[-0.11, 0.3, 0.07]} size={[0.1, 0.22, 0.09]} color={bright} metal={0.8} />
-      <Hand pos={[0.4, 0.82, 0.2]} rot={[0.4, 0.2, -0.2]} skin="#d4b094" gauntlet={bright} />
-      <Hand pos={[-0.38, 0.84, 0.2]} rot={[0.2, -0.15, 0.25]} skin="#d4b094" gauntlet={bright} />
-      <group position={[0.42, 0.78, 0.22]} rotation={[1.2, 0.15, 0.12]}>
-        <mesh position={[0, 0, -0.08]} castShadow>
-          <cylinderGeometry args={[0.016, 0.02, 0.14, 10]} />
-          <Skin color="#2a241c" metalness={0.35} roughness={0.45} />
+      <mesh position={[0.12, 0.7, 0.07]} scale={[0.7, 1.2, 0.65]} castShadow>
+        <sphereGeometry args={[0.09, 12, 10]} />
+        <Skin color={steel} metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh position={[-0.12, 0.7, 0.07]} scale={[0.7, 1.2, 0.65]} castShadow>
+        <sphereGeometry args={[0.09, 12, 10]} />
+        <Skin color={steel} metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh position={[0.11, 0.28, 0.06]} scale={[0.7, 1.35, 0.7]} castShadow>
+        <sphereGeometry args={[0.08, 12, 10]} />
+        <Skin color={bright} metalness={0.82} roughness={0.16} />
+      </mesh>
+      <mesh position={[-0.11, 0.28, 0.06]} scale={[0.7, 1.35, 0.7]} castShadow>
+        <sphereGeometry args={[0.08, 12, 10]} />
+        <Skin color={bright} metalness={0.82} roughness={0.16} />
+      </mesh>
+      <Hand pos={[0.42, 0.8, 0.22]} rot={[0.35, 0.15, -0.15]} skin="#d4b094" gauntlet={bright} />
+      <Hand pos={[-0.4, 0.86, 0.2]} rot={[0.15, -0.2, 0.2]} skin="#d4b094" gauntlet={bright} />
+      <group position={[0.5, 0.86, 0.18]} rotation={[0.15, -0.85, 1.15]}>
+        <mesh position={[0, -0.08, 0]} castShadow>
+          <cylinderGeometry args={[0.018, 0.022, 0.16, 10]} />
+          <Skin color="#3a2e24" metalness={0.3} roughness={0.48} />
         </mesh>
-        <mesh position={[0, 0, 0.02]} castShadow>
-          <boxGeometry args={[0.09, 0.028, 0.04]} />
-          <Skin color={bright} metalness={0.85} roughness={0.16} />
+        <mesh position={[0, 0.02, 0]} castShadow>
+          <boxGeometry args={[0.12, 0.03, 0.04]} />
+          <Skin color={bright} metalness={0.88} roughness={0.12} />
         </mesh>
-        <mesh position={[0, 0, great ? 0.42 : 0.32]} castShadow>
-          <boxGeometry args={[0.034, 0.012, great ? 0.72 : 0.54]} />
-          <Skin color="#b8c0c8" metalness={0.88} roughness={0.12} />
+        <mesh position={[0, great ? 0.42 : 0.34, 0]} castShadow>
+          <boxGeometry args={[0.07, great ? 0.72 : 0.56, 0.014]} />
+          <Skin color="#dce4ec" metalness={0.9} roughness={0.1} />
         </mesh>
-        <mesh position={[0.0, 0.01, great ? 0.42 : 0.32]}>
-          <boxGeometry args={[0.01, 0.008, great ? 0.68 : 0.5]} />
-          <Skin color={accent} metalness={0.45} roughness={0.12} eInt={1.5} />
+        <mesh position={[0.0, great ? 0.42 : 0.34, 0.009]}>
+          <boxGeometry args={[0.018, great ? 0.66 : 0.5, 0.006]} />
+          <Skin color={accent} metalness={0.4} roughness={0.1} eInt={1.8} />
         </mesh>
-        <mesh position={[0, 0, great ? 0.78 : 0.6]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.018, 0.06, 8]} />
-          <Skin color="#d0d6dc" metalness={0.9} roughness={0.1} />
+        <mesh position={[0, great ? 0.8 : 0.64, 0]}>
+          <coneGeometry args={[0.028, 0.07, 8]} />
+          <Skin color="#eef4f8" metalness={0.92} roughness={0.08} />
         </mesh>
       </group>
-      <group position={[-0.4, 0.88, 0.16]} rotation={[0.25, 0.55, 0.15]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.22, 0.32, 0.04]} />
-          <Skin color={bright} metalness={0.86} roughness={0.16} />
+      <group position={[-0.46, 0.92, 0.12]} rotation={[0.15, 0.85, 0.1]}>
+        <mesh scale={[1, 1.25, 0.18]} castShadow>
+          <sphereGeometry args={[0.16, 16, 14]} />
+          <Skin color={bright} metalness={0.88} roughness={0.14} />
         </mesh>
-        <mesh position={[0, 0, 0.012]}>
-          <ringGeometry args={[0.05, 0.08, 16]} />
-          <Skin color={accent} metalness={0.5} roughness={0.18} eInt={0.7} />
+        <mesh position={[0, 0, 0.03]} rotation={[0, 0, 0]}>
+          <torusGeometry args={[0.055, 0.012, 10, 16]} />
+          <Skin color={accent} metalness={0.5} roughness={0.16} eInt={0.9} />
         </mesh>
       </group>
-      <Plate pos={[0.12, 0.055, 0.08]} size={[0.12, 0.055, 0.2]} color="#1a1e24" metal={0.75} />
-      <Plate pos={[-0.12, 0.055, 0.08]} size={[0.12, 0.055, 0.2]} color="#1a1e24" metal={0.75} />
+      <mesh position={[0.12, 0.05, 0.08]} scale={[1, 0.45, 1.4]} castShadow>
+        <sphereGeometry args={[0.07, 10, 8]} />
+        <Skin color="#1a1e24" metalness={0.72} roughness={0.28} />
+      </mesh>
+      <mesh position={[-0.12, 0.05, 0.08]} scale={[1, 0.45, 1.4]} castShadow>
+        <sphereGeometry args={[0.07, 10, 8]} />
+        <Skin color="#1a1e24" metalness={0.72} roughness={0.28} />
+      </mesh>
     </Humanoid>
   );
 }
@@ -407,7 +438,7 @@ function RangerBody({ accent, heavy, long }: { accent: string; heavy: boolean; l
       <Hand pos={[-0.22, 1.0, 0.18]} rot={[0.35, 0.5, 0.2]} skin="#c8a07c" />
       <group position={[0.12, 1.02, 0.22]} rotation={[0.05, -0.55, 0.12]}>
         <mesh castShadow>
-          <boxGeometry args={[0.055, 0.07, long ? 0.58 : 0.42]} />
+          <boxGeometry args={[0.07, 0.085, long ? 0.64 : 0.48]} />
           <Skin color="#1e262c" metalness={0.72} roughness={0.24} />
         </mesh>
         <mesh position={[0, 0.01, long ? 0.34 : 0.24]} rotation={[Math.PI / 2, 0, 0]} castShadow>

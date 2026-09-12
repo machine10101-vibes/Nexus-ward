@@ -161,10 +161,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
     if (showHero) {
-      cam.position.x = 1.35 + Math.sin(t * 0.14) * 0.18;
-      cam.position.y = 1.28 + Math.sin(t * 0.09) * 0.06;
-      cam.position.z = 2.55;
-      cam.lookAt(0, 0.92, 0);
+      cam.position.x = 1.55 + Math.sin(t * 0.12) * 0.16;
+      cam.position.y = 1.22 + Math.sin(t * 0.08) * 0.05;
+      cam.position.z = 2.85;
+      cam.lookAt(0, 0.88, 0);
       return;
     }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
@@ -177,6 +177,7 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       <hemisphereLight intensity={showHero ? 0.95 : 0.58} color={showHero ? "#f2f4f8" : theme.hemiSky} groundColor={showHero ? "#3a3e46" : theme.hemiGround} />
       <directionalLight position={[6, 8, 4]} intensity={showHero ? 3.1 : 2.15} color={showHero ? "#fff4dc" : theme.dir} />
       {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={1.35} color="#c8dcff" /> : null}
+      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={1.7} color="#fff6e8" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />

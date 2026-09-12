@@ -1,12 +1,13 @@
 import { useEffect } from "react";
-import { ArrowLeft, Check, Settings2 } from "lucide-react";
+import { ArrowLeft, Check, Crosshair, Settings2, Sparkles, Sword } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
 import { ENEMIES, inflateSpawnCount, PLANET_THEME } from "@/game/config";
+import { HEROES, HERO_ORDER, ITEMS, heroStats, itemsForHero } from "@/game/heroes";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
 import { loadSave } from "@/game/save";
-import type { MapId } from "@/game/types";
+import type { HeroId, ItemSlot, MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/asset";
 import { STUDIO_CATALOG, studioEntry } from "./studioCatalog";
@@ -19,7 +20,9 @@ export function Overlays() {
     <div className="absolute inset-0 z-20 overflow-y-auto">
       {screen === "title" && <Title />}
       {screen === "select" && <Select />}
+      {screen === "hero" && <HeroSelect />}
       {screen === "briefing" && <Briefing />}
+      {screen === "loadout" && <Loadout />}
       {screen === "paused" && <Paused />}
       {screen === "won" && <Result won />}
       {screen === "lost" && <Result won={false} />}
@@ -136,7 +139,7 @@ function Select() {
               type="button"
               onMouseEnter={() => useGameStore.getState().setPreview(id)}
               onFocus={() => useGameStore.getState().setPreview(id)}
-              onClick={() => useGameStore.getState().startBriefing(id)}
+              onClick={() => useGameStore.getState().startHeroSelect(id)}
               className={cn(
                 "group overflow-hidden rounded-xl border p-2 text-left transition-colors duration-[var(--motion-fast)]",
                 on ? "border-accent bg-surface" : "border-border bg-surface/70 hover:border-border-strong",
@@ -222,8 +225,84 @@ function PlanetSwatch({ id, active }: { id: MapId; active: boolean }) {
   );
 }
 
+const HERO_ICON = {
+  fighter: Sword,
+  ranger: Crosshair,
+  mage: Sparkles,
+} as const;
+
+function HeroSelect() {
+  const preview = useGameStore((s) => s.previewHero);
+  const heroSave = useGameStore((s) => s.heroSave);
+  const owned = heroSave.owned;
+  return (
+    <Shell className="max-w-3xl">
+      <button
+        type="button"
+        className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition-colors duration-[var(--motion-quick)] hover:text-fg"
+        onClick={() => useGameStore.getState().setScreen("select")}
+      >
+        <ArrowLeft className="size-4" />
+        Worlds
+      </button>
+      <p className="font-display text-2xs uppercase tracking-label text-accent">Select a warden</p>
+      <h2 className="mt-2 font-display text-3xl tracking-[-0.03em]">Three who hold</h2>
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {HERO_ORDER.map((id) => {
+          const h = HEROES[id];
+          const on = preview === id;
+          const Icon = HERO_ICON[id];
+          const gear = heroSave.loadouts[id];
+          const stats = heroStats(id, gear);
+          return (
+            <button
+              key={id}
+              type="button"
+              onMouseEnter={() => useGameStore.getState().setPreviewHero(id)}
+              onFocus={() => useGameStore.getState().setPreviewHero(id)}
+              onClick={() => useGameStore.getState().confirmHero(id)}
+              className={cn(
+                "group overflow-hidden rounded-xl border p-2 text-left transition-colors duration-[var(--motion-fast)]",
+                on ? "border-accent bg-surface" : "border-border bg-surface/70 hover:border-border-strong",
+              )}
+            >
+              <div className="relative h-28 overflow-hidden rounded-lg bg-bg">
+                <div
+                  className="absolute inset-0 opacity-50"
+                  style={{
+                    background: `radial-gradient(circle at 50% 40%, ${h.accent}55, transparent 62%)`,
+                  }}
+                />
+                <Icon className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 text-fg/80" style={{ color: h.accent }} />
+                {on ? <span className="absolute inset-0 outline outline-1 -outline-offset-1 outline-accent/45 rounded-lg" /> : null}
+              </div>
+              <div className="px-2 pb-1 pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-display text-lg">{h.name}</p>
+                  <span className="font-display text-2xs uppercase tracking-label text-muted">{h.title}</span>
+                </div>
+                <p className="text-xs uppercase tracking-label text-muted">{h.role}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{h.blurb}</p>
+                <p className="mt-3 font-mono text-2xs tabular-nums text-subtle">
+                  {Math.round(stats.damage)} dmg · {stats.range.toFixed(1)} rng · {h.ability}
+                </p>
+                <p className="mt-1 font-mono text-2xs text-subtle">
+                  {owned.filter((item) => ITEMS[item].hero === id).length} pieces owned
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </Shell>
+  );
+}
+
 function Briefing() {
   const id = useGameStore((s) => s.mapId) ?? "mycelion";
+  const heroId = useGameStore((s) => s.heroId) ?? useGameStore((s) => s.heroSave.last);
+  const loadout = useGameStore((s) => s.heroSave.loadouts[heroId]);
+  const h = HEROES[heroId];
   const m = MAPS[id];
   const first = m.waves[0].groups
     .map((g) => `${ENEMIES[g.enemy].name} ×${inflateSpawnCount(g.enemy, g.count, 0)}`)
@@ -233,10 +312,10 @@ function Briefing() {
       <button
         type="button"
         className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition-colors duration-[var(--motion-quick)] hover:text-fg"
-        onClick={() => useGameStore.getState().setScreen("select")}
+        onClick={() => useGameStore.getState().setScreen("hero")}
       >
         <ArrowLeft className="size-4" />
-        Worlds
+        Wardens
       </button>
       <p className="font-display text-2xs uppercase tracking-label text-accent">{m.subtitle}</p>
       <h2 className="mt-2 font-display text-4xl tracking-display">{m.name}</h2>
@@ -251,16 +330,135 @@ function Briefing() {
             <span>{m.waves.length} incursions</span>
             <span>first contact · {first}</span>
           </div>
+          <p className="mt-3 text-sm text-fg">
+            Warden · {h.name} ({h.title}) · {ITEMS[loadout.weapon ?? h.starterWeapon]?.name ?? "unarmed"} /{" "}
+            {ITEMS[loadout.armor ?? h.starterArmor]?.name ?? "unarmored"}
+          </p>
         </div>
       </div>
-      <button
-        type="button"
-        className="mt-6 h-12 w-full rounded-xl bg-fg font-display text-sm text-bg transition-transform duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)] active:scale-[0.96] sm:w-auto sm:px-8"
-        onClick={() => useGameStore.getState().dropIn()}
-      >
-        Drop in
-      </button>
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          className="h-12 rounded-xl bg-fg px-8 font-display text-sm text-bg transition-transform duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)] active:scale-[0.96]"
+          onClick={() => useGameStore.getState().dropIn()}
+        >
+          Drop in
+        </button>
+        <button
+          type="button"
+          className="h-12 rounded-xl border border-border px-6 font-display text-sm text-fg"
+          onClick={() => useGameStore.getState().openLoadout()}
+        >
+          Loadout
+        </button>
+      </div>
     </Shell>
+  );
+}
+
+function Loadout() {
+  const previewHero = useGameStore((s) => s.previewHero);
+  const heroId = useGameStore((s) => s.heroId) ?? previewHero;
+  const heroSave = useGameStore((s) => s.heroSave);
+  const who = heroSave.loadouts[heroId] ? heroId : previewHero;
+  const h = HEROES[who];
+  const loadout = heroSave.loadouts[who];
+  const stats = heroStats(who, loadout);
+  const slots: ItemSlot[] = ["weapon", "armor"];
+  return (
+    <div className="flex min-h-full items-end justify-center bg-gradient-to-t from-bg from-25% via-bg/60 to-transparent px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-16">
+      <div className="overlay-in mx-auto w-full max-w-3xl rounded-xl border border-border bg-surface/95 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-2xs uppercase tracking-label text-accent">Loadout</p>
+            <h2 className="mt-1 font-display text-2xl tracking-[-0.03em]">
+              {h.name} · {h.title}
+            </h2>
+            <p className="mt-1 text-sm text-muted">{h.ability} — {h.abilityHint}</p>
+          </div>
+          <button
+            type="button"
+            className="h-10 rounded-lg border border-border px-4 text-sm text-fg"
+            onClick={() => useGameStore.getState().closeOverlay()}
+          >
+            Close
+          </button>
+        </div>
+        <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(
+            [
+              ["damage", Math.round(stats.damage)],
+              ["range", stats.range.toFixed(1)],
+              ["rate", stats.fireRate.toFixed(2)],
+              ["armor", Math.round(stats.armor)],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k} className="rounded-lg border border-border px-2 py-2">
+              <dd className="font-display text-base tabular-nums leading-none">{v}</dd>
+              <dt className="hud-label mt-1.5">{k}</dt>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {slots.map((slot) => {
+            const equipped = loadout[slot];
+            const item = equipped ? ITEMS[equipped] : null;
+            return (
+              <div key={slot} className="rounded-xl border border-border p-3">
+                <p className="font-display text-2xs uppercase tracking-label text-muted">{slot}</p>
+                <p className="mt-1 font-display text-lg">{item?.name ?? "Empty"}</p>
+                <p className="mt-1 text-sm text-muted">{item?.blurb ?? "Nothing slotted. Stats fall back to the warden's kit."}</p>
+                {item ? (
+                  <button
+                    type="button"
+                    className="mt-3 h-9 rounded-lg border border-border px-3 text-xs text-fg"
+                    onClick={() => useGameStore.getState().unequipSlot(slot)}
+                  >
+                    Unequip
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-5 font-display text-2xs uppercase tracking-label text-muted">Inventory</p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {itemsForHero(who).map((id) => {
+            const item = ITEMS[id];
+            const have = heroSave.owned.includes(id);
+            const on = loadout[item.slot] === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                disabled={!have}
+                onClick={() => useGameStore.getState().equipItem(id)}
+                className={cn(
+                  "rounded-xl border p-3 text-left transition-colors duration-[var(--motion-quick)]",
+                  on ? "border-accent bg-accent/10" : "border-border bg-surface/60",
+                  have ? "hover:border-border-strong" : "opacity-45",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-display text-sm">{item.name}</p>
+                  <span className="font-display text-2xs uppercase tracking-label text-muted">
+                    {have ? item.slot : "locked"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted">{item.blurb}</p>
+                <p className="mt-2 font-mono text-2xs tabular-nums text-subtle">
+                  {item.damage ? `+${item.damage} dmg ` : ""}
+                  {item.range ? `+${item.range.toFixed(1)} rng ` : ""}
+                  {item.armor ? `+${item.armor} arm ` : ""}
+                  {item.fireRate ? `${item.fireRate > 0 ? "+" : ""}${item.fireRate.toFixed(2)} rate ` : ""}
+                  {item.abilityCd ? `${item.abilityCd}s art` : ""}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -287,6 +485,13 @@ function Paused() {
             onClick={() => useGameStore.getState().resume()}
           >
             Resume
+          </button>
+          <button
+            type="button"
+            className="h-11 rounded-lg border border-border text-sm text-fg"
+            onClick={() => useGameStore.getState().openLoadout()}
+          >
+            Loadout
           </button>
           <button
             type="button"
@@ -366,7 +571,7 @@ function Result({ won }: { won: boolean }) {
 const KEYS: [string, string][] = [
   ["1 – 5", "Select battery"],
   ["Space", "Deploy wave"],
-  ["Q / E", "Surge / Overclock"],
+  ["Q / E / R", "Surge / Overclock / Warden"],
   ["U / X", "Upgrade / Salvage"],
   ["F / A", "Speed / Auto"],
   ["Esc", "Cancel build, else pause"],
@@ -378,28 +583,33 @@ function Help() {
       <h2 className="font-display text-2xl tracking-[-0.03em]">How to hold</h2>
       <ol className="mt-4 space-y-3 text-sm leading-relaxed text-muted">
         <li>
-          <span className="text-fg">1. Choose a battery</span> from the tray, then tap lit hex platforms beside the path. The
+          <span className="text-fg">1. Choose a world, then a warden</span> — fighter, ranger, or mage. Open Loadout to
+          equip and unequip their weapons and armor. Clear a world to unlock heavier kits.
+        </li>
+        <li>
+          <span className="text-fg">2. Choose a battery</span> from the tray, then tap lit hex platforms beside the path. The
           battery stays armed, so you can lay a whole line without re-picking it.
         </li>
         <li>
-          <span className="text-fg">2. Deploy the wave</span> when your line is ready. Deploying early pays a credit bonus
+          <span className="text-fg">3. Deploy the wave</span> when your line is ready. Deploying early pays a credit bonus
           that shrinks the longer you build.
         </li>
         <li>
-          <span className="text-fg">3. Air units</span> ignore pulse and frost. Lance, tesla, and rail cover the sky.
+          <span className="text-fg">4. Air units</span> ignore pulse and frost. Lance, tesla, and rail cover the sky.
           Each host also has its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split,
           or shrug frost.
         </li>
         <li>
-          <span className="text-fg">4. Linked batteries</span> of the same type within range deal 15% more damage. Each
+          <span className="text-fg">5. Linked batteries</span> of the same type within range deal 15% more damage. Each
           rank changes that battery's silhouette. Rank 3 unlocks a unique overdrive.
         </li>
         <li>
-          <span className="text-fg">5. Surge (Q)</span> slams every host on the grid.{" "}
-          <span className="text-fg">Overclock (E)</span> haste-fires the line.
+          <span className="text-fg">6. Surge (Q)</span> slams every host on the grid.{" "}
+          <span className="text-fg">Overclock (E)</span> haste-fires the line.{" "}
+          <span className="text-fg">Warden art (R)</span> is the hero's class ability.
         </li>
         <li>
-          <span className="text-fg">6. Extra gates</span> open every 10 incursions, each with a new path into the core.
+          <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.
         </li>
       </ol>
       <div className="mt-5 rounded-lg border border-border p-2">

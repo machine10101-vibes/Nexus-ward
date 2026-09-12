@@ -35,7 +35,7 @@ export function NexusWardApp() {
             s.pause();
           }
         } else if (s.screen === "paused") s.resume();
-        else if (s.screen === "help" || s.screen === "settings" || s.screen === "studio") s.closeOverlay();
+        else if (s.screen === "help" || s.screen === "settings" || s.screen === "studio" || s.screen === "loadout") s.closeOverlay();
         return;
       }
       if (e.code === "KeyV" && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -57,6 +57,13 @@ export function NexusWardApp() {
       if (e.code === "KeyE") {
         engine.castOverclock();
         s.syncHud();
+      }
+      if (e.code === "KeyR") {
+        engine.castHeroAbility();
+        s.syncHud();
+      }
+      if (e.code === "KeyL") {
+        s.openLoadout();
       }
       if (e.code === "KeyF") {
         engine.cycleSpeed();

@@ -7,6 +7,7 @@ import {
   Play,
   Radio,
   Snowflake,
+  Sword,
   Waves,
   Zap,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import {
   towerStats,
   upgradeCost,
 } from "@/game/config";
+import { HEROES } from "@/game/heroes";
 import { engine } from "@/game/engine";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
@@ -220,6 +222,19 @@ export function Hud() {
               }}
             >
               <FastForward className="size-4" />
+            </AbilityIcon>
+            <AbilityIcon
+              label={hud.heroId ? HEROES[hud.heroId].ability : "Art"}
+              hint="R"
+              ready={hud.heroAbilityCd <= 0}
+              cd={hud.heroAbilityCd}
+              max={hud.heroAbilityMax}
+              onClick={() => {
+                engine.castHeroAbility();
+                useGameStore.getState().syncHud();
+              }}
+            >
+              <Sword className="size-4" />
             </AbilityIcon>
             {canWave ? (
               <button

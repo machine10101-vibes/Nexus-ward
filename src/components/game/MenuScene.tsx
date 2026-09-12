@@ -6,6 +6,7 @@ import { useGameStore } from "@/game/store";
 import { PLANET_THEME } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetGlobe, PLANET_PALETTE } from "./Planet";
+import { HeroModel } from "./HeroModel";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
 import { useWorldLibrary, type WorldLibrary } from "./worldArt";
 
@@ -148,12 +149,24 @@ function MenuArt() {
 
 function MenuWorld({ lib }: { lib: WorldLibrary }) {
   const preview = useGameStore((s) => s.preview);
+  const screen = useGameStore((s) => s.screen);
+  const previewHero = useGameStore((s) => s.previewHero);
+  const heroSave = useGameStore((s) => s.heroSave);
+  const showHero = screen === "hero" || screen === "loadout";
   const pal = PLANET_PALETTE[preview];
   const theme = PLANET_THEME[preview];
+  const loadout = heroSave.loadouts[previewHero];
 
   useFrame((state) => {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
+    if (showHero) {
+      cam.position.x = Math.sin(t * 0.12) * 0.55;
+      cam.position.y = 1.15 + Math.sin(t * 0.08) * 0.08;
+      cam.position.z = 3.55;
+      cam.lookAt(0, 0.82, 0);
+      return;
+    }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
     cam.position.y = 0.32 + Math.sin(t * 0.05) * 0.18;
     cam.lookAt(0, 0, 0);
@@ -168,11 +181,22 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />
       <MenuSky lib={lib} preview={preview} />
       <SunGlint />
-      <PlanetGlobe id={preview} />
-      <PlanetRings color={pal.ring} />
-      <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
-      <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
-      <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
+      {showHero ? (
+        <>
+          <group position={[0, -2.6, -6]} scale={0.42}>
+            <PlanetGlobe id={preview} />
+          </group>
+          <HeroModel id={previewHero} weapon={loadout.weapon} armor={loadout.armor} scale={1.15} />
+        </>
+      ) : (
+        <>
+          <PlanetGlobe id={preview} />
+          <PlanetRings color={pal.ring} />
+          <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
+          <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
+          <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
+        </>
+      )}
     </>
   );
 }

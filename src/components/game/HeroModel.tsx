@@ -96,13 +96,13 @@ function joint(length: number, radius: number) {
 
 const RIG = {
   shoulderY: 1.4,
-  shoulderX: 0.19,
+  shoulderX: 0.168,
   hipY: 0.88,
   hipX: 0.1,
   upper: 0.24,
-  upperR: 0.044,
+  upperR: 0.048,
   fore: 0.22,
-  foreR: 0.036,
+  foreR: 0.038,
   thigh: 0.32,
   thighR: 0.052,
   calf: 0.36,
@@ -204,18 +204,18 @@ function Boot({ color, metal = 0.55 }: { color: string; metal?: number }) {
 }
 
 function Sword({ accent, great }: { accent: string; great: boolean }) {
-  const blade = great ? 0.72 : 0.54;
+  const blade = great ? 0.82 : 0.62;
   return (
-    <group rotation={[0.15, 0, -0.35]} position={[0.02, -0.06, 0.04]}>
-      <mesh position={[0, 0.02, 0]} castShadow>
-        <cylinderGeometry args={[0.014, 0.018, 0.12, 10]} />
+    <group rotation={[0.05, 0.9, -0.15]} position={[0.04, -0.02, 0.08]}>
+      <mesh position={[0, 0.02, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.016, 0.02, 0.14, 10]} />
         <Skin color="#3a2e24" metalness={0.28} roughness={0.5} />
       </mesh>
-      <Box pos={[0, 0.08, 0]} size={[0.14, 0.028, 0.036]} color="#d8dee6" metal={0.88} rough={0.12} />
-      <Box pos={[0, 0.08 + blade / 2, 0]} size={[0.055, blade, 0.012]} color="#e8eef4" metal={0.92} rough={0.08} />
-      <Box pos={[0, 0.08 + blade / 2, 0.008]} size={[0.014, blade * 0.94, 0.005]} color={accent} metal={0.4} rough={0.1} eInt={1.6} />
-      <mesh position={[0, 0.08 + blade + 0.03, 0]}>
-        <coneGeometry args={[0.024, 0.06, 8]} />
+      <Box pos={[0.08, 0.02, 0]} size={[0.03, 0.16, 0.04]} color="#d8dee6" metal={0.88} rough={0.12} />
+      <Box pos={[0.08 + blade / 2, 0.02, 0]} size={[blade, 0.07, 0.014]} color="#e8eef4" metal={0.92} rough={0.08} />
+      <Box pos={[0.08 + blade / 2, 0.02, 0.01]} size={[blade * 0.94, 0.016, 0.006]} color={accent} metal={0.4} rough={0.1} eInt={1.6} />
+      <mesh position={[0.1 + blade, 0.02, 0]} rotation={[0, 0, -Math.PI / 2]}>
+        <coneGeometry args={[0.028, 0.07, 8]} />
         <Skin color="#f2f6fa" metalness={0.9} roughness={0.08} />
       </mesh>
     </group>
@@ -239,19 +239,19 @@ function Shield({ accent, steel }: { accent: string; steel: string }) {
 }
 
 function Rifle({ accent, long }: { accent: string; long: boolean }) {
-  const body = long ? 0.58 : 0.44;
+  const body = long ? 0.7 : 0.54;
   return (
-    <group rotation={[1.15, 0.15, -0.2]} position={[0.02, -0.04, 0.06]}>
-      <Box pos={[0, 0, body * 0.08]} size={[0.055, 0.07, body]} color="#1a2026" metal={0.7} rough={0.24} />
-      <mesh position={[0, 0.01, body * 0.52]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.012, 0.016, long ? 0.28 : 0.18, 10]} />
+    <group rotation={[1.2, 0.05, 0.15]} position={[0.03, -0.02, 0.08]}>
+      <Box pos={[0, 0, body * 0.12]} size={[0.06, 0.075, body]} color="#1a2026" metal={0.7} rough={0.24} />
+      <mesh position={[0, 0.012, body * 0.58]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.014, 0.018, long ? 0.32 : 0.22, 10]} />
         <Skin color="#8a949c" metalness={0.88} roughness={0.14} />
       </mesh>
-      <Box pos={[0, -0.05, 0]} size={[0.03, 0.08, 0.07]} color="#12161a" metal={0.45} rough={0.4} />
-      <Box pos={[0.0, 0.05, 0.06]} size={[0.03, 0.04, 0.08]} color={accent} metal={0.55} rough={0.14} eInt={0.85} />
-      <Box pos={[0, 0.01, -body * 0.38]} size={[0.04, 0.055, 0.12]} color="#2a3238" metal={0.4} rough={0.42} />
-      <mesh position={[0, 0, body * 0.62]}>
-        <sphereGeometry args={[0.012, 8, 8]} />
+      <Box pos={[0, -0.055, 0.02]} size={[0.032, 0.09, 0.08]} color="#12161a" metal={0.45} rough={0.4} />
+      <Box pos={[0, 0.055, 0.08]} size={[0.032, 0.042, 0.09]} color={accent} metal={0.55} rough={0.14} eInt={0.85} />
+      <Box pos={[0, 0.012, -body * 0.32]} size={[0.045, 0.06, 0.14]} color="#2a3238" metal={0.4} rough={0.42} />
+      <mesh position={[0, 0, body * 0.72]}>
+        <sphereGeometry args={[0.014, 8, 8]} />
         <Skin color={accent} eInt={1.5} roughness={0.1} />
       </mesh>
     </group>
@@ -284,7 +284,9 @@ function Arm({
   fore,
   pose,
   hand,
+  pad,
   sleeve,
+  bracer,
   shield,
 }: {
   side: 1 | -1;
@@ -292,18 +294,22 @@ function Arm({
   fore: string;
   pose: { shoulder: Vec3; elbow: Vec3 };
   hand: ReactNode;
+  pad?: ReactNode;
   sleeve?: ReactNode;
+  bracer?: ReactNode;
   shield?: ReactNode;
 }) {
   const r = RIG.upperR;
   const fr = RIG.foreR;
   return (
     <group position={[RIG.shoulderX * side, RIG.shoulderY, 0]} rotation={pose.shoulder}>
-      <Joint r={r * 1.15} color={upper} metal={0.45} />
+      <Joint r={r * 1.35} color={upper} metal={0.45} />
+      {pad}
       <Bone length={RIG.upper} radius={r} color={upper} metal={0.5} />
       {sleeve}
       <group position={[0, joint(RIG.upper, r), 0]} rotation={pose.elbow}>
-        <Joint r={fr * 1.1} color={fore} metal={0.2} />
+        <Joint r={fr * 1.25} color={fore} metal={0.2} />
+        {bracer}
         <Bone length={RIG.fore} radius={fr} color={fore} metal={0.12} rough={0.52} />
         {shield}
         <group position={[0, joint(RIG.fore, fr), 0]}>{hand}</group>
@@ -376,8 +382,8 @@ function Torso({
         <Skin color={chest} metalness={0.5} roughness={0.3} />
       </mesh>
       {([-1, 1] as const).map((s) => (
-        <mesh key={s} position={[0.1 * w * s, 1.4, 0]} rotation={[0, 0, -0.18 * s]} castShadow>
-          <boxGeometry args={[0.16 * w, 0.045, 0.055]} />
+        <mesh key={s} position={[0.09 * w * s, 1.4, 0.01]} rotation={[0, 0, -0.12 * s]} castShadow>
+          <boxGeometry args={[0.2 * w, 0.05, 0.07]} />
           <Skin color={collar ?? chest} metalness={0.55} roughness={0.28} />
         </mesh>
       ))}
@@ -431,23 +437,33 @@ function Figure({
             <Skin color={accent} metalness={0.55} roughness={0.18} eInt={0.65} />
           </mesh>
         </group>
-        <Torso chest={steel} waist={dark} pelvis={dark} bulk={heavy ? 1.14 : 1.08} collar={steel}>
-          <Box pos={[0, 1.3, 0.12]} size={[0.22, 0.2, 0.05]} color={bright} metal={0.86} rough={0.14} />
-          <Box pos={[0, 1.16, 0.11]} size={[0.18, 0.06, 0.04]} color={dark} metal={0.5} />
-          <Box pos={[-0.06, 1.08, 0.1]} size={[0.055, 0.06, 0.035]} color={steel} metal={0.78} />
-          <Box pos={[0.06, 1.08, 0.1]} size={[0.055, 0.06, 0.035]} color={steel} metal={0.78} />
-          <mesh position={[0, 1.28, 0.145]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.055, 0.01, 10, 18]} />
-            <Skin color={accent} metalness={0.5} roughness={0.16} eInt={0.8} />
+        <Torso chest={dark} waist={dark} pelvis={dark} bulk={heavy ? 1.14 : 1.08} collar={steel}>
+          <Box pos={[-0.07, 1.32, 0.12]} size={[0.12, 0.16, 0.05]} color={bright} metal={0.86} rough={0.14} />
+          <Box pos={[0.07, 1.32, 0.12]} size={[0.12, 0.16, 0.05]} color={bright} metal={0.86} rough={0.14} />
+          <Box pos={[0, 1.18, 0.11]} size={[0.2, 0.05, 0.04]} color={steel} metal={0.7} />
+          <Box pos={[-0.055, 1.1, 0.105]} size={[0.09, 0.045, 0.035]} color={bright} metal={0.8} />
+          <Box pos={[0.055, 1.1, 0.105]} size={[0.09, 0.045, 0.035]} color={bright} metal={0.8} />
+          <Box pos={[0, 1.02, 0.1]} size={[0.16, 0.04, 0.032]} color={steel} metal={0.72} />
+          <mesh position={[0, 1.3, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.05, 0.01, 10, 18]} />
+            <Skin color={accent} metalness={0.5} roughness={0.16} eInt={0.85} />
           </mesh>
-          <Box pos={[0, 0.96, 0.09]} size={[0.24, 0.04, 0.12]} color="#2a3038" metal={0.35} rough={0.45} />
+          <Box pos={[0, 0.96, 0.09]} size={[0.26, 0.045, 0.13]} color="#2a3038" metal={0.35} rough={0.45} />
+          <Box pos={[0, 0.96, 0.15]} size={[0.05, 0.05, 0.03]} color={accent} metal={0.55} eInt={0.4} />
         </Torso>
         <Arm
           side={1}
           upper={steel}
           fore={steel}
-          pose={{ shoulder: [0.55, 0.25, -0.7], elbow: [0.85, 0.1, 0.15] }}
-          sleeve={<Box pos={[0, -0.08, 0]} size={[0.1, 0.08, 0.1]} color={bright} metal={0.84} />}
+          pose={{ shoulder: [0.4, 0.15, -0.45], elbow: [0.55, 0.05, 0.1] }}
+          pad={
+            <mesh position={[0.02, 0.02, 0]} scale={[1.25, 0.85, 1.1]} castShadow>
+              <sphereGeometry args={[0.075, 14, 12]} />
+              <Skin color={bright} metalness={0.86} roughness={0.14} />
+            </mesh>
+          }
+          sleeve={<Box pos={[0, -0.1, 0]} size={[0.11, 0.07, 0.11]} color={bright} metal={0.84} />}
+          bracer={<Box pos={[0, -0.04, 0]} size={[0.09, 0.07, 0.09]} color={bright} metal={0.82} />}
           hand={
             <group>
               <Hand skin={skin} plate={bright} />
@@ -459,8 +475,15 @@ function Figure({
           side={-1}
           upper={steel}
           fore={steel}
-          pose={{ shoulder: [0.35, -0.2, 0.65], elbow: [0.45, -0.1, -0.1] }}
-          sleeve={<Box pos={[0, -0.08, 0]} size={[0.1, 0.08, 0.1]} color={bright} metal={0.84} />}
+          pose={{ shoulder: [0.28, -0.12, 0.42], elbow: [0.35, -0.08, -0.08] }}
+          pad={
+            <mesh position={[-0.02, 0.02, 0]} scale={[1.25, 0.85, 1.1]} castShadow>
+              <sphereGeometry args={[0.075, 14, 12]} />
+              <Skin color={bright} metalness={0.86} roughness={0.14} />
+            </mesh>
+          }
+          sleeve={<Box pos={[0, -0.1, 0]} size={[0.11, 0.07, 0.11]} color={bright} metal={0.84} />}
+          bracer={<Box pos={[0, -0.04, 0]} size={[0.09, 0.07, 0.09]} color={bright} metal={0.82} />}
           shield={<Shield accent={accent} steel={bright} />}
           hand={<Hand skin={skin} plate={bright} />}
         />
@@ -499,8 +522,9 @@ function Figure({
           <Box pos={[0, -0.02, 0.1]} size={[0.2, 0.036, 0.05]} color={accent} metal={0.7} eInt={1.1} />
           <Box pos={[0, -0.02, 0.126]} size={[0.15, 0.012, 0.01]} color="#e8f4f8" metal={0.3} rough={0.1} eInt={0.95} />
         </group>
-        <Torso chest={kit} waist={weave} pelvis={weave} bulk={heavy ? 0.98 : 0.94} collar={kit}>
-          <Box pos={[0, 1.26, 0.12]} size={[0.18, 0.14, 0.045]} color="#161c20" metal={0.4} rough={0.42} />
+        <Torso chest={weave} waist={weave} pelvis={weave} bulk={heavy ? 0.98 : 0.94} collar={kit}>
+          <Box pos={[0, 1.28, 0.12]} size={[0.16, 0.12, 0.04]} color={kit} metal={0.5} rough={0.3} />
+          <Box pos={[0, 1.26, 0.14]} size={[0.14, 0.1, 0.03]} color="#161c20" metal={0.4} rough={0.42} />
           <Box pos={[0, 1.14, 0.11]} rot={[0, 0, 0.55]} size={[0.22, 0.024, 0.028]} color="#1a2024" metal={0.3} rough={0.5} />
           <Box pos={[0, 1.14, 0.11]} rot={[0, 0, -0.55]} size={[0.22, 0.024, 0.028]} color="#1a2024" metal={0.3} rough={0.5} />
           <Box pos={[-0.055, 1.04, 0.12]} size={[0.05, 0.065, 0.038]} color="#12181c" metal={0.55} />
@@ -517,8 +541,15 @@ function Figure({
           side={1}
           upper={kit}
           fore={skin}
-          pose={{ shoulder: [0.95, 0.55, -1.05], elbow: [1.15, 0.25, 0.2] }}
-          sleeve={<Box pos={[0, -0.06, 0]} size={[0.08, 0.06, 0.08]} color={kit} metal={0.5} />}
+          pose={{ shoulder: [0.45, 0.2, -0.5], elbow: [0.7, 0.12, 0.12] }}
+          pad={
+            <mesh position={[0.015, 0.015, 0]} scale={[1.1, 0.75, 1]} castShadow>
+              <sphereGeometry args={[0.06, 12, 10]} />
+              <Skin color={kit} metalness={0.5} roughness={0.32} />
+            </mesh>
+          }
+          sleeve={<Box pos={[0, -0.08, 0]} size={[0.08, 0.055, 0.08]} color={kit} metal={0.5} />}
+          bracer={<Box pos={[0, -0.03, 0]} size={[0.07, 0.05, 0.07]} color="#2a3438" metal={0.45} />}
           hand={
             <group>
               <Hand skin={skin} />
@@ -530,8 +561,15 @@ function Figure({
           side={-1}
           upper={kit}
           fore={skin}
-          pose={{ shoulder: [0.75, -0.45, 0.95], elbow: [1.05, -0.2, -0.15] }}
-          sleeve={<Box pos={[0, -0.06, 0]} size={[0.08, 0.06, 0.08]} color={kit} metal={0.5} />}
+          pose={{ shoulder: [0.4, -0.18, 0.48], elbow: [0.55, -0.1, -0.1] }}
+          pad={
+            <mesh position={[-0.015, 0.015, 0]} scale={[1.1, 0.75, 1]} castShadow>
+              <sphereGeometry args={[0.06, 12, 10]} />
+              <Skin color={kit} metalness={0.5} roughness={0.32} />
+            </mesh>
+          }
+          sleeve={<Box pos={[0, -0.08, 0]} size={[0.08, 0.055, 0.08]} color={kit} metal={0.5} />}
+          bracer={<Box pos={[0, -0.03, 0]} size={[0.07, 0.05, 0.07]} color="#2a3438" metal={0.45} />}
           hand={<Hand skin={skin} />}
         />
         <Leg
@@ -575,23 +613,34 @@ function Figure({
       </group>
       <Torso chest={lining} waist={veil} pelvis={veil} bulk={0.9} collar={lining}>
         <mesh position={[0, 0.62, 0]} rotation={[0.08, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.22, 0.12, 0.55, 14]} />
+          <cylinderGeometry args={[0.2, 0.11, 0.5, 14]} />
           <Skin color={veil} metalness={0.06} roughness={0.72} side={DoubleSide} />
         </mesh>
-        <mesh position={[0, 0.55, 0.02]} rotation={[0.12, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.18, 0.1, 0.42, 14]} />
-          <Skin color={deep} metalness={0.05} roughness={0.74} side={DoubleSide} />
+        <mesh position={[0, 0.58, 0.03]} rotation={[0.14, 0.2, 0]} castShadow>
+          <boxGeometry args={[0.08, 0.42, 0.16]} />
+          <Skin color={deep} metalness={0.05} roughness={0.74} />
+        </mesh>
+        <mesh position={[0, 0.56, -0.02]} rotation={[0.1, -0.25, 0]} castShadow>
+          <boxGeometry args={[0.07, 0.38, 0.14]} />
+          <Skin color={lining} metalness={0.1} roughness={0.66} />
         </mesh>
         <Box pos={[0, 1.24, 0.1]} size={[0.2, 0.08, 0.04]} color={lining} metal={0.16} rough={0.55} />
+        <Box pos={[0, 0.96, 0.08]} size={[0.18, 0.03, 0.1]} color={deep} metal={0.08} rough={0.7} />
       </Torso>
       <Arm
         side={1}
         upper={veil}
         fore={skin}
-        pose={{ shoulder: [0.25, 0.1, -0.45], elbow: [0.35, 0, 0.08] }}
+        pose={{ shoulder: [0.22, 0.08, -0.32], elbow: [0.28, 0, 0.06] }}
+        pad={
+          <mesh position={[0.01, 0.01, 0]} scale={[1.15, 0.7, 1]} castShadow>
+            <sphereGeometry args={[0.055, 12, 10]} />
+            <Skin color={lining} metalness={0.12} roughness={0.6} />
+          </mesh>
+        }
         sleeve={
           <mesh position={[0, -0.14, 0]} castShadow>
-            <capsuleGeometry args={[0.06, 0.22, 6, 12]} />
+            <capsuleGeometry args={[0.062, 0.22, 6, 12]} />
             <Skin color={veil} metalness={0.08} roughness={0.68} />
           </mesh>
         }
@@ -601,10 +650,16 @@ function Figure({
         side={-1}
         upper={veil}
         fore={skin}
-        pose={{ shoulder: [0.2, -0.15, 0.4], elbow: [0.25, 0, -0.08] }}
+        pose={{ shoulder: [0.18, -0.12, 0.3], elbow: [0.22, 0, -0.06] }}
+        pad={
+          <mesh position={[-0.01, 0.01, 0]} scale={[1.15, 0.7, 1]} castShadow>
+            <sphereGeometry args={[0.055, 12, 10]} />
+            <Skin color={lining} metalness={0.12} roughness={0.6} />
+          </mesh>
+        }
         sleeve={
           <mesh position={[0, -0.14, 0]} castShadow>
-            <capsuleGeometry args={[0.06, 0.22, 6, 12]} />
+            <capsuleGeometry args={[0.062, 0.22, 6, 12]} />
             <Skin color={veil} metalness={0.08} roughness={0.68} />
           </mesh>
         }

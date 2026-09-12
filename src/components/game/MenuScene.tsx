@@ -161,10 +161,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
     if (showHero) {
-      cam.position.x = 1.55 + Math.sin(t * 0.12) * 0.16;
-      cam.position.y = 1.22 + Math.sin(t * 0.08) * 0.05;
-      cam.position.z = 2.85;
-      cam.lookAt(0, 0.88, 0);
+      cam.position.x = 1.7 + Math.sin(t * 0.1) * 0.12;
+      cam.position.y = 1.15 + Math.sin(t * 0.07) * 0.04;
+      cam.position.z = 3.15;
+      cam.lookAt(0, 0.86, 0);
       return;
     }
     cam.position.x = Math.sin(t * 0.07) * 0.7;

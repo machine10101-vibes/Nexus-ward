@@ -53,6 +53,7 @@ function addPart(mesh: Mesh, parent: Object3D, outlineScale?: number, outlineCol
   return mesh;
 }
 
+/** Layered fur / fold / plate teeth — same clump language as hunterscape Hunter. */
 function addSpikes(
   parent: Object3D,
   cx: number,
@@ -84,7 +85,11 @@ function addSpikes(
     if (i % 2 === 0) {
       const strand = new Mesh(new ConeGeometry(tipJ * 0.55, lenJ * 0.72, 4), i % 4 === 0 ? c : b);
       const a2 = ang + 0.18;
-      strand.position.set(cx + Math.cos(a2) * (radJ * 0.94), cy + lenJ * 0.12 + lift * 0.5, cz + Math.sin(a2) * (radJ * 0.94));
+      strand.position.set(
+        cx + Math.cos(a2) * (radJ * 0.94),
+        cy + lenJ * 0.12 + lift * 0.5,
+        cz + Math.sin(a2) * (radJ * 0.94),
+      );
       strand.rotation.z = -Math.cos(a2) * 0.55;
       strand.rotation.x = Math.sin(a2) * 0.55;
       strand.castShadow = true;
@@ -103,7 +108,27 @@ export type WardenKit = {
   accent: string;
 };
 
-function makeHead(parent: Object3D, skin: MeshStandardMaterial, skinDark: MeshStandardMaterial, hairCol: MeshStandardMaterial) {
+type BodyMats = {
+  cloth: MeshStandardMaterial;
+  clothDark: MeshStandardMaterial;
+  wrap: MeshStandardMaterial;
+  wrapDark: MeshStandardMaterial;
+  wrapMid: MeshStandardMaterial;
+  trim: MeshStandardMaterial;
+  trimDark: MeshStandardMaterial;
+  trimMid: MeshStandardMaterial;
+  metal: MeshStandardMaterial;
+  metalBright: MeshStandardMaterial;
+  accent: MeshStandardMaterial;
+};
+
+/** Hunterscape Hunter head — jaw, stubble, brows, full eyes, spiky hair. Face stays open. */
+function makeHunterHead(
+  parent: Object3D,
+  skin: MeshStandardMaterial,
+  skinDark: MeshStandardMaterial,
+  hairCol: MeshStandardMaterial,
+) {
   const head = new Group();
   head.name = "playerHead";
   head.position.set(0, 1.6, 0.02);
@@ -141,6 +166,13 @@ function makeHead(parent: Object3D, skin: MeshStandardMaterial, skinDark: MeshSt
     brow.position.set(sx * 0.085, 0.095, 0.19);
     brow.rotation.z = sx * -0.22;
     head.add(brow);
+    const browRidge = new Mesh(new BoxGeometry(0.08, 0.025, 0.04), mat(0x2a1a10, { roughness: 0.9 }));
+    browRidge.position.set(sx * 0.085, 0.075, 0.205);
+    browRidge.rotation.z = sx * -0.18;
+    head.add(browRidge);
+  }
+
+  for (const sx of [-1, 1] as const) {
     const socket = new Mesh(new SphereGeometry(0.055, 7, 5), mat(0x0c0806));
     socket.position.set(sx * 0.08, 0.03, 0.175);
     head.add(socket);
@@ -184,6 +216,10 @@ function makeHead(parent: Object3D, skin: MeshStandardMaterial, skinDark: MeshSt
     [0, 0.26, 0.06, 0.9],
     [-0.16, 0.11, 0.0, 0.85],
     [0.16, 0.11, 0.0, 0.85],
+    [-0.05, 0.28, -0.02, 1.0],
+    [0.05, 0.28, -0.02, 1.0],
+    [-0.1, 0.2, 0.08, 0.8],
+    [0.1, 0.2, 0.08, 0.8],
   ];
   for (const [x, y, z, s] of spikePts) {
     const spike = new Mesh(new ConeGeometry(0.042 * s, 0.145 * s, 4), hairCol);
@@ -197,451 +233,504 @@ function makeHead(parent: Object3D, skin: MeshStandardMaterial, skinDark: MeshSt
   return head;
 }
 
-function dressFighter(g: Group, kit: WardenKit, skin: MeshStandardMaterial, skinDark: MeshStandardMaterial, hairCol: MeshStandardMaterial) {
-  const accentN = hex(kit.accent);
-  const steel = mat(kit.heavy ? 0x8a929c : 0xc8d0d8, { metalness: 0.86, roughness: 0.18 });
-  const steelMid = mat(kit.heavy ? 0x6a727c : 0x9aa4ae, { metalness: 0.8, roughness: 0.22 });
-  const steelDark = mat(0x2a323a, { metalness: 0.55, roughness: 0.4 });
-  const under = mat(0x1a2026, { roughness: 0.9 });
-  const bright = mat(0xe8eef4, { metalness: 0.92, roughness: 0.12, emissive: 0xb8c8d8, emissiveIntensity: 0.35 });
-  const gold = mat(accentN, { metalness: 0.55, roughness: 0.22, emissive: accentN, emissiveIntensity: 0.55 });
+function makeHunterLeg(side: number, m: BodyMats, opts: { bootFur: boolean; greave?: boolean }) {
+  const leg = new Group();
+  const thigh = new Mesh(new CylinderGeometry(0.11, 0.13, 0.42, 6), m.cloth);
+  thigh.position.set(0, 0.55, 0);
+  addPart(thigh, leg);
 
-  const makeLeg = (side: number) => {
-    const leg = new Group();
-    const thigh = new Mesh(new CylinderGeometry(0.12, 0.14, 0.42, 6), under);
-    thigh.position.set(0, 0.55, 0);
-    addPart(thigh, leg);
-    const shin = new Mesh(new CylinderGeometry(0.11, 0.12, 0.28, 6), steelDark);
-    shin.position.set(0, 0.28, 0.02);
-    addPart(shin, leg);
-    const greave = new Mesh(new BoxGeometry(0.16, 0.26, 0.12), steel);
-    greave.position.set(0, 0.3, 0.06);
-    addPart(greave, leg, 1.05);
-    const boot = new Mesh(new CylinderGeometry(0.12, 0.14, 0.36, 6), steelDark);
-    boot.position.set(0, 0.18, 0.02);
-    addPart(boot, leg, 1.06);
-    const foot = new Mesh(new BoxGeometry(0.18, 0.1, 0.3), steelDark);
-    foot.position.set(0, 0.05, 0.09);
-    addPart(foot, leg);
-    const sole = new Mesh(new BoxGeometry(0.19, 0.045, 0.32), mat(0x0c1014, { roughness: 0.95 }));
-    sole.position.set(0, 0.02, 0.08);
-    leg.add(sole);
-    for (let i = 0; i < 3; i++) {
-      const strap = new Mesh(new TorusGeometry(0.13, 0.016, 4, 8), bright);
-      strap.rotation.x = Math.PI / 2;
-      strap.position.set(0, 0.14 + i * 0.09, 0.03);
-      leg.add(strap);
-    }
-    leg.position.x = side * 0.17;
-    return leg;
-  };
-  g.add(makeLeg(-1));
-  g.add(makeLeg(1));
+  const shin = new Mesh(new CylinderGeometry(0.1, 0.11, 0.28, 6), m.clothDark);
+  shin.position.set(0, 0.28, 0.02);
+  addPart(shin, leg);
 
-  const hips = new Mesh(new CylinderGeometry(0.26, 0.3, 0.22, 8), steelDark);
+  const boot = new Mesh(new CylinderGeometry(0.115, 0.13, 0.38, 6), opts.greave ? m.wrap : m.wrap);
+  boot.position.set(0, 0.2, 0.02);
+  addPart(boot, leg, 1.06);
+
+  const foot = new Mesh(new BoxGeometry(0.17, 0.1, 0.3), m.wrapDark);
+  foot.position.set(0, 0.05, 0.09);
+  addPart(foot, leg);
+  const sole = new Mesh(new BoxGeometry(0.18, 0.045, 0.32), mat(0x120c08, { roughness: 0.95 }));
+  sole.position.set(0, 0.02, 0.08);
+  leg.add(sole);
+
+  for (let i = 0; i < 3; i++) {
+    const strap = new Mesh(new TorusGeometry(0.125, 0.018, 4, 10), opts.greave ? m.metal : m.wrapMid);
+    strap.rotation.x = Math.PI / 2;
+    strap.position.set(0, 0.12 + i * 0.1, 0.02);
+    leg.add(strap);
+  }
+
+  if (opts.greave) {
+    const plate = new Mesh(new BoxGeometry(0.16, 0.26, 0.1), m.metalBright);
+    plate.position.set(0, 0.3, 0.07);
+    addPart(plate, leg, 1.04);
+  }
+
+  if (opts.bootFur) {
+    addSpikes(leg, 0, 0.36, 0.02, 0.125, 14, 0.1, 0.024, m.trim, m.trimDark, m.trimMid);
+    addSpikes(leg, 0, 0.08, 0.04, 0.115, 12, 0.08, 0.02, m.trim, m.trimDark, m.trimMid);
+  }
+
+  leg.position.x = side * 0.16;
+  return leg;
+}
+
+function makeHunterArm(
+  side: number,
+  m: BodyMats,
+  skin: MeshStandardMaterial,
+  opts: { sleeve: "bare" | "steel" | "cloth"; gauntletFur: boolean },
+) {
+  const arm = new Group();
+  arm.name = side < 0 ? "armL" : "armR";
+
+  const upperMat = opts.sleeve === "bare" ? skin : opts.sleeve === "steel" ? m.metal : m.cloth;
+  const upper = new Mesh(new CylinderGeometry(0.095, 0.105, 0.34, 7), upperMat);
+  upper.position.set(0, 0, 0);
+  upper.rotation.z = side * 0.35;
+  addPart(upper, arm, opts.sleeve === "bare" ? undefined : 1.04);
+
+  const cuff = new Mesh(new CylinderGeometry(0.1, 0.11, 0.08, 6), opts.sleeve === "cloth" ? m.wrapMid : m.cloth);
+  cuff.position.set(side * -0.02, 0.12, 0);
+  cuff.rotation.z = side * 0.35;
+  arm.add(cuff);
+
+  const gauntlet = new Mesh(
+    new CylinderGeometry(0.098, 0.115, 0.3, 7),
+    opts.sleeve === "steel" ? m.metalBright : opts.sleeve === "cloth" ? m.wrap : m.wrap,
+  );
+  gauntlet.position.set(side * 0.12, -0.3, 0.02);
+  gauntlet.rotation.z = side * 0.2;
+  addPart(gauntlet, arm, 1.05);
+
+  for (let i = 0; i < 2; i++) {
+    const s = new Mesh(new TorusGeometry(0.11, 0.015, 4, 8), opts.sleeve === "steel" ? m.accent : m.wrapDark);
+    s.rotation.x = Math.PI / 2;
+    s.position.set(side * 0.12, -0.22 - i * 0.1, 0.02);
+    arm.add(s);
+  }
+
+  if (opts.gauntletFur) {
+    const furGroup = new Group();
+    furGroup.position.set(side * 0.08, -0.12, 0.02);
+    addSpikes(furGroup, 0, 0, 0, 0.105, 14, 0.095, 0.022, m.trim, m.trimDark, m.trimMid);
+    arm.add(furGroup);
+  }
+
+  const hand = new Mesh(new BoxGeometry(0.1, 0.1, 0.12), skin);
+  hand.position.set(side * 0.16, -0.46, 0.04);
+  addPart(hand, arm);
+
+  arm.position.set(side * 0.36, 1.28, 0);
+  return arm;
+}
+
+function addHunterHips(g: Group, m: BodyMats, longSkirt = false) {
+  const hips = new Mesh(new CylinderGeometry(0.24, 0.28, 0.22, 8), m.wrap);
   hips.position.y = 0.78;
   addPart(hips, g);
-  for (const [z, ry] of [[0.16, 0], [-0.16, Math.PI]] as const) {
-    const flap = new Mesh(new BoxGeometry(0.3, 0.22, 0.06), steelMid);
-    flap.position.set(0, 0.68, z);
+
+  for (const [z, ry] of [
+    [0.16, 0],
+    [-0.16, Math.PI],
+  ] as const) {
+    const flap = new Mesh(new BoxGeometry(0.28, longSkirt ? 0.38 : 0.22, 0.06), m.wrapDark);
+    flap.position.set(0, longSkirt ? 0.6 : 0.68, z);
     flap.rotation.y = ry;
     addPart(flap, g);
   }
   for (const sx of [-1, 1] as const) {
-    const flap = new Mesh(new BoxGeometry(0.07, 0.2, 0.18), steel);
-    flap.position.set(sx * 0.24, 0.68, 0);
+    const flap = new Mesh(new BoxGeometry(0.06, longSkirt ? 0.34 : 0.2, 0.18), m.wrapMid);
+    flap.position.set(sx * 0.22, longSkirt ? 0.62 : 0.68, 0);
     addPart(flap, g);
   }
+}
 
-  const torso = new Mesh(new CylinderGeometry(0.26, 0.3, 0.55, 8), under);
+function addHunterTorso(
+  g: Group,
+  m: BodyMats,
+  opts: { xStraps: boolean; chestKind: "leather" | "plate" | "cloth" },
+) {
+  const torso = new Mesh(new CylinderGeometry(0.24, 0.29, 0.55, 9), m.wrap);
+  torso.name = "playerTorso";
   torso.position.y = 1.12;
-  addPart(torso, g, 1.06);
-  const pecL = new Mesh(new BoxGeometry(0.2, 0.22, 0.12), steel);
-  pecL.position.set(-0.1, 1.22, 0.16);
-  addPart(pecL, g);
-  const pecR = new Mesh(new BoxGeometry(0.2, 0.22, 0.12), steel);
-  pecR.position.set(0.1, 1.22, 0.16);
-  addPart(pecR, g);
-  const belly = new Mesh(new BoxGeometry(0.32, 0.16, 0.1), steelMid);
-  belly.position.set(0, 1.02, 0.14);
-  addPart(belly, g);
-  const belt = new Mesh(new CylinderGeometry(0.3, 0.3, 0.1, 10), steelDark);
+  addPart(torso, g, 1.07, 0x0a0806);
+
+  if (opts.chestKind === "plate") {
+    const pecL = new Mesh(new BoxGeometry(0.2, 0.28, 0.14), m.metalBright);
+    pecL.position.set(-0.1, 1.22, 0.16);
+    addPart(pecL, g);
+    const pecR = new Mesh(new BoxGeometry(0.2, 0.28, 0.14), m.metal);
+    pecR.position.set(0.1, 1.22, 0.16);
+    addPart(pecR, g);
+    const belly = new Mesh(new BoxGeometry(0.36, 0.16, 0.12), m.wrapMid);
+    belly.position.set(0, 1.0, 0.15);
+    addPart(belly, g);
+  } else if (opts.chestKind === "cloth") {
+    const robe = new Mesh(new BoxGeometry(0.4, 0.32, 0.16), m.wrapMid);
+    robe.position.set(0, 1.2, 0.15);
+    addPart(robe, g);
+  } else {
+    const chestPlate = new Mesh(new BoxGeometry(0.4, 0.3, 0.16), m.wrapMid);
+    chestPlate.position.set(0, 1.2, 0.15);
+    addPart(chestPlate, g);
+  }
+
+  const undershirt = new Mesh(new CylinderGeometry(0.2, 0.22, 0.12, 8), m.cloth);
+  undershirt.position.set(0, 1.38, 0.02);
+  g.add(undershirt);
+
+  const belt = new Mesh(new CylinderGeometry(0.29, 0.29, 0.1, 10), m.wrapDark);
   belt.position.y = 0.88;
   addPart(belt, g);
-  const buckle = new Mesh(new BoxGeometry(0.14, 0.1, 0.07), gold);
-  buckle.position.set(0, 0.88, 0.3);
-  g.add(buckle);
-  const crest = new Mesh(new OctahedronGeometry(0.08, 0), gold);
-  crest.scale.set(1.2, 0.9, 0.45);
-  crest.position.set(0, 1.2, 0.28);
-  g.add(crest);
+  const beltBuckle = new Mesh(new BoxGeometry(0.14, 0.1, 0.07), m.metalBright);
+  beltBuckle.position.set(0, 0.88, 0.3);
+  g.add(beltBuckle);
 
+  if (opts.xStraps) {
+    const makeStrap = (rotZ: number, z: number) => {
+      const strap = new Mesh(new BoxGeometry(0.08, 0.56, 0.04), m.wrapDark);
+      strap.position.set(0, 1.18, z);
+      strap.rotation.z = rotZ;
+      g.add(strap);
+    };
+    makeStrap(0.55, 0.26);
+    makeStrap(-0.55, 0.26);
+    makeStrap(0.55, -0.22);
+    makeStrap(-0.55, -0.22);
+
+    const bucklePad = new Mesh(new BoxGeometry(0.16, 0.14, 0.045), m.wrapDark);
+    bucklePad.position.set(0, 1.2, 0.3);
+    g.add(bucklePad);
+    const chestBuckle = new Mesh(new OctahedronGeometry(0.1, 0), m.metalBright);
+    chestBuckle.scale.set(1.35, 1.05, 0.55);
+    chestBuckle.position.set(0, 1.2, 0.36);
+    g.add(chestBuckle);
+    const facet = new Mesh(
+      new OctahedronGeometry(0.055, 0),
+      mat(0xffffff, { metalness: 0.98, roughness: 0.08, emissive: 0xd0e0f0, emissiveIntensity: 0.55 }),
+    );
+    facet.scale.set(1.2, 0.9, 0.4);
+    facet.position.set(0, 1.2, 0.4);
+    g.add(facet);
+    const ring = new Mesh(new TorusGeometry(0.058, 0.014, 4, 10), m.metalBright);
+    ring.position.set(0, 1.2, 0.385);
+    g.add(ring);
+    for (const [dx, dy] of [
+      [-0.07, 0.06],
+      [0.07, 0.06],
+      [-0.07, -0.06],
+      [0.07, -0.06],
+    ] as const) {
+      const rivet = new Mesh(new SphereGeometry(0.018, 5, 4), m.metalBright);
+      rivet.position.set(dx, 1.2 + dy, 0.34);
+      g.add(rivet);
+    }
+  } else {
+    const gem = new Mesh(new OctahedronGeometry(0.08, 0), m.accent);
+    gem.position.set(0, 1.18, 0.3);
+    g.add(gem);
+  }
+}
+
+function addHunterShoulders(
+  g: Group,
+  m: BodyMats,
+  kind: "leather" | "steel" | "cloth",
+) {
   for (const sx of [-1, 1] as const) {
-    const pad = new Mesh(new BoxGeometry(0.2, 0.12, 0.2), bright);
-    pad.position.set(sx * 0.28, 1.4, 0);
-    pad.rotation.z = sx * -0.22;
-    addPart(pad, g, 1.06);
-    const pad2 = new Mesh(new BoxGeometry(0.15, 0.09, 0.16), steel);
-    pad2.position.set(sx * 0.34, 1.32, 0.02);
-    pad2.rotation.z = sx * -0.32;
+    const pad = new Mesh(
+      new BoxGeometry(kind === "steel" ? 0.2 : 0.15, kind === "steel" ? 0.12 : 0.09, kind === "steel" ? 0.2 : 0.17),
+      kind === "steel" ? m.metalBright : kind === "cloth" ? m.wrapMid : m.wrapMid,
+    );
+    pad.position.set(sx * (kind === "steel" ? 0.26 : 0.24), 1.4, 0);
+    pad.rotation.z = sx * -0.18;
+    addPart(pad, g, 1.05);
+    const pad2 = new Mesh(
+      new BoxGeometry(kind === "steel" ? 0.16 : 0.12, 0.07, kind === "steel" ? 0.16 : 0.14),
+      kind === "steel" ? m.metal : m.wrapDark,
+    );
+    pad2.position.set(sx * (kind === "steel" ? 0.32 : 0.28), 1.34, 0.02);
+    pad2.rotation.z = sx * -0.28;
     addPart(pad2, g);
-    const ring = new Mesh(new TorusGeometry(0.04, 0.012, 4, 8), gold);
-    ring.position.set(sx * 0.22, 1.38, 0.12);
+    const ring = new Mesh(new TorusGeometry(0.035, 0.01, 4, 8), kind === "cloth" ? m.accent : m.metal);
+    ring.position.set(sx * 0.2, 1.38, 0.12);
     g.add(ring);
   }
-
-  const makeArm = (side: number) => {
-    const arm = new Group();
-    const upper = new Mesh(new CylinderGeometry(0.11, 0.12, 0.34, 7), steel);
-    upper.position.set(0, 0, 0);
-    upper.rotation.z = side * 0.32;
-    addPart(upper, arm, 1.04);
-    const gauntlet = new Mesh(new CylinderGeometry(0.1, 0.12, 0.3, 7), bright);
-    gauntlet.position.set(side * 0.12, -0.3, 0.02);
-    gauntlet.rotation.z = side * 0.2;
-    addPart(gauntlet, arm, 1.05);
-    for (let i = 0; i < 2; i++) {
-      const s = new Mesh(new TorusGeometry(0.12, 0.014, 4, 8), gold);
-      s.rotation.x = Math.PI / 2;
-      s.position.set(side * 0.12, -0.22 - i * 0.1, 0.02);
-      arm.add(s);
-    }
-    const hand = new Mesh(new BoxGeometry(0.11, 0.1, 0.12), skin);
-    hand.position.set(side * 0.16, -0.46, 0.04);
-    addPart(hand, arm);
-    if (side > 0) {
-      const blade = kit.bigWep ? 0.78 : 0.58;
-      const sword = new Group();
-      sword.position.set(side * 0.22, -0.42, 0.16);
-      sword.rotation.set(0.15, 0.35, -0.9);
-      const hilt = new Mesh(new CylinderGeometry(0.02, 0.024, 0.16, 6), mat(0x3a2e24, { roughness: 0.8 }));
-      hilt.rotation.z = Math.PI / 2;
-      sword.add(hilt);
-      const guard = new Mesh(new BoxGeometry(0.05, 0.18, 0.04), bright);
-      guard.position.x = 0.08;
-      sword.add(guard);
-      const bladeM = new Mesh(new BoxGeometry(blade, 0.07, 0.016), mat(0xe8eef4, { metalness: 0.92, roughness: 0.1 }));
-      bladeM.position.x = 0.1 + blade / 2;
-      addPart(bladeM, sword);
-      const edge = new Mesh(new BoxGeometry(blade * 0.94, 0.016, 0.008), gold);
-      edge.position.set(0.1 + blade / 2, 0, 0.01);
-      sword.add(edge);
-      arm.add(sword);
-    } else {
-      const shield = new Group();
-      shield.position.set(side * 0.22, -0.2, 0.16);
-      shield.rotation.y = 0.7;
-      const disc = new Mesh(new BoxGeometry(0.08, 0.42, 0.32), bright);
-      addPart(disc, shield, 1.04);
-      const boss = new Mesh(new TorusGeometry(0.07, 0.016, 4, 10), gold);
-      boss.rotation.y = Math.PI / 2;
-      boss.position.x = 0.05;
-      shield.add(boss);
-      arm.add(shield);
-    }
-    arm.position.set(side * 0.38, 1.28, 0);
-    return arm;
-  };
-  g.add(makeArm(-1));
-  g.add(makeArm(1));
-
-  const head = makeHead(g, skin, skinDark, hairCol);
-  const helm = new Mesh(new SphereGeometry(0.22, 10, 8), bright);
-  helm.scale.set(1.08, 0.85, 1.05);
-  helm.position.set(0, 0.06, -0.02);
-  addPart(helm, head, 1.08);
-  const visor = new Mesh(new BoxGeometry(0.28, 0.07, 0.08), gold);
-  visor.position.set(0, -0.02, 0.2);
-  head.add(visor);
-  const slit = new Mesh(new BoxGeometry(0.22, 0.02, 0.02), mat(0xfff4c0, { emissive: 0xfff4c0, emissiveIntensity: 1.4 }));
-  slit.position.set(0, -0.02, 0.25);
-  head.add(slit);
-  const crestFin = new Mesh(new BoxGeometry(0.04, 0.16, 0.1), gold);
-  crestFin.position.set(0, 0.22, -0.02);
-  head.add(crestFin);
 }
 
-function dressRanger(g: Group, kit: WardenKit, skin: MeshStandardMaterial, skinDark: MeshStandardMaterial, hairCol: MeshStandardMaterial) {
-  const accentN = hex(kit.accent);
-  const weave = mat(kit.heavy ? 0x3a4a4e : 0x4a5e5a, { roughness: 0.88 });
-  const kitCol = mat(kit.heavy ? 0x5a6c72 : 0x6e848a, { metalness: 0.35, roughness: 0.42 });
-  const strap = mat(0x1a2024, { roughness: 0.9 });
-  const cloth = mat(0x262c26, { roughness: 0.92 });
-  const clothDark = mat(0x161a16, { roughness: 0.94 });
-  const leather = mat(0x322012, { roughness: 0.78, metalness: 0.08 });
-  const leatherDark = mat(0x1a1008, { roughness: 0.86 });
-  const leatherMid = mat(0x5c3a26, { roughness: 0.68, metalness: 0.1 });
-  const fur = mat(0xa07848, { roughness: 0.99, metalness: 0 });
-  const furDark = mat(0x5c3a22, { roughness: 0.99, metalness: 0 });
-  const furMid = mat(0x8a5e36, { roughness: 0.99, metalness: 0 });
-  const glow = mat(accentN, { metalness: 0.55, roughness: 0.18, emissive: accentN, emissiveIntensity: 0.7 });
+function addFurCollar(g: Group, m: BodyMats) {
+  const collarBase = new Mesh(new TorusGeometry(0.23, 0.095, 6, 14), m.trimMid);
+  collarBase.rotation.x = Math.PI / 2;
+  collarBase.position.set(0, 1.42, 0);
+  collarBase.scale.set(1.2, 1.05, 0.98);
+  addPart(collarBase, g);
+  const collarUnder = new Mesh(new TorusGeometry(0.2, 0.07, 5, 12), m.trimDark);
+  collarUnder.rotation.x = Math.PI / 2;
+  collarUnder.position.set(0, 1.38, 0.02);
+  collarUnder.scale.set(1.15, 1.0, 0.95);
+  g.add(collarUnder);
 
-  const makeLeg = (side: number) => {
-    const leg = new Group();
-    const thigh = new Mesh(new CylinderGeometry(0.1, 0.12, 0.42, 6), cloth);
-    thigh.position.set(0, 0.55, 0);
-    addPart(thigh, leg);
-    const shin = new Mesh(new CylinderGeometry(0.095, 0.105, 0.28, 6), clothDark);
-    shin.position.set(0, 0.28, 0.02);
-    addPart(shin, leg);
-    const boot = new Mesh(new CylinderGeometry(0.11, 0.125, 0.36, 6), leather);
-    boot.position.set(0, 0.18, 0.02);
-    addPart(boot, leg, 1.06);
-    const foot = new Mesh(new BoxGeometry(0.16, 0.09, 0.28), leatherDark);
-    foot.position.set(0, 0.05, 0.08);
-    addPart(foot, leg);
-    const sole = new Mesh(new BoxGeometry(0.17, 0.04, 0.3), mat(0x120c08, { roughness: 0.95 }));
-    sole.position.set(0, 0.02, 0.07);
-    leg.add(sole);
-    for (let i = 0; i < 3; i++) {
-      const s = new Mesh(new TorusGeometry(0.12, 0.016, 4, 10), leatherMid);
-      s.rotation.x = Math.PI / 2;
-      s.position.set(0, 0.12 + i * 0.1, 0.02);
-      leg.add(s);
-    }
-    addSpikes(leg, 0, 0.36, 0.02, 0.12, 12, 0.09, 0.022, fur, furDark, furMid);
-    addSpikes(leg, 0, 0.08, 0.04, 0.11, 10, 0.07, 0.018, fur, furDark, furMid);
-    leg.position.x = side * 0.16;
-    return leg;
-  };
-  g.add(makeLeg(-1));
-  g.add(makeLeg(1));
-
-  const hips = new Mesh(new CylinderGeometry(0.23, 0.27, 0.2, 8), leather);
-  hips.position.y = 0.78;
-  addPart(hips, g);
-  for (const [z, ry] of [[0.15, 0], [-0.15, Math.PI]] as const) {
-    const flap = new Mesh(new BoxGeometry(0.26, 0.2, 0.05), leatherDark);
-    flap.position.set(0, 0.68, z);
-    flap.rotation.y = ry;
-    addPart(flap, g);
-  }
-
-  const torso = new Mesh(new CylinderGeometry(0.22, 0.27, 0.52, 8), weave);
-  torso.position.y = 1.12;
-  addPart(torso, g, 1.06);
-  const vest = new Mesh(new BoxGeometry(0.36, 0.26, 0.14), kitCol);
-  vest.position.set(0, 1.2, 0.14);
-  addPart(vest, g);
-  const undershirt = new Mesh(new CylinderGeometry(0.18, 0.2, 0.1, 8), cloth);
-  undershirt.position.set(0, 1.36, 0.02);
-  g.add(undershirt);
-  const belt = new Mesh(new CylinderGeometry(0.27, 0.27, 0.09, 10), leatherDark);
-  belt.position.y = 0.88;
-  addPart(belt, g);
-  const buckle = new Mesh(new BoxGeometry(0.12, 0.08, 0.06), glow);
-  buckle.position.set(0, 0.88, 0.28);
-  g.add(buckle);
-
-  for (const rotZ of [0.55, -0.55] as const) {
-    const front = new Mesh(new BoxGeometry(0.07, 0.52, 0.035), strap);
-    front.position.set(0, 1.16, 0.24);
-    front.rotation.z = rotZ;
-    g.add(front);
-    const back = new Mesh(new BoxGeometry(0.07, 0.52, 0.035), strap);
-    back.position.set(0, 1.16, -0.2);
-    back.rotation.z = rotZ;
-    g.add(back);
-  }
+  addSpikes(g, 0, 1.4, 0, 0.29, 30, 0.2, 0.032, m.trim, m.trimDark, m.trimMid);
+  addSpikes(g, 0, 1.52, -0.04, 0.25, 24, 0.16, 0.028, m.trim, m.trimDark, m.trimMid, 0.15);
+  addSpikes(g, 0, 1.34, 0.08, 0.32, 20, 0.14, 0.026, m.trim, m.trimDark, m.trimMid, 0.32);
+  addSpikes(g, 0, 1.46, 0.02, 0.2, 16, 0.11, 0.022, m.trim, m.trimDark, m.trimMid, 0.5);
+  addSpikes(g, 0, 1.48, -0.08, 0.22, 12, 0.13, 0.02, m.trim, m.trimDark, m.trimMid, 0.7);
   for (const sx of [-1, 1] as const) {
-    const pouch = new Mesh(new BoxGeometry(0.09, 0.1, 0.07), leatherDark);
-    pouch.position.set(sx * 0.12, 1.0, 0.22);
-    addPart(pouch, g);
+    addSpikes(g, sx * 0.3, 1.35, 0.05, 0.14, 16, 0.15, 0.026, m.trim, m.trimDark, m.trimMid);
+    addSpikes(g, sx * 0.36, 1.2, 0.02, 0.11, 12, 0.12, 0.022, m.trim, m.trimDark, m.trimMid);
+    const drape = new Mesh(new ConeGeometry(0.1, 0.32, 5), m.trimDark);
+    drape.position.set(sx * 0.35, 1.26, 0);
+    drape.rotation.z = sx * 0.72;
+    drape.rotation.x = -0.32;
+    addPart(drape, g);
+    const drape2 = new Mesh(new ConeGeometry(0.07, 0.22, 4), m.trimMid);
+    drape2.position.set(sx * 0.4, 1.16, 0.06);
+    drape2.rotation.z = sx * 0.85;
+    drape2.rotation.x = -0.2;
+    addPart(drape2, g);
+    const drape3 = new Mesh(new ConeGeometry(0.055, 0.18, 4), m.trim);
+    drape3.position.set(sx * 0.38, 1.2, -0.04);
+    drape3.rotation.z = sx * 0.65;
+    drape3.rotation.x = -0.15;
+    addPart(drape3, g);
   }
-  if (kit.heavy) {
-    for (const sx of [-1, 1] as const) {
-      const cell = new Mesh(new BoxGeometry(0.06, 0.06, 0.04), glow);
-      cell.position.set(sx * 0.1, 1.18, 0.24);
-      g.add(cell);
-    }
-  }
-
-  for (const sx of [-1, 1] as const) {
-    const pad = new Mesh(new BoxGeometry(0.13, 0.08, 0.15), kitCol);
-    pad.position.set(sx * 0.24, 1.38, 0);
-    pad.rotation.z = sx * -0.18;
-    addPart(pad, g);
-    addSpikes(g, sx * 0.3, 1.32, 0.04, 0.12, 12, 0.12, 0.022, fur, furDark, furMid);
-  }
-
-  const collar = new Mesh(new TorusGeometry(0.2, 0.07, 5, 12), furMid);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.set(0, 1.4, 0);
-  addPart(collar, g);
-  addSpikes(g, 0, 1.4, 0, 0.26, 22, 0.16, 0.028, fur, furDark, furMid);
-  addSpikes(g, 0, 1.5, -0.04, 0.22, 16, 0.13, 0.022, fur, furDark, furMid, 0.2);
-
-  const makeArm = (side: number) => {
-    const arm = new Group();
-    const upper = new Mesh(new CylinderGeometry(0.09, 0.1, 0.34, 7), skin);
-    upper.position.set(0, 0, 0);
-    upper.rotation.z = side * 0.32;
-    addPart(upper, arm);
-    const cuff = new Mesh(new CylinderGeometry(0.095, 0.105, 0.08, 6), cloth);
-    cuff.position.set(side * -0.02, 0.12, 0);
-    cuff.rotation.z = side * 0.32;
-    arm.add(cuff);
-    const gauntlet = new Mesh(new CylinderGeometry(0.09, 0.108, 0.28, 7), leather);
-    gauntlet.position.set(side * 0.12, -0.3, 0.02);
-    gauntlet.rotation.z = side * 0.2;
-    addPart(gauntlet, arm, 1.05);
-    addSpikes(arm, side * 0.08, -0.12, 0.02, 0.1, 12, 0.085, 0.02, fur, furDark, furMid);
-    const hand = new Mesh(new BoxGeometry(0.1, 0.1, 0.12), skin);
-    hand.position.set(side * 0.16, -0.46, 0.04);
-    addPart(hand, arm);
-    if (side > 0) {
-      const body = kit.bigWep ? 0.62 : 0.48;
-      const rifle = new Group();
-      rifle.position.set(side * 0.18, -0.38, 0.18);
-      rifle.rotation.set(1.15, 0.2, 0.15);
-      const rec = new Mesh(new BoxGeometry(0.07, 0.08, body), mat(0x1a2026, { metalness: 0.65, roughness: 0.28 }));
-      addPart(rec, rifle);
-      const barrel = new Mesh(new CylinderGeometry(0.014, 0.018, kit.bigWep ? 0.3 : 0.2, 6), mat(0x8a949c, { metalness: 0.85, roughness: 0.16 }));
-      barrel.rotation.x = Math.PI / 2;
-      barrel.position.z = body * 0.52;
-      rifle.add(barrel);
-      const mag = new Mesh(new BoxGeometry(0.035, 0.09, 0.08), strap);
-      mag.position.y = -0.06;
-      rifle.add(mag);
-      const optic = new Mesh(new BoxGeometry(0.04, 0.045, 0.09), glow);
-      optic.position.set(0, 0.06, 0.06);
-      rifle.add(optic);
-      arm.add(rifle);
-    }
-    arm.position.set(side * 0.34, 1.28, 0);
-    return arm;
-  };
-  g.add(makeArm(-1));
-  g.add(makeArm(1));
-
-  const head = makeHead(g, skin, skinDark, hairCol);
-  const visor = new Mesh(new BoxGeometry(0.28, 0.05, 0.08), glow);
-  visor.position.set(0, 0.04, 0.2);
-  head.add(visor);
-  const slit = new Mesh(new BoxGeometry(0.2, 0.016, 0.02), mat(0xe8f4f8, { emissive: 0xe8f4f8, emissiveIntensity: 0.9 }));
-  slit.position.set(0, 0.04, 0.25);
-  head.add(slit);
 }
 
-function dressMage(g: Group, kit: WardenKit, skin: MeshStandardMaterial, skinDark: MeshStandardMaterial, hairCol: MeshStandardMaterial) {
-  const accentN = hex(kit.accent);
-  const veil = mat(kit.heavy ? 0x3c366c : 0x564e96, { roughness: 0.82 });
-  const deep = mat(kit.heavy ? 0x282244 : 0x383264, { roughness: 0.86 });
-  const lining = mat(kit.heavy ? 0x8a7cc8 : 0x7a72b0, { roughness: 0.7, emissive: accentN, emissiveIntensity: 0.12 });
-  const glow = mat(accentN, { metalness: 0.2, roughness: 0.16, emissive: accentN, emissiveIntensity: 1.2 });
-  const wood = mat(0x4a4468, { roughness: 0.55, metalness: 0.25 });
-
-  const makeLeg = (side: number) => {
-    const leg = new Group();
-    const thigh = new Mesh(new CylinderGeometry(0.1, 0.12, 0.42, 6), deep);
-    thigh.position.set(0, 0.55, 0);
-    addPart(thigh, leg);
-    const shin = new Mesh(new CylinderGeometry(0.09, 0.1, 0.3, 6), veil);
-    shin.position.set(0, 0.26, 0.02);
-    addPart(shin, leg);
-    const boot = new Mesh(new BoxGeometry(0.15, 0.09, 0.26), mat(0x1a1624, { roughness: 0.8 }));
-    boot.position.set(0, 0.05, 0.07);
-    addPart(boot, leg);
-    const sole = new Mesh(new BoxGeometry(0.16, 0.035, 0.28), mat(0x0c0a12, { roughness: 0.95 }));
-    sole.position.set(0, 0.02, 0.06);
-    leg.add(sole);
-    leg.position.x = side * 0.15;
-    return leg;
-  };
-  g.add(makeLeg(-1));
-  g.add(makeLeg(1));
-
-  const hips = new Mesh(new CylinderGeometry(0.22, 0.28, 0.2, 8), veil);
-  hips.position.y = 0.78;
-  addPart(hips, g);
-  const skirt = new Mesh(new CylinderGeometry(0.34, 0.2, 0.62, 8), veil);
-  skirt.position.y = 0.58;
-  addPart(skirt, g, 1.04);
-  const slit = new Mesh(new BoxGeometry(0.12, 0.5, 0.2), deep);
-  slit.position.set(0.04, 0.52, 0.12);
-  slit.rotation.y = 0.25;
-  addPart(slit, g);
-  const liningFlap = new Mesh(new BoxGeometry(0.1, 0.44, 0.16), lining);
-  liningFlap.position.set(-0.06, 0.5, 0.08);
-  liningFlap.rotation.y = -0.2;
-  addPart(liningFlap, g);
-
-  const torso = new Mesh(new CylinderGeometry(0.2, 0.24, 0.5, 8), lining);
-  torso.position.y = 1.12;
-  addPart(torso, g, 1.05);
-  const mantle = new Mesh(new BoxGeometry(0.42, 0.16, 0.28), deep);
-  mantle.position.set(0, 1.34, 0.02);
-  addPart(mantle, g);
-  const sash = new Mesh(new CylinderGeometry(0.24, 0.24, 0.08, 8), deep);
-  sash.position.y = 0.9;
-  addPart(sash, g);
-  const gem = new Mesh(new OctahedronGeometry(0.07, 0), glow);
-  gem.position.set(0, 1.18, 0.24);
-  g.add(gem);
-
-  addSpikes(g, 0, 1.38, 0.02, 0.24, 16, 0.12, 0.02, lining, deep, glow, 0.2);
+function addSteelGorget(g: Group, m: BodyMats) {
+  const collarBase = new Mesh(new TorusGeometry(0.22, 0.07, 6, 12), m.metal);
+  collarBase.rotation.x = Math.PI / 2;
+  collarBase.position.set(0, 1.42, 0);
+  collarBase.scale.set(1.15, 1.02, 0.95);
+  addPart(collarBase, g, 1.05);
+  const plate = new Mesh(new BoxGeometry(0.28, 0.1, 0.16), m.metalBright);
+  plate.position.set(0, 1.4, 0.16);
+  addPart(plate, g);
+  addSpikes(g, 0, 1.44, 0, 0.24, 16, 0.1, 0.02, m.metal, m.wrapDark, m.metalBright);
   for (const sx of [-1, 1] as const) {
-    const drape = new Mesh(new ConeGeometry(0.09, 0.3, 5), deep);
-    drape.position.set(sx * 0.32, 1.22, 0);
-    drape.rotation.z = sx * 0.7;
-    drape.rotation.x = -0.25;
+    const drape = new Mesh(new ConeGeometry(0.08, 0.22, 5), m.metal);
+    drape.position.set(sx * 0.32, 1.28, 0);
+    drape.rotation.z = sx * 0.65;
+    drape.rotation.x = -0.22;
     addPart(drape, g);
   }
+}
 
-  const makeArm = (side: number) => {
-    const arm = new Group();
-    const sleeve = new Mesh(new CylinderGeometry(0.1, 0.13, 0.4, 7), veil);
-    sleeve.position.set(0, -0.02, 0);
-    sleeve.rotation.z = side * 0.28;
-    addPart(sleeve, arm, 1.04);
-    const cuff = new Mesh(new CylinderGeometry(0.08, 0.11, 0.1, 6), lining);
-    cuff.position.set(side * 0.1, -0.28, 0.02);
-    cuff.rotation.z = side * 0.2;
-    arm.add(cuff);
-    const hand = new Mesh(new BoxGeometry(0.09, 0.09, 0.11), skin);
-    hand.position.set(side * 0.16, -0.44, 0.04);
-    addPart(hand, arm);
-    if (side < 0) {
-      const h = kit.bigWep ? 1.15 : 0.92;
-      const staff = new Group();
-      staff.position.set(side * 0.18, -0.5, 0.08);
-      const shaft = new Mesh(new CylinderGeometry(0.016, 0.022, h, 6), wood);
-      shaft.position.y = h * 0.35;
-      addPart(shaft, staff);
-      const bind = new Mesh(new TorusGeometry(0.03, 0.008, 4, 8), glow);
-      bind.position.y = 0.12;
-      staff.add(bind);
-      const crystal = new Mesh(new OctahedronGeometry(kit.bigWep ? 0.11 : 0.085, 0), glow);
-      crystal.position.y = h * 0.72;
-      addPart(crystal, staff);
-      arm.add(staff);
-    }
-    arm.position.set(side * 0.32, 1.26, 0);
-    return arm;
-  };
-  g.add(makeArm(-1));
-  g.add(makeArm(1));
-
-  const head = makeHead(g, skin, skinDark, hairCol);
-  const hood = new Mesh(new ConeGeometry(0.26, 0.36, 7), deep);
-  hood.position.set(0, 0.22, -0.06);
-  hood.rotation.x = -0.35;
-  addPart(hood, head, 1.06);
-  const cowl = new Mesh(new SphereGeometry(0.24, 8, 6), veil);
-  cowl.scale.set(1.15, 0.7, 1.05);
-  cowl.position.set(0, 0.04, -0.04);
-  addPart(cowl, head);
-  const brim = new Mesh(new BoxGeometry(0.28, 0.06, 0.16), deep);
-  brim.position.set(0, 0.02, 0.14);
-  brim.rotation.x = 0.35;
-  head.add(brim);
-
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2;
-    const shard = new Mesh(new OctahedronGeometry(0.035, 0), glow);
-    shard.position.set(Math.cos(a) * 0.28, 1.28 + Math.sin(a) * 0.04, Math.sin(a) * 0.18);
-    g.add(shard);
+function addClothCowl(g: Group, m: BodyMats) {
+  const collarBase = new Mesh(new TorusGeometry(0.24, 0.1, 6, 14), m.wrapMid);
+  collarBase.rotation.x = Math.PI / 2;
+  collarBase.position.set(0, 1.4, -0.02);
+  collarBase.scale.set(1.22, 1.08, 0.95);
+  addPart(collarBase, g);
+  addSpikes(g, 0, 1.38, -0.04, 0.28, 22, 0.18, 0.03, m.trim, m.trimDark, m.trimMid);
+  addSpikes(g, 0, 1.5, -0.1, 0.22, 16, 0.14, 0.024, m.trim, m.trimDark, m.trimMid, 0.2);
+  for (const sx of [-1, 1] as const) {
+    const drape = new Mesh(new ConeGeometry(0.12, 0.4, 5), m.wrapDark);
+    drape.position.set(sx * 0.34, 1.2, -0.02);
+    drape.rotation.z = sx * 0.7;
+    drape.rotation.x = -0.28;
+    addPart(drape, g);
+    const lining = new Mesh(new ConeGeometry(0.08, 0.28, 4), m.trimMid);
+    lining.position.set(sx * 0.38, 1.14, 0.04);
+    lining.rotation.z = sx * 0.8;
+    lining.rotation.x = -0.18;
+    addPart(lining, g);
   }
+}
+
+function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
+  const blade = kit.bigWep ? 0.78 : 0.58;
+  const sword = new Group();
+  sword.position.set(0.22, -0.42, 0.16);
+  sword.rotation.set(0.15, 0.35, -0.9);
+  const hilt = new Mesh(new CylinderGeometry(0.02, 0.024, 0.16, 6), mat(0x3a2e24, { roughness: 0.8 }));
+  hilt.rotation.z = Math.PI / 2;
+  sword.add(hilt);
+  const guard = new Mesh(new BoxGeometry(0.05, 0.18, 0.04), m.metalBright);
+  guard.position.x = 0.08;
+  sword.add(guard);
+  const bladeM = new Mesh(new BoxGeometry(blade, 0.07, 0.016), mat(0xe8eef4, { metalness: 0.92, roughness: 0.1 }));
+  bladeM.position.x = 0.1 + blade / 2;
+  addPart(bladeM, sword);
+  const edge = new Mesh(new BoxGeometry(blade * 0.94, 0.016, 0.008), m.accent);
+  edge.position.set(0.1 + blade / 2, 0, 0.01);
+  sword.add(edge);
+  armR.add(sword);
+
+  const shield = new Group();
+  shield.position.set(-0.22, -0.2, 0.16);
+  shield.rotation.y = 0.7;
+  const disc = new Mesh(new BoxGeometry(0.08, 0.42, 0.32), m.metalBright);
+  addPart(disc, shield, 1.04);
+  const boss = new Mesh(new TorusGeometry(0.07, 0.016, 4, 10), m.accent);
+  boss.rotation.y = Math.PI / 2;
+  boss.position.x = 0.05;
+  shield.add(boss);
+  armL.add(shield);
+}
+
+function addRangerKit(armR: Group, kit: WardenKit, m: BodyMats) {
+  const body = kit.bigWep ? 0.62 : 0.48;
+  const rifle = new Group();
+  rifle.position.set(0.18, -0.38, 0.18);
+  rifle.rotation.set(1.15, 0.2, 0.15);
+  const rec = new Mesh(new BoxGeometry(0.07, 0.08, body), mat(0x1a2026, { metalness: 0.65, roughness: 0.28 }));
+  addPart(rec, rifle);
+  const barrel = new Mesh(
+    new CylinderGeometry(0.014, 0.018, kit.bigWep ? 0.3 : 0.2, 6),
+    mat(0x8a949c, { metalness: 0.85, roughness: 0.16 }),
+  );
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.z = body * 0.52;
+  rifle.add(barrel);
+  const mag = new Mesh(new BoxGeometry(0.035, 0.09, 0.08), m.wrapDark);
+  mag.position.y = -0.06;
+  rifle.add(mag);
+  const optic = new Mesh(new BoxGeometry(0.04, 0.045, 0.09), m.accent);
+  optic.position.set(0, 0.06, 0.06);
+  rifle.add(optic);
+  armR.add(rifle);
+}
+
+function addMageKit(armL: Group, kit: WardenKit, m: BodyMats) {
+  const h = kit.bigWep ? 1.15 : 0.92;
+  const staff = new Group();
+  staff.position.set(-0.18, -0.5, 0.08);
+  const shaft = new Mesh(new CylinderGeometry(0.016, 0.022, h, 6), mat(0x4a4468, { roughness: 0.55, metalness: 0.25 }));
+  shaft.position.y = h * 0.35;
+  addPart(shaft, staff);
+  const bind = new Mesh(new TorusGeometry(0.03, 0.008, 4, 8), m.accent);
+  bind.position.y = 0.12;
+  staff.add(bind);
+  const crystal = new Mesh(new OctahedronGeometry(kit.bigWep ? 0.11 : 0.085, 0), m.accent);
+  crystal.position.y = h * 0.72;
+  addPart(crystal, staff);
+  armL.add(staff);
+}
+
+function dressFighter(
+  g: Group,
+  kit: WardenKit,
+  skin: MeshStandardMaterial,
+  skinDark: MeshStandardMaterial,
+  hairCol: MeshStandardMaterial,
+) {
+  const accentN = hex(kit.accent);
+  const steel = kit.heavy ? 0x9aa4ae : 0xd0d8e0;
+  const m: BodyMats = {
+    cloth: mat(0x1a2026, { roughness: 0.9 }),
+    clothDark: mat(0x12161a, { roughness: 0.92 }),
+    wrap: mat(kit.heavy ? 0x6a727c : 0x8a929c, { metalness: 0.78, roughness: 0.22 }),
+    wrapDark: mat(0x2a323a, { metalness: 0.55, roughness: 0.4 }),
+    wrapMid: mat(kit.heavy ? 0x7a828c : 0x9aa4ae, { metalness: 0.8, roughness: 0.2 }),
+    trim: mat(steel, { metalness: 0.88, roughness: 0.16 }),
+    trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28 }),
+    trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14 }),
+    metal: mat(steel, { metalness: 0.86, roughness: 0.18 }),
+    metalBright: mat(0xf0f4f8, { metalness: 0.94, roughness: 0.1, emissive: 0xb8c8d8, emissiveIntensity: 0.38 }),
+    accent: mat(accentN, { metalness: 0.55, roughness: 0.22, emissive: accentN, emissiveIntensity: 0.55 }),
+  };
+
+  g.add(makeHunterLeg(-1, m, { bootFur: false, greave: true }));
+  g.add(makeHunterLeg(1, m, { bootFur: false, greave: true }));
+  addHunterHips(g, m);
+  addHunterTorso(g, m, { xStraps: true, chestKind: "plate" });
+  addHunterShoulders(g, m, "steel");
+  addSteelGorget(g, m);
+  const armL = makeHunterArm(-1, m, skin, { sleeve: "steel", gauntletFur: false });
+  const armR = makeHunterArm(1, m, skin, { sleeve: "steel", gauntletFur: false });
+  addFighterKit(armR, armL, kit, m);
+  g.add(armL);
+  g.add(armR);
+
+  const head = makeHunterHead(g, skin, skinDark, hairCol);
+  const brow = new Mesh(new BoxGeometry(0.22, 0.05, 0.08), m.metalBright);
+  brow.position.set(0, 0.1, 0.18);
+  head.add(brow);
+  const crest = new Mesh(new BoxGeometry(0.04, 0.14, 0.08), m.accent);
+  crest.position.set(0, 0.22, -0.02);
+  head.add(crest);
+}
+
+function dressRanger(
+  g: Group,
+  kit: WardenKit,
+  skin: MeshStandardMaterial,
+  skinDark: MeshStandardMaterial,
+  hairCol: MeshStandardMaterial,
+) {
+  const accentN = hex(kit.accent);
+  const m: BodyMats = {
+    cloth: mat(0x262c26, { roughness: 0.92 }),
+    clothDark: mat(0x161a16, { roughness: 0.94 }),
+    wrap: mat(kit.heavy ? 0x28180e : 0x322012, { roughness: 0.78, metalness: 0.08 }),
+    wrapDark: mat(0x1a1008, { roughness: 0.86 }),
+    wrapMid: mat(kit.heavy ? 0x4a3220 : 0x5c3a26, { roughness: 0.68, metalness: 0.1 }),
+    trim: mat(0xa07848, { roughness: 0.99, metalness: 0 }),
+    trimDark: mat(0x5c3a22, { roughness: 0.99, metalness: 0 }),
+    trimMid: mat(0x8a5e36, { roughness: 0.99, metalness: 0 }),
+    metal: mat(0xe4ecf4, { metalness: 0.9, roughness: 0.16 }),
+    metalBright: mat(0xf6fafc, { metalness: 0.96, roughness: 0.1, emissive: 0xb8c8d8, emissiveIntensity: 0.42 }),
+    accent: mat(accentN, { metalness: 0.55, roughness: 0.18, emissive: accentN, emissiveIntensity: 0.7 }),
+  };
+
+  g.add(makeHunterLeg(-1, m, { bootFur: true }));
+  g.add(makeHunterLeg(1, m, { bootFur: true }));
+  addHunterHips(g, m);
+  addHunterTorso(g, m, { xStraps: true, chestKind: "leather" });
+  addHunterShoulders(g, m, "leather");
+  addFurCollar(g, m);
+  const armL = makeHunterArm(-1, m, skin, { sleeve: "bare", gauntletFur: true });
+  const armR = makeHunterArm(1, m, skin, { sleeve: "bare", gauntletFur: true });
+  addRangerKit(armR, kit, m);
+  g.add(armL);
+  g.add(armR);
+  makeHunterHead(g, skin, skinDark, hairCol);
+}
+
+function dressMage(
+  g: Group,
+  kit: WardenKit,
+  skin: MeshStandardMaterial,
+  skinDark: MeshStandardMaterial,
+  hairCol: MeshStandardMaterial,
+) {
+  const accentN = hex(kit.accent);
+  const m: BodyMats = {
+    cloth: mat(kit.heavy ? 0x2a2448 : 0x383264, { roughness: 0.86 }),
+    clothDark: mat(0x1a1630, { roughness: 0.9 }),
+    wrap: mat(kit.heavy ? 0x3c366c : 0x564e96, { roughness: 0.82 }),
+    wrapDark: mat(kit.heavy ? 0x282244 : 0x383264, { roughness: 0.86 }),
+    wrapMid: mat(kit.heavy ? 0x8a7cc8 : 0x7a72b0, { roughness: 0.7, emissive: accentN, emissiveIntensity: 0.12 }),
+    trim: mat(0x6a62a0, { roughness: 0.8 }),
+    trimDark: mat(0x2a2448, { roughness: 0.88 }),
+    trimMid: mat(0x9a8ed4, { roughness: 0.72, emissive: accentN, emissiveIntensity: 0.18 }),
+    metal: mat(0xc8c0e8, { metalness: 0.35, roughness: 0.35 }),
+    metalBright: mat(accentN, { metalness: 0.2, roughness: 0.16, emissive: accentN, emissiveIntensity: 1.1 }),
+    accent: mat(accentN, { metalness: 0.2, roughness: 0.16, emissive: accentN, emissiveIntensity: 1.2 }),
+  };
+
+  g.add(makeHunterLeg(-1, m, { bootFur: false }));
+  g.add(makeHunterLeg(1, m, { bootFur: false }));
+  addHunterHips(g, m, true);
+  const skirt = new Mesh(new CylinderGeometry(0.36, 0.2, 0.58, 8), m.wrap);
+  skirt.position.y = 0.52;
+  addPart(skirt, g, 1.04);
+  addHunterTorso(g, m, { xStraps: false, chestKind: "cloth" });
+  addHunterShoulders(g, m, "cloth");
+  addClothCowl(g, m);
+  const armL = makeHunterArm(-1, m, skin, { sleeve: "cloth", gauntletFur: false });
+  const armR = makeHunterArm(1, m, skin, { sleeve: "cloth", gauntletFur: false });
+  addMageKit(armL, kit, m);
+  g.add(armL);
+  g.add(armR);
+
+  const head = makeHunterHead(g, skin, skinDark, hairCol);
+  const hoodBack = new Mesh(new ConeGeometry(0.22, 0.32, 7), m.wrapDark);
+  hoodBack.position.set(0, 0.16, -0.16);
+  hoodBack.rotation.x = -0.85;
+  addPart(hoodBack, head, 1.05);
 }
 
 export function createWardenMesh(id: HeroId, kit: WardenKit) {
@@ -654,6 +743,7 @@ export function createWardenMesh(id: HeroId, kit: WardenKit) {
   );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.03;
+  shadow.name = "contactShadow";
   g.add(shadow);
 
   const skin = mat(0xc8a07c, { roughness: 0.7, metalness: 0.03 });

@@ -621,9 +621,9 @@ function dressFighter(
   const m: BodyMats = {
     cloth: mat(0x1a2026, { roughness: 0.9 }),
     clothDark: mat(0x12161a, { roughness: 0.92 }),
-    wrap: mat(kit.heavy ? 0x6a727c : 0x8a929c, { metalness: 0.78, roughness: 0.22 }),
-    wrapDark: mat(0x2a323a, { metalness: 0.55, roughness: 0.4 }),
-    wrapMid: mat(kit.heavy ? 0x7a828c : 0x9aa4ae, { metalness: 0.8, roughness: 0.2 }),
+    wrap: mat(kit.heavy ? 0x3a424a : 0x4a525a, { metalness: 0.35, roughness: 0.55 }),
+    wrapDark: mat(0x1c2228, { metalness: 0.4, roughness: 0.55 }),
+    wrapMid: mat(kit.heavy ? 0x8a929c : 0xb0b8c2, { metalness: 0.82, roughness: 0.18 }),
     trim: mat(steel, { metalness: 0.88, roughness: 0.16 }),
     trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28 }),
     trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14 }),
@@ -637,6 +637,12 @@ function dressFighter(
   addHunterHips(g, m);
   addHunterTorso(g, m, { xStraps: true, chestKind: "plate" });
   addHunterShoulders(g, m, "steel");
+  for (const sx of [-1, 1] as const) {
+    const ridge = new Mesh(new BoxGeometry(0.1, 0.06, 0.18), m.accent);
+    ridge.position.set(sx * 0.28, 1.42, 0.04);
+    ridge.rotation.z = sx * -0.2;
+    g.add(ridge);
+  }
   addSteelGorget(g, m);
   const armL = makeHunterArm(-1, m, skin, { sleeve: "steel", gauntletFur: false });
   const armR = makeHunterArm(1, m, skin, { sleeve: "steel", gauntletFur: false });
@@ -714,6 +720,16 @@ function dressMage(
   g.add(makeHunterLeg(-1, m, { bootFur: false }));
   g.add(makeHunterLeg(1, m, { bootFur: false }));
   addHunterHips(g, m, true);
+  for (const [x, z, ry] of [
+    [0.1, 0.2, 0.2],
+    [-0.12, 0.18, -0.25],
+    [0.02, -0.2, 3.0],
+  ] as const) {
+    const fold = new Mesh(new BoxGeometry(0.16, 0.46, 0.05), m.wrapDark);
+    fold.position.set(x, 0.52, z);
+    fold.rotation.y = ry;
+    addPart(fold, g);
+  }
   const skirt = new Mesh(new CylinderGeometry(0.36, 0.2, 0.58, 8), m.wrap);
   skirt.position.y = 0.52;
   addPart(skirt, g, 1.04);

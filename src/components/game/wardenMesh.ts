@@ -518,21 +518,21 @@ function addSteelGorget(g: Group, m: BodyMats) {
 }
 
 function addClothCowl(g: Group, m: BodyMats) {
-  const collarBase = new Mesh(new TorusGeometry(0.24, 0.1, 6, 14), m.wrapMid);
+  const collarBase = new Mesh(new TorusGeometry(0.22, 0.08, 6, 14), m.wrapMid);
   collarBase.rotation.x = Math.PI / 2;
-  collarBase.position.set(0, 1.4, -0.02);
-  collarBase.scale.set(1.22, 1.08, 0.95);
+  collarBase.position.set(0, 1.36, -0.06);
+  collarBase.scale.set(1.18, 1.0, 0.88);
   addPart(collarBase, g);
-  addSpikes(g, 0, 1.38, -0.04, 0.28, 22, 0.18, 0.03, m.trim, m.trimDark, m.trimMid);
-  addSpikes(g, 0, 1.5, -0.1, 0.22, 16, 0.14, 0.024, m.trim, m.trimDark, m.trimMid, 0.2);
+  addSpikes(g, 0, 1.32, -0.1, 0.24, 18, 0.14, 0.024, m.trim, m.trimDark, m.trimMid);
+  addSpikes(g, 0, 1.28, -0.16, 0.2, 12, 0.12, 0.02, m.trim, m.trimDark, m.trimMid, 0.25);
   for (const sx of [-1, 1] as const) {
     const drape = new Mesh(new ConeGeometry(0.12, 0.4, 5), m.wrapDark);
-    drape.position.set(sx * 0.34, 1.2, -0.02);
+    drape.position.set(sx * 0.34, 1.16, -0.04);
     drape.rotation.z = sx * 0.7;
     drape.rotation.x = -0.28;
     addPart(drape, g);
     const lining = new Mesh(new ConeGeometry(0.08, 0.28, 4), m.trimMid);
-    lining.position.set(sx * 0.38, 1.14, 0.04);
+    lining.position.set(sx * 0.38, 1.1, 0.02);
     lining.rotation.z = sx * 0.8;
     lining.rotation.x = -0.18;
     addPart(lining, g);
@@ -727,10 +727,10 @@ function dressMage(
   g.add(armR);
 
   const head = makeHunterHead(g, skin, skinDark, hairCol);
-  const hoodBack = new Mesh(new ConeGeometry(0.22, 0.32, 7), m.wrapDark);
-  hoodBack.position.set(0, 0.16, -0.16);
-  hoodBack.rotation.x = -0.85;
-  addPart(hoodBack, head, 1.05);
+  const hoodBack = new Mesh(new ConeGeometry(0.16, 0.28, 6), m.wrapDark);
+  hoodBack.position.set(0, 0.04, -0.24);
+  hoodBack.rotation.x = -1.15;
+  addPart(hoodBack, head);
 }
 
 export function createWardenMesh(id: HeroId, kit: WardenKit) {

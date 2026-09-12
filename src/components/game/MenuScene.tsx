@@ -161,10 +161,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
     if (showHero) {
-      cam.position.x = 1.15 + Math.sin(t * 0.1) * 0.08;
-      cam.position.y = 1.42 + Math.sin(t * 0.07) * 0.03;
-      cam.position.z = 2.35;
-      cam.lookAt(0, 1.18, 0);
+      cam.position.x = 1.55 + Math.sin(t * 0.1) * 0.1;
+      cam.position.y = 1.22 + Math.sin(t * 0.07) * 0.03;
+      cam.position.z = 3.15;
+      cam.lookAt(0, 1.02, 0);
       return;
     }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
@@ -188,7 +188,7 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
           <group position={[0, -2.6, -6]} scale={0.42}>
             <PlanetGlobe id={preview} />
           </group>
-          <HeroModel id={previewHero} weapon={loadout.weapon} armor={loadout.armor} scale={1.32} />
+          <HeroModel id={previewHero} weapon={loadout.weapon} armor={loadout.armor} scale={1.18} />
         </>
       ) : (
         <>

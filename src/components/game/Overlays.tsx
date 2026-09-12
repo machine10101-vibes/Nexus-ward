@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Crosshair, Settings2, Sparkles, Sword } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
 import { ENEMIES, inflateSpawnCount, PLANET_THEME } from "@/game/config";
@@ -6,7 +6,7 @@ import { HEROES, HERO_ORDER, ITEMS, heroStats, itemsForHero } from "@/game/heroe
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
-import { loadSave } from "@/game/save";
+import { DEFAULT_KEYS, RESERVED_CODES, formatKey, loadSave, type ArtBind } from "@/game/save";
 import type { HeroId, ItemSlot, MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/asset";
@@ -284,7 +284,7 @@ function HeroSelect() {
                 <p className="text-xs uppercase tracking-label text-muted">{h.role}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{h.blurb}</p>
                 <p className="mt-3 font-mono text-2xs tabular-nums text-subtle">
-                  {Math.round(stats.damage)} dmg · {stats.range.toFixed(1)} rng · {h.ability}
+                  {Math.round(stats.damage)} dmg · {stats.range.toFixed(1)} rng · {h.arts.map((a) => a.name).join(" / ")}
                 </p>
                 <p className="mt-1 font-mono text-2xs text-subtle">
                   {owned.filter((item) => ITEMS[item].hero === id).length} pieces owned
@@ -374,7 +374,13 @@ function Loadout() {
             <h2 className="mt-1 font-display text-2xl tracking-[-0.03em]">
               {h.name} · {h.title}
             </h2>
-            <p className="mt-1 text-sm text-muted">{h.ability} — {h.abilityHint}</p>
+            <ul className="mt-1 space-y-0.5 text-sm text-muted">
+              {h.arts.map((art) => (
+                <li key={art.name}>
+                  <span className="text-fg">{art.name}</span> — {art.hint}
+                </li>
+              ))}
+            </ul>
           </div>
           <button
             type="button"
@@ -571,7 +577,8 @@ function Result({ won }: { won: boolean }) {
 const KEYS: [string, string][] = [
   ["1 – 5", "Select battery"],
   ["Space", "Deploy wave"],
-  ["Q / E / R", "Surge / Overclock / Warden"],
+  ["Q / E", "Surge / Overclock"],
+  ["R / T / Y", "Warden arts (rebind in Settings)"],
   ["U / X", "Upgrade / Salvage"],
   ["F / A", "Speed / Auto"],
   ["Esc", "Cancel build, else pause"],
@@ -606,7 +613,7 @@ function Help() {
         <li>
           <span className="text-fg">6. Surge (Q)</span> slams every host on the grid.{" "}
           <span className="text-fg">Overclock (E)</span> haste-fires the line.{" "}
-          <span className="text-fg">Warden art (R)</span> is the hero's class ability.
+          <span className="text-fg">Warden arts (R / T / Y)</span> are the hero's three specials. Rebind them in Settings.
         </li>
         <li>
           <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.
@@ -636,6 +643,29 @@ function Help() {
 function Settings() {
   const s = useGameStore((s) => s.settings);
   const patch = useGameStore((st) => st.patchSettings);
+  const heroId = useGameStore((st) => st.heroId) ?? useGameStore((st) => st.previewHero);
+  const arts = HEROES[heroId].arts;
+  const [listen, setListen] = useState<ArtBind | null>(null);
+  useEffect(() => {
+    if (!listen) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code === "Escape") {
+        setListen(null);
+        return;
+      }
+      if (RESERVED_CODES.has(e.code)) return;
+      const next = { ...s.keys, [listen]: e.code };
+      for (const id of ["art1", "art2", "art3"] as const) {
+        if (id !== listen && next[id] === e.code) next[id] = s.keys[listen];
+      }
+      patch({ keys: next });
+      setListen(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [listen, patch, s.keys]);
   return (
     <Modal>
       <h2 className="font-display text-2xl tracking-[-0.03em]">Settings</h2>
@@ -649,6 +679,37 @@ function Settings() {
           on={s.quality === "high"}
           onClick={() => patch({ quality: s.quality === "high" ? "low" : "high" })}
         />
+        <div>
+          <p className="font-display text-2xs uppercase tracking-label text-muted">Warden arts</p>
+          <p className="mt-1 text-xs text-subtle">Click a bind, then press a key. Esc cancels.</p>
+          <div className="mt-2 space-y-1.5">
+            {(["art1", "art2", "art3"] as const).map((id, i) => (
+              <div key={id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                <div>
+                  <p className="text-sm text-fg">{arts[i].name}</p>
+                  <p className="font-mono text-2xs text-subtle">{arts[i].hint}</p>
+                </div>
+                <button
+                  type="button"
+                  className={cn(
+                    "h-9 min-w-12 rounded-md border px-3 font-mono text-sm",
+                    listen === id ? "border-accent bg-accent/15 text-accent" : "border-border text-fg",
+                  )}
+                  onClick={() => setListen(listen === id ? null : id)}
+                >
+                  {listen === id ? "…" : formatKey(s.keys[id])}
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="mt-2 text-xs text-muted underline-offset-2 hover:text-fg hover:underline"
+            onClick={() => patch({ keys: { ...DEFAULT_KEYS } })}
+          >
+            Reset art binds
+          </button>
+        </div>
       </div>
       <button
         type="button"

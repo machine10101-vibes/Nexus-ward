@@ -18,7 +18,7 @@ import {
   towerStats,
   upgradeCost,
 } from "./config";
-import { HEROES, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
+import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { MAPS, cellToWorld } from "./maps";
 import type {
   Beam,
@@ -46,7 +46,8 @@ export type HeroState = {
   z: number;
   yaw: number;
   cooldown: number;
-  abilityCd: number;
+  artCd: [number, number, number];
+  artMax: [number, number, number];
   loadout: HeroLoadout;
   stats: HeroStats;
   swing: number;
@@ -141,7 +142,8 @@ export class GameEngine {
     z: 0,
     yaw: 0,
     cooldown: 0,
-    abilityCd: 0,
+    artCd: [0, 0, 0],
+    artMax: [16, 18, 20],
     loadout: emptyLoadouts().fighter,
     stats: heroStats("fighter", emptyLoadouts().fighter),
     swing: 0,
@@ -332,13 +334,23 @@ export class GameEngine {
     this.hero.z = end.z - uz * 2.05 + ux * 1.55;
     this.hero.yaw = Math.atan2(dx, dz);
     this.hero.cooldown = 0;
-    this.hero.abilityCd = 0;
+    this.hero.artCd = [0, 0, 0];
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
     this.hero.swing = 0;
   }
 
   applyHeroGear(loadout: HeroLoadout) {
     this.hero.loadout = { ...loadout };
     this.hero.stats = heroStats(this.hero.id, loadout);
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(this.hero.id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
     this.hudDirty = true;
   }
 
@@ -646,7 +658,9 @@ export class GameEngine {
     this.time += dt;
     if (this.surgeCd > 0) this.surgeCd = Math.max(0, this.surgeCd - dt);
     if (this.overclockCd > 0) this.overclockCd = Math.max(0, this.overclockCd - dt);
-    if (this.hero.abilityCd > 0) this.hero.abilityCd = Math.max(0, this.hero.abilityCd - dt);
+    this.hero.artCd[0] = Math.max(0, this.hero.artCd[0] - dt);
+    this.hero.artCd[1] = Math.max(0, this.hero.artCd[1] - dt);
+    this.hero.artCd[2] = Math.max(0, this.hero.artCd[2] - dt);
     if (this.hero.swing > 0) this.hero.swing = Math.max(0, this.hero.swing - dt);
     if (this.phase === "build") {
       this.buildClock += dt;
@@ -923,49 +937,127 @@ export class GameEngine {
     }
   }
 
-  castHeroAbility() {
+  hostsInRange(range: number, flying: boolean) {
+    const r2 = range * range;
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      if (dist2(this.hero.x, this.hero.z, e.x, e.z) <= r2) out.push(e);
+    }
+    return out;
+  }
+
+  hostsOnLine(reach: number, width: number, flying: boolean) {
+    const h = this.hero;
+    const fx = Math.sin(h.yaw);
+    const fz = Math.cos(h.yaw);
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      const dx = e.x - h.x;
+      const dz = e.z - h.z;
+      const along = dx * fx + dz * fz;
+      const perp = Math.abs(dx * fz - dz * fx);
+      if (along > 0.15 && along < reach && perp < width) out.push(e);
+    }
+    return out;
+  }
+
+  castHeroAbility(slot: 0 | 1 | 2) {
     if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
     const h = this.hero;
-    if (h.abilityCd > 0) return false;
+    if (h.artCd[slot] > 0) return false;
     const stats = h.stats;
-    h.abilityCd = stats.abilityCd;
+    const art = HEROES[h.id].arts[slot];
+    const cd = artCooldown(h.id, slot, h.loadout);
+    h.artCd[slot] = cd;
+    h.artMax[slot] = cd;
     h.swing = 0.34;
-    const def = HEROES[h.id];
+    let n = 0;
     if (h.id === "fighter") {
-      const reach = stats.range + 1.15;
-      let n = 0;
-      for (const e of this.enemies) {
-        if (!e.alive || e.flying) continue;
-        if (dist2(h.x, h.z, e.x, e.z) <= reach * reach) {
+      if (slot === 0) {
+        const hit = this.hostsInRange(stats.range + 1.15, false);
+        for (const e of hit) {
           this.hurt(e, stats.damage * 2.15, stats.kind);
           n += 1;
         }
+        this.spawnBurst(h.x + Math.sin(h.yaw) * 1.1, 0.7, h.z + Math.cos(h.yaw) * 1.1, 2.2, stats.color);
+      } else if (slot === 1) {
+        const hit = this.hostsInRange(stats.range + 1.55, false);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 1.35, stats.kind);
+          this.applySlow(e, 0.42, 2.4);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 0.45, h.z, 2.8, stats.color);
+      } else {
+        const hit = this.hostsOnLine(stats.range + 3.2, 0.85, false);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 2.6, stats.kind);
+          n += 1;
+        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        this.spawnBeam(h.x, 0.85, h.z, h.x + fx * 4.2, 0.7, h.z + fz * 4.2, stats.color, 0.2, 0.12, "rail");
       }
-      this.spawnBurst(h.x + Math.sin(h.yaw) * 1.1, 0.7, h.z + Math.cos(h.yaw) * 1.1, 2.2, stats.color);
-      this.lastEvent = n ? `${def.ability} · ${n} cut` : `${def.ability} · empty arc`;
     } else if (h.id === "ranger") {
-      const marked: Enemy[] = [];
-      for (const e of this.enemies) {
-        if (!e.alive) continue;
-        if (dist2(h.x, h.z, e.x, e.z) <= (stats.range + 1.4) * (stats.range + 1.4)) marked.push(e);
-      }
+      const marked = this.hostsInRange(stats.range + 1.4, true);
       marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
-      const shots = marked.slice(0, 5);
-      for (const e of shots) this.fireHero(e);
-      this.lastEvent = shots.length ? `${def.ability} · ${shots.length} marked` : `${def.ability} · no shot`;
-    } else {
-      const reach = 4.4 + (h.loadout.weapon === "nova-crozier" ? 0.6 : 0);
-      let n = 0;
-      for (const e of this.enemies) {
-        if (!e.alive) continue;
-        if (dist2(h.x, h.z, e.x, e.z) <= reach * reach) {
-          this.hurt(e, stats.damage * 1.55, stats.kind);
+      if (slot === 0) {
+        const shots = marked.slice(0, 5);
+        for (const e of shots) {
+          this.fireHero(e);
+          n += 1;
+        }
+      } else if (slot === 1) {
+        const line = this.hostsOnLine(stats.range + 2.4, 0.7, true);
+        for (const e of line) {
+          this.hurt(e, stats.damage * 2.8, stats.kind);
+          this.spawnBeam(h.x, 1.2, h.z, e.x, e.y + 0.25, e.z, stats.color, 0.12, 0.08, "rail");
+          n += 1;
+        }
+        if (!line.length) {
+          const fx = Math.sin(h.yaw);
+          const fz = Math.cos(h.yaw);
+          this.spawnBeam(h.x, 1.2, h.z, h.x + fx * (stats.range + 2), 1.1, h.z + fz * (stats.range + 2), stats.color, 0.12, 0.08, "rail");
+        }
+      } else {
+        const shots = marked.slice(0, 8);
+        for (const e of shots) {
+          this.hurt(e, stats.damage * 0.85, stats.kind);
+          this.fireHero(e);
           n += 1;
         }
       }
+    } else if (slot === 0) {
+      const reach = 4.4 + (h.loadout.weapon === "nova-crozier" ? 0.6 : 0);
+      const hit = this.hostsInRange(reach, true);
+      for (const e of hit) {
+        this.hurt(e, stats.damage * 1.55, stats.kind);
+        n += 1;
+      }
       this.spawnBurst(h.x, 1.1, h.z, 3.6, stats.color);
-      this.lastEvent = n ? `${def.ability} · ${n} scorched` : `${def.ability} · empty grid`;
+    } else if (slot === 1) {
+      const marked = this.hostsInRange(stats.range + 1.2, true);
+      marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+      const shots = marked.slice(0, 4);
+      for (const e of shots) {
+        this.hurt(e, stats.damage * 1.25, stats.kind);
+        this.spawnBeam(h.x, 1.35, h.z, e.x, e.y + 0.28, e.z, stats.color, 0.16, 0.08, "lance");
+        n += 1;
+      }
+    } else {
+      const reach = 5.1 + (h.loadout.weapon === "nova-crozier" ? 0.5 : 0);
+      const hit = this.hostsInRange(reach, true);
+      for (const e of hit) {
+        this.hurt(e, stats.damage * 1.85, stats.kind);
+        n += 1;
+      }
+      this.spawnBurst(h.x, 1.2, h.z, 4.4, stats.color);
     }
+    this.lastEvent = n ? `${art.name} · ${n}` : `${art.name} · empty`;
     this.addTrauma(0.28);
     this.sfx = "surge";
     this.hudDirty = true;

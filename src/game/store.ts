@@ -34,8 +34,8 @@ export type HudSnap = {
   rankGen: number;
   placeGen: number;
   heroId: HeroId | null;
-  heroAbilityCd: number;
-  heroAbilityMax: number;
+  heroArtCd: [number, number, number];
+  heroArtMax: [number, number, number];
 };
 
 type GameStore = {
@@ -114,8 +114,8 @@ const emptyHud: HudSnap = {
   rankGen: 0,
   placeGen: 0,
   heroId: null,
-  heroAbilityCd: 0,
-  heroAbilityMax: 16,
+  heroArtCd: [0, 0, 0],
+  heroArtMax: [16, 18, 20],
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -269,7 +269,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.rankGen === cur.rankGen &&
       next.placeGen === cur.placeGen &&
       next.heroId === cur.heroId &&
-      Math.floor(next.heroAbilityCd) === Math.floor(cur.heroAbilityCd) &&
+      next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
       return;
@@ -281,7 +281,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ hud: next, screen: s, buildType: engine.buildType });
   },
   patchSettings: (p) => {
-    const settings = { ...get().settings, ...p };
+    const cur = get().settings;
+    const settings = { ...cur, ...p, keys: { ...cur.keys, ...p.keys } };
     set({ settings });
     saveSettings(settings);
     audio.setVolumes(settings);
@@ -328,8 +329,8 @@ function snapHud(): HudSnap {
     rankGen: engine.rankGen,
     placeGen: engine.placeGen,
     heroId: engine.hero.id,
-    heroAbilityCd: engine.hero.abilityCd,
-    heroAbilityMax: engine.hero.stats.abilityCd,
+    heroArtCd: [...engine.hero.artCd],
+    heroArtMax: [...engine.hero.artMax],
   };
 }
 

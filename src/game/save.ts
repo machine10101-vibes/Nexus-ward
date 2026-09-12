@@ -4,12 +4,62 @@ import type { HeroId, ItemId, MapId, Quality } from "./types";
 const KEY = "nexus-ward-save";
 const VERSION = 2;
 
+export type ArtBind = "art1" | "art2" | "art3";
+
+export type Keybinds = {
+  art1: string;
+  art2: string;
+  art3: string;
+};
+
+export const DEFAULT_KEYS: Keybinds = {
+  art1: "KeyR",
+  art2: "KeyT",
+  art3: "KeyY",
+};
+
+export const RESERVED_CODES = new Set([
+  "Escape",
+  "Space",
+  "Tab",
+  "Enter",
+  "MetaLeft",
+  "MetaRight",
+  "ControlLeft",
+  "ControlRight",
+  "AltLeft",
+  "AltRight",
+  "ShiftLeft",
+  "ShiftRight",
+  "Digit1",
+  "Digit2",
+  "Digit3",
+  "Digit4",
+  "Digit5",
+  "KeyQ",
+  "KeyE",
+  "KeyL",
+  "KeyA",
+  "KeyV",
+  "KeyU",
+  "KeyX",
+  "KeyF",
+]);
+
+export function formatKey(code: string) {
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  if (code.startsWith("Arrow")) return code.slice(5);
+  return code.replace(/Left|Right/, "");
+}
+
 export type Settings = {
   master: number;
   sfx: number;
   music: number;
   shake: boolean;
   quality: Quality;
+  keys: Keybinds;
 };
 
 export type HeroSave = {
@@ -36,6 +86,7 @@ const defaults: SaveData = {
     music: 0.35,
     shake: true,
     quality: "high",
+    keys: { ...DEFAULT_KEYS },
   },
   hero: {
     last: "fighter",
@@ -48,7 +99,11 @@ function migrate(raw: SaveData): SaveData {
   const s = {
     ...defaults,
     ...raw,
-    settings: { ...defaults.settings, ...raw.settings },
+    settings: {
+      ...defaults.settings,
+      ...raw.settings,
+      keys: { ...defaults.settings.keys, ...raw.settings?.keys },
+    },
     hero: {
       ...defaults.hero,
       ...raw.hero,

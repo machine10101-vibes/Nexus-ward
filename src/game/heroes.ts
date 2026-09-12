@@ -1,5 +1,11 @@
 import type { DamageKind, HeroId, ItemId, ItemSlot } from "./types";
 
+export type HeroArt = {
+  name: string;
+  hint: string;
+  cd: number;
+};
+
 export type HeroDef = {
   id: HeroId;
   name: string;
@@ -14,6 +20,7 @@ export type HeroDef = {
   abilityCd: number;
   ability: string;
   abilityHint: string;
+  arts: [HeroArt, HeroArt, HeroArt];
   hitsFlying: boolean;
   kind: DamageKind;
   starterWeapon: ItemId;
@@ -67,6 +74,11 @@ export const HEROES: Record<HeroId, HeroDef> = {
     abilityCd: 16,
     ability: "Cleave",
     abilityHint: "Arc the blade through every host in reach.",
+    arts: [
+      { name: "Cleave", hint: "Arc the blade through every host in reach.", cd: 16 },
+      { name: "Guard Break", hint: "Slam the grid. Slows everything nearby.", cd: 18 },
+      { name: "Ion Rush", hint: "Drive a cut down the facing line.", cd: 20 },
+    ],
     hitsFlying: false,
     kind: "shell",
     starterWeapon: "ion-cleaver",
@@ -86,6 +98,11 @@ export const HEROES: Record<HeroId, HeroDef> = {
     abilityCd: 14,
     ability: "Volley",
     abilityHint: "Dump a burst into the nearest hosts, including air.",
+    arts: [
+      { name: "Volley", hint: "Dump a burst into the nearest hosts, including air.", cd: 14 },
+      { name: "Rail Pin", hint: "A piercing shot through the lane, air included.", cd: 16 },
+      { name: "Suppress", hint: "Walk fire across more hosts. Weaker, wider.", cd: 12 },
+    ],
     hitsFlying: true,
     kind: "bolt",
     starterWeapon: "pulse-rifle",
@@ -105,6 +122,11 @@ export const HEROES: Record<HeroId, HeroDef> = {
     abilityCd: 18,
     ability: "Nova",
     abilityHint: "Detonate aether in a wide sphere. Hits everything.",
+    arts: [
+      { name: "Nova", hint: "Detonate aether in a wide sphere. Hits everything.", cd: 18 },
+      { name: "Lance Storm", hint: "Four heavy lances into the nearest hosts.", cd: 16 },
+      { name: "Rift Well", hint: "A deeper burst. Cooks a wide pocket of the grid.", cd: 22 },
+    ],
     hitsFlying: true,
     kind: "beam",
     starterWeapon: "aether-rod",
@@ -329,6 +351,18 @@ export function heroStats(id: HeroId, loadout: HeroLoadout): HeroStats {
     kind: h.kind,
     color: h.accent,
   };
+}
+
+export function artCooldown(id: HeroId, slot: 0 | 1 | 2, loadout: HeroLoadout) {
+  const art = HEROES[id].arts[slot];
+  let cd = art.cd;
+  for (const itemId of [loadout.weapon, loadout.armor] as const) {
+    if (!itemId) continue;
+    const item = ITEMS[itemId];
+    if (item.hero !== id) continue;
+    cd += item.abilityCd;
+  }
+  return Math.max(8, cd);
 }
 
 export function itemsForHero(id: HeroId, slot?: ItemSlot) {

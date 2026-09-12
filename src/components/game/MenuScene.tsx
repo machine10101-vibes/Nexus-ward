@@ -178,6 +178,7 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       <directionalLight position={[6, 8, 4]} intensity={showHero ? 3.1 : 2.15} color={showHero ? "#fff4dc" : theme.dir} />
       {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={1.35} color="#c8dcff" /> : null}
       {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={1.7} color="#fff6e8" /> : null}
+      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={1.15} color="#9ad0ff" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />

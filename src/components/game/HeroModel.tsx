@@ -36,27 +36,60 @@ export function HeroModel({
     const armL = g.getObjectByName("armL");
     const armR = g.getObjectByName("armR");
     const torso = g.getObjectByName("playerTorso");
-    const pose = (obj: Object3D | undefined, x: number, y = 0) => {
+    const pose = (obj: Object3D | undefined, x: number, y = 0, z = 0) => {
       if (!obj) return;
       obj.rotation.x = x;
       obj.rotation.y = y;
+      obj.rotation.z = z;
     };
 
     if (animate === "combat") {
       const swing = engine.hero.swing;
-      const punch = swing > 0 ? Math.min(1, swing / 0.34) : 0;
-      if (id === "fighter") {
-        pose(armR, -punch * 1.45);
-        pose(armL, punch * 0.55);
-      } else if (id === "ranger") {
-        pose(armR, -punch * 0.7);
-        pose(armL, -punch * 0.2);
-      } else {
-        pose(armR, -punch * 0.35);
-        pose(armL, -punch * 1.05);
+      const art = engine.hero.lastArt;
+      const punch = swing > 0 ? Math.min(1, swing / 0.42) : 0;
+      if (punch <= 0) {
+        g.position.y = Math.sin(t * 1.25) * 0.008;
+        pose(armL, Math.sin(t * 0.95) * 0.04);
+        pose(armR, Math.sin(t * 0.95 + 0.6) * 0.04);
+        if (head) head.rotation.x = -0.12 + Math.sin(t * 0.5) * 0.02;
+        if (torso) torso.rotation.x = 0;
+        return;
       }
-      if (head) head.rotation.x = -0.14 - punch * 0.1;
-      if (torso) torso.rotation.x = punch * 0.08;
+      g.position.y = 0;
+      if (id === "fighter") {
+        if (art === 1) {
+          pose(armR, punch * 0.95);
+          pose(armL, punch * 0.85);
+        } else if (art === 2) {
+          pose(armR, -punch * 1.75);
+          pose(armL, punch * 0.35);
+        } else {
+          pose(armR, -punch * 1.2, punch * 0.9);
+          pose(armL, punch * 0.45, -punch * 0.25);
+        }
+      } else if (id === "ranger") {
+        if (art === 1) {
+          pose(armR, -punch * 0.95);
+          pose(armL, -punch * 0.7);
+        } else if (art === 2) {
+          pose(armR, -punch * 0.55, punch * 0.7);
+          pose(armL, -punch * 0.25);
+        } else {
+          pose(armR, -punch * 0.75);
+          pose(armL, -punch * 0.22);
+        }
+      } else if (art === 0) {
+        pose(armR, -punch * 0.55, 0, punch * 0.45);
+        pose(armL, -punch * 0.85, 0, -punch * 0.4);
+      } else if (art === 2) {
+        pose(armL, punch * 0.7);
+        pose(armR, punch * 0.35);
+      } else {
+        pose(armR, -punch * 0.3);
+        pose(armL, -punch * 1.15);
+      }
+      if (head) head.rotation.x = -0.14 - punch * (art === 1 && id === "fighter" ? 0.22 : 0.1);
+      if (torso) torso.rotation.x = punch * (art === 2 && id === "fighter" ? 0.16 : 0.08);
       return;
     }
 

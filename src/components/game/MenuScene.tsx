@@ -161,10 +161,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
     if (showHero) {
-      cam.position.x = 1.55 + Math.sin(t * 0.1) * 0.1;
-      cam.position.y = 1.22 + Math.sin(t * 0.07) * 0.03;
-      cam.position.z = 3.15;
-      cam.lookAt(0, 1.02, 0);
+      cam.position.x = 1.42 + Math.sin(t * 0.1) * 0.08;
+      cam.position.y = 1.16 + Math.sin(t * 0.07) * 0.025;
+      cam.position.z = 2.88;
+      cam.lookAt(0, 1.06, 0);
       return;
     }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
@@ -179,6 +179,7 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
       {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={1.35} color="#c8dcff" /> : null}
       {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={1.7} color="#fff6e8" /> : null}
       {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={1.15} color="#9ad0ff" /> : null}
+      {showHero ? <pointLight position={[0.35, 1.7, 1.4]} intensity={6.5} distance={4.2} color="#fff1dc" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />

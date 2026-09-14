@@ -36,6 +36,8 @@ export function HeroModel({
     const armL = g.getObjectByName("armL");
     const armR = g.getObjectByName("armR");
     const torso = g.getObjectByName("playerTorso");
+    const orbit = g.getObjectByName("orbit");
+    if (orbit) orbit.rotation.y = t * 0.85;
     const pose = (obj: Object3D | undefined, x: number, y = 0, z = 0) => {
       if (!obj) return;
       obj.rotation.x = x;

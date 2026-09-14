@@ -565,18 +565,18 @@ function addHunterShoulders(
 ) {
   for (const sx of [-1, 1] as const) {
     const pad = new Mesh(
-      new BoxGeometry(kind === "steel" ? 0.2 : 0.15, kind === "steel" ? 0.12 : 0.09, kind === "steel" ? 0.2 : 0.17),
+      new BoxGeometry(kind === "steel" ? 0.28 : 0.16, kind === "steel" ? 0.16 : 0.09, kind === "steel" ? 0.26 : 0.17),
       kind === "steel" ? m.metalBright : kind === "cloth" ? m.wrapMid : m.wrapMid,
     );
-    pad.position.set(sx * (kind === "steel" ? 0.26 : 0.24), 1.4, 0);
-    pad.rotation.z = sx * -0.18;
+    pad.position.set(sx * (kind === "steel" ? 0.3 : 0.24), 1.42, 0.02);
+    pad.rotation.z = sx * -0.22;
     addPart(pad, g, 1.05);
     const pad2 = new Mesh(
-      new BoxGeometry(kind === "steel" ? 0.16 : 0.12, 0.07, kind === "steel" ? 0.16 : 0.14),
+      new BoxGeometry(kind === "steel" ? 0.2 : 0.12, kind === "steel" ? 0.1 : 0.07, kind === "steel" ? 0.2 : 0.14),
       kind === "steel" ? m.metal : m.wrapDark,
     );
-    pad2.position.set(sx * (kind === "steel" ? 0.32 : 0.28), 1.34, 0.02);
-    pad2.rotation.z = sx * -0.28;
+    pad2.position.set(sx * (kind === "steel" ? 0.38 : 0.28), 1.34, 0.04);
+    pad2.rotation.z = sx * -0.32;
     addPart(pad2, g);
     const ring = new Mesh(new TorusGeometry(0.035, 0.01, 4, 8), kind === "cloth" ? m.accent : m.metal);
     ring.position.set(sx * 0.2, 1.38, 0.12);
@@ -664,10 +664,11 @@ function addClothCowl(g: Group, m: BodyMats) {
 }
 
 function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
-  const blade = kit.bigWep ? 0.86 : 0.68;
+  const blade = kit.bigWep ? 1.12 : 0.92;
   const sword = new Group();
-  sword.position.set(0.2, -0.38, 0.2);
-  sword.rotation.set(0.05, 0.15, -1.05);
+  sword.name = "wep";
+  sword.position.set(0.22, -0.34, 0.28);
+  sword.rotation.set(0.15, 0.35, -1.15);
   const grip = new Mesh(new CylinderGeometry(0.022, 0.026, 0.18, 6), mat(0x3a2e24, { roughness: 0.8 }));
   grip.rotation.z = Math.PI / 2;
   sword.add(grip);
@@ -683,7 +684,7 @@ function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
   const guard = new Mesh(new BoxGeometry(0.05, 0.22, 0.05), m.metalBright);
   guard.position.x = 0.1;
   sword.add(guard);
-  const bladeM = new Mesh(new BoxGeometry(blade, 0.085, 0.02), mat(0xf2f6fa, { metalness: 0.94, roughness: 0.08 }));
+  const bladeM = new Mesh(new BoxGeometry(blade, 0.11, 0.028), mat(0xf2f6fa, { metalness: 0.94, roughness: 0.08 }));
   bladeM.position.x = 0.12 + blade / 2;
   addPart(bladeM, sword);
   const fuller = new Mesh(new BoxGeometry(blade * 0.82, 0.018, 0.006), m.accent);
@@ -696,9 +697,9 @@ function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
   armR.add(sword);
 
   const shield = new Group();
-  shield.position.set(-0.24, -0.16, 0.18);
-  shield.rotation.y = 0.85;
-  const face = new Mesh(new BoxGeometry(0.07, 0.5, 0.32), m.metalBright);
+  shield.position.set(-0.22, -0.12, 0.28);
+  shield.rotation.y = 0.28;
+  const face = new Mesh(new BoxGeometry(0.08, 0.56, 0.38), m.metalBright);
   addPart(face, shield, 1.04);
   const taper = new Mesh(new BoxGeometry(0.055, 0.22, 0.2), m.metal);
   taper.position.set(0.01, -0.3, 0);
@@ -723,10 +724,11 @@ function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
 }
 
 function addRangerKit(armR: Group, kit: WardenKit, m: BodyMats) {
-  const body = kit.bigWep ? 0.7 : 0.54;
+  const body = kit.bigWep ? 0.92 : 0.74;
   const rifle = new Group();
-  rifle.position.set(0.16, -0.36, 0.2);
-  rifle.rotation.set(1.2, 0.15, 0.08);
+  rifle.name = "wep";
+  rifle.position.set(0.14, -0.28, 0.32);
+  rifle.rotation.set(0.35, 0.55, 0.12);
   const stock = new Mesh(new BoxGeometry(0.06, 0.09, 0.16), m.wrapMid);
   stock.position.z = -body * 0.42;
   addPart(stock, rifle);
@@ -769,9 +771,10 @@ function addRangerKit(armR: Group, kit: WardenKit, m: BodyMats) {
 }
 
 function addMageKit(armL: Group, kit: WardenKit, m: BodyMats) {
-  const h = kit.bigWep ? 1.22 : 1.02;
+  const h = kit.bigWep ? 1.48 : 1.28;
   const staff = new Group();
-  staff.position.set(-0.2, -0.52, 0.1);
+  staff.name = "wep";
+  staff.position.set(-0.12, -0.42, 0.28);
   const shaft = new Mesh(new CylinderGeometry(0.018, 0.024, h, 6), mat(0x3a3458, { roughness: 0.55, metalness: 0.25 }));
   shaft.position.y = h * 0.38;
   addPart(shaft, staff);
@@ -783,7 +786,7 @@ function addMageKit(armL: Group, kit: WardenKit, m: BodyMats) {
   const cradle = new Mesh(new CylinderGeometry(0.04, 0.02, 0.08, 6), m.wrapMid);
   cradle.position.y = h * 0.7;
   staff.add(cradle);
-  const crystal = new Mesh(new OctahedronGeometry(kit.bigWep ? 0.13 : 0.1, 0), m.accent);
+  const crystal = new Mesh(new OctahedronGeometry(kit.bigWep ? 0.16 : 0.13, 0), m.accent);
   crystal.position.y = h * 0.82;
   addPart(crystal, staff);
   const core = new Mesh(new SphereGeometry(0.04, 6, 5), mat(0xffffff, { emissive: hex(kit.accent) || 0x8b7cc8, emissiveIntensity: 1.4 }));
@@ -856,6 +859,12 @@ function dressFighter(
   const plackart = new Mesh(new BoxGeometry(0.32, 0.1, 0.1), m.metalBright);
   plackart.position.set(0, 1.02, 0.2);
   addPart(plackart, g);
+  const tabard = new Mesh(new BoxGeometry(0.18, 0.72, 0.045), m.accent);
+  tabard.position.set(0, 0.78, 0.26);
+  addPart(tabard, g);
+  const tabardBack = new Mesh(new BoxGeometry(0.2, 0.64, 0.04), m.wrapDark);
+  tabardBack.position.set(0, 0.82, -0.24);
+  addPart(tabardBack, g);
   addSteelGorget(g, m);
   const armL = makeHunterArm(-1, m, skin, { sleeve: "steel", gauntletFur: false });
   const armR = makeHunterArm(1, m, skin, { sleeve: "steel", gauntletFur: false });
@@ -943,6 +952,14 @@ function dressRanger(
   bandolier.position.set(0.04, 1.12, 0.24);
   bandolier.rotation.z = 0.55;
   g.add(bandolier);
+  const cape = new Mesh(new BoxGeometry(0.38, 0.55, 0.06), m.wrapDark);
+  cape.position.set(0, 1.05, -0.26);
+  cape.rotation.x = 0.18;
+  addPart(cape, g);
+  const capeFold = new Mesh(new BoxGeometry(0.16, 0.48, 0.04), m.wrapMid);
+  capeFold.position.set(0.1, 1.0, -0.3);
+  capeFold.rotation.x = 0.22;
+  addPart(capeFold, g);
   const quiver = new Group();
   quiver.position.set(-0.16, 1.05, -0.24);
   quiver.rotation.z = 0.25;
@@ -1012,12 +1029,15 @@ function dressMage(
     fold.rotation.y = ry;
     addPart(fold, g);
   }
-  const skirt = new Mesh(new CylinderGeometry(0.38, 0.2, 0.6, 10), m.wrap);
-  skirt.position.y = 0.5;
+  const skirt = new Mesh(new CylinderGeometry(0.48, 0.2, 0.68, 10), m.wrap);
+  skirt.position.y = 0.48;
   addPart(skirt, g, 1.04);
-  const hem = new Mesh(new CylinderGeometry(0.4, 0.36, 0.08, 10), m.wrapDark);
-  hem.position.y = 0.22;
+  const hem = new Mesh(new CylinderGeometry(0.52, 0.44, 0.1, 10), m.wrapDark);
+  hem.position.y = 0.18;
   addPart(hem, g);
+  const overskirt = new Mesh(new CylinderGeometry(0.42, 0.22, 0.36, 8), m.wrapMid);
+  overskirt.position.y = 0.62;
+  addPart(overskirt, g);
   addHunterTorso(g, m, { xStraps: false, chestKind: "cloth" });
   addHunterShoulders(g, m, "cloth");
   addClothCowl(g, m);
@@ -1028,7 +1048,7 @@ function dressMage(
   g.add(armR);
 
   for (const sx of [-1, 1] as const) {
-    const bell = new Mesh(new CylinderGeometry(0.14, 0.09, 0.22, 7), m.wrap);
+    const bell = new Mesh(new CylinderGeometry(0.18, 0.1, 0.28, 7), m.wrap);
     bell.position.set(sx * 0.38, 1.02, 0.02);
     bell.rotation.z = sx * 0.35;
     addPart(bell, g);
@@ -1043,12 +1063,16 @@ function dressMage(
   const runeCore = new Mesh(new SphereGeometry(0.03, 6, 5), m.metalBright);
   runeCore.position.set(0, 1.2, 0.28);
   g.add(runeCore);
+  const orbit = new Group();
+  orbit.name = "orbit";
+  orbit.position.set(0, 1.28, 0);
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
-    const shard = new Mesh(new OctahedronGeometry(0.032, 0), m.accent);
-    shard.position.set(Math.cos(a) * 0.4, 1.24 + Math.sin(a * 2) * 0.07, Math.sin(a) * 0.24);
-    g.add(shard);
+    const shard = new Mesh(new OctahedronGeometry(0.04, 0), m.accent);
+    shard.position.set(Math.cos(a) * 0.46, Math.sin(a * 2) * 0.08, Math.sin(a) * 0.28);
+    orbit.add(shard);
   }
+  g.add(orbit);
 
   const head = makeHunterHead(g, skin, skinDark, hairCol, "mage");
   const hoodPanel = new Mesh(new BoxGeometry(0.3, 0.4, 0.08), m.wrapDark);

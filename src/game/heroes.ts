@@ -76,7 +76,7 @@ export const HEROES: Record<HeroId, HeroDef> = {
     abilityHint: "Sweep the blade. Heavy hits on every host in reach. Follow-through widens the next cuts.",
     arts: [
       { name: "Cleave", hint: "Sweep every host in reach. Follow-through widens the next cuts.", cd: 16 },
-      { name: "Guard Break", hint: "Slam the pack — soft damage, long slow. Next cuts pin what they hit.", cd: 18 },
+      { name: "Guard Break", hint: "Slam a pinning field under the pack. Next cuts keep them slow.", cd: 18 },
       { name: "Ion Rush", hint: "Cut the facing lane. The charge leaves the blade hotter.", cd: 20 },
     ],
     hitsFlying: false,
@@ -101,7 +101,7 @@ export const HEROES: Record<HeroId, HeroDef> = {
     arts: [
       { name: "Volley", hint: "Three hard shots into the closest hosts. Hands stay fast after.", cd: 14 },
       { name: "Rail Pin", hint: "Pierce the facing line and pin it. The next rounds still sting.", cd: 16 },
-      { name: "Suppress", hint: "Walk weak fire across the pack. Follow-up shots keep them slow.", cd: 12 },
+      { name: "Suppress", hint: "Walk weak fire across the pack. A suppress field keeps the lane slow.", cd: 12 },
     ],
     hitsFlying: true,
     kind: "bolt",
@@ -121,11 +121,11 @@ export const HEROES: Record<HeroId, HeroDef> = {
     armor: 2,
     abilityCd: 18,
     ability: "Nova",
-    abilityHint: "Detonate aether in a wide sphere. Residual heat cooks the next lance.",
+    abilityHint: "Detonate aether. Residual heat cooks the next lance and the ground.",
     arts: [
-      { name: "Nova", hint: "Detonate aether in a wide sphere. Residual heat cooks the next lance.", cd: 18 },
+      { name: "Nova", hint: "Detonate aether. Residual heat cooks the next lance and the ground.", cd: 18 },
       { name: "Lance Storm", hint: "Four heavy lances. The staff keeps a second bolt ready.", cd: 16 },
-      { name: "Rift Well", hint: "Open a hold. The well clings to later strikes.", cd: 22 },
+      { name: "Rift Well", hint: "Open a hold that keeps cooking the pocket.", cd: 22 },
     ],
     hitsFlying: true,
     kind: "beam",

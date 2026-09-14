@@ -666,6 +666,7 @@ function HeroLayer() {
   const stamp = useGameStore((s) => `${s.hud.heroId}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.weapon}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.armor}`);
   void stamp;
   const group = useRef<Group>(null);
+  const field = useRef<Mesh>(null);
   useFrame(() => {
     const g = group.current;
     if (!g) return;
@@ -673,6 +674,17 @@ function HeroLayer() {
     g.rotation.y = hero.yaw;
     const punch = hero.swing > 0 ? 1 + hero.swing * 0.12 : 1;
     g.scale.setScalar(punch);
+    const ring = field.current;
+    if (ring) {
+      const live = hero.zoneUntil > engine.time && hero.zoneRange > 0;
+      ring.visible = live;
+      if (live) {
+        const r = Math.max(1.1, hero.zoneRange * 0.55);
+        ring.scale.setScalar(r);
+        const mat = ring.material as MeshBasicMaterial;
+        mat.opacity = 0.22 + Math.sin(engine.visualTime * 6) * 0.08;
+      }
+    }
   });
   return (
     <group ref={group} position={[hero.x, hero.y, hero.z]}>
@@ -680,6 +692,10 @@ function HeroLayer() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <ringGeometry args={[0.28, 0.38, 20]} />
         <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh ref={field} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} visible={false}>
+        <ringGeometry args={[0.72, 1.05, 28]} />
+        <meshBasicMaterial color={hero.stats.color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   );

@@ -135,13 +135,13 @@ function makeHunterHead(
   head.position.set(0, 1.6, 0.02);
   head.rotation.x = -0.12;
 
-  const skull = new Mesh(new SphereGeometry(0.2, 16, 12), skin);
-  skull.scale.set(id === "fighter" ? 1.06 : 1.02, id === "mage" ? 1.2 : 1.16, 1.0);
-  addPart(skull, head, 1.08, 0x1a1008);
+  const skull = new Mesh(new SphereGeometry(0.2, 10, 8), skin);
+  skull.scale.set(id === "fighter" ? 1.06 : 1.02, id === "mage" ? 1.18 : 1.14, 0.98);
+  addPart(skull, head, 1.1, 0x1a1008);
 
-  const temple = new Mesh(new SphereGeometry(0.175, 10, 8), skin);
-  temple.scale.set(1.18, 0.72, 0.82);
-  temple.position.set(0, 0.04, 0.01);
+  const temple = new Mesh(new SphereGeometry(0.16, 8, 6), skin);
+  temple.scale.set(1.16, 0.68, 0.78);
+  temple.position.set(0, 0.04, 0.0);
   head.add(temple);
 
   const jawW = id === "fighter" ? 1.22 : id === "ranger" ? 1.1 : 1.02;
@@ -174,16 +174,16 @@ function makeHunterHead(
     head.add(zygoma);
   }
 
-  const bridge = new Mesh(new SphereGeometry(0.028, 6, 5), skinDark);
-  bridge.scale.set(0.7, 1.55, 1.1);
-  bridge.position.set(0, 0.035, 0.2);
+  const bridge = new Mesh(new SphereGeometry(0.03, 6, 5), skinDark);
+  bridge.scale.set(0.72, 1.6, 1.15);
+  bridge.position.set(0, 0.04, 0.21);
   head.add(bridge);
-  const nose = new Mesh(new SphereGeometry(0.038, 7, 6), skinDark);
-  nose.scale.set(0.85, 0.95, 1.25);
-  nose.position.set(0, -0.02, 0.235);
+  const nose = new Mesh(new SphereGeometry(0.042, 6, 5), skinDark);
+  nose.scale.set(0.88, 0.95, 1.35);
+  nose.position.set(0, -0.015, 0.255);
   head.add(nose);
-  const tip = new Mesh(new SphereGeometry(0.022, 6, 5), skin);
-  tip.position.set(0, -0.04, 0.26);
+  const tip = new Mesh(new SphereGeometry(0.024, 5, 4), skin);
+  tip.position.set(0, -0.038, 0.285);
   head.add(tip);
   for (const sx of [-1, 1] as const) {
     const nostril = new Mesh(new SphereGeometry(0.008, 4, 3), mat(0x2a1810, { roughness: 0.9 }));
@@ -216,20 +216,20 @@ function makeHunterHead(
     lidLow.scale.set(1.1, 0.28, 0.65);
     lidLow.position.set(sx * 0.078, 0.01, 0.2);
     head.add(lidLow);
-    const sclera = new Mesh(new SphereGeometry(0.036, 8, 6), mat(0xf2ebe0, { roughness: 0.32, flatShading: false }));
-    sclera.position.set(sx * 0.078, 0.032, 0.208);
+    const sclera = new Mesh(new SphereGeometry(0.042, 7, 5), mat(0xf2ebe0, { roughness: 0.38 }));
+    sclera.position.set(sx * 0.08, 0.034, 0.218);
     head.add(sclera);
     const iris = new Mesh(
-      new SphereGeometry(0.024, 8, 6),
-      mat(irisCol, { emissive: irisCol, emissiveIntensity: irisGlow, roughness: 0.28, flatShading: false }),
+      new SphereGeometry(0.028, 7, 5),
+      mat(irisCol, { emissive: irisCol, emissiveIntensity: irisGlow, roughness: 0.32 }),
     );
-    iris.position.set(sx * 0.078, 0.032, 0.232);
+    iris.position.set(sx * 0.08, 0.034, 0.246);
     head.add(iris);
-    const pupil = new Mesh(new SphereGeometry(0.011, 6, 4), mat(0x080604));
-    pupil.position.set(sx * 0.078, 0.032, 0.246);
+    const pupil = new Mesh(new SphereGeometry(0.013, 5, 4), mat(0x080604));
+    pupil.position.set(sx * 0.08, 0.034, 0.262);
     head.add(pupil);
-    const hl = new Mesh(new SphereGeometry(0.008, 5, 4), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.85 }));
-    hl.position.set(sx * 0.07, 0.042, 0.252);
+    const hl = new Mesh(new SphereGeometry(0.009, 4, 3), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.9 }));
+    hl.position.set(sx * 0.072, 0.044, 0.268);
     head.add(hl);
 
     const ear = new Mesh(new SphereGeometry(0.05, 7, 6), skin);
@@ -813,9 +813,9 @@ function dressFighter(
   const m: BodyMats = {
     cloth: mat(0x1a2026, { roughness: 0.9 }),
     clothDark: mat(0x12161a, { roughness: 0.92 }),
-    wrap: mat(kit.heavy ? 0x3a424a : 0x4a525a, { metalness: 0.35, roughness: 0.55 }),
-    wrapDark: mat(0x1c2228, { metalness: 0.4, roughness: 0.55 }),
-    wrapMid: mat(kit.heavy ? 0x8a929c : 0xb0b8c2, { metalness: 0.82, roughness: 0.18 }),
+    wrap: mat(kit.heavy ? 0x2a3238 : 0x343c44, { metalness: 0.28, roughness: 0.62 }),
+    wrapDark: mat(0x14181c, { metalness: 0.35, roughness: 0.62 }),
+    wrapMid: mat(kit.heavy ? 0x9aa4ae : 0xc8d0d8, { metalness: 0.88, roughness: 0.14 }),
     trim: mat(steel, { metalness: 0.88, roughness: 0.16 }),
     trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28 }),
     trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14 }),
@@ -869,15 +869,15 @@ function dressFighter(
   g.add(armR);
 
   const head = makeHunterHead(g, skin, skinDark, hairCol, "fighter");
-  const brow = new Mesh(new BoxGeometry(0.24, 0.055, 0.09), m.metalBright);
-  brow.position.set(0, 0.12, 0.18);
+  const brow = new Mesh(new BoxGeometry(0.26, 0.05, 0.08), m.metalBright);
+  brow.position.set(0, 0.14, 0.16);
   head.add(brow);
   const slit = new Mesh(new BoxGeometry(0.18, 0.012, 0.02), mat(0xfff4c0, { emissive: 0xfff4c0, emissiveIntensity: 1.1 }));
-  slit.position.set(0, 0.1, 0.23);
+  slit.position.set(0, 0.118, 0.205);
   head.add(slit);
   for (const sx of [-1, 1] as const) {
-    const cheek = new Mesh(new BoxGeometry(0.055, 0.16, 0.14), m.metal);
-    cheek.position.set(sx * 0.2, -0.04, 0.06);
+    const cheek = new Mesh(new BoxGeometry(0.05, 0.15, 0.12), m.metal);
+    cheek.position.set(sx * 0.21, -0.03, 0.02);
     head.add(cheek);
   }
   const nape = new Mesh(new BoxGeometry(0.22, 0.12, 0.08), m.metal);
@@ -985,9 +985,9 @@ function dressMage(
   const m: BodyMats = {
     cloth: mat(kit.heavy ? 0x2a2448 : 0x383264, { roughness: 0.86 }),
     clothDark: mat(0x1a1630, { roughness: 0.9 }),
-    wrap: mat(kit.heavy ? 0x3c366c : 0x564e96, { roughness: 0.82 }),
-    wrapDark: mat(kit.heavy ? 0x282244 : 0x383264, { roughness: 0.86 }),
-    wrapMid: mat(kit.heavy ? 0x8a7cc8 : 0x7a72b0, { roughness: 0.7, emissive: accentN, emissiveIntensity: 0.12 }),
+    wrap: mat(kit.heavy ? 0x3c366c : 0x5c54a0, { roughness: 0.82 }),
+    wrapDark: mat(kit.heavy ? 0x1c1834 : 0x2a2448, { roughness: 0.88 }),
+    wrapMid: mat(kit.heavy ? 0x9a8cd8 : 0x8a82c4, { roughness: 0.64, emissive: accentN, emissiveIntensity: 0.22 }),
     trim: mat(0x6a62a0, { roughness: 0.8 }),
     trimDark: mat(0x2a2448, { roughness: 0.88 }),
     trimMid: mat(0x9a8ed4, { roughness: 0.72, emissive: accentN, emissiveIntensity: 0.18 }),
@@ -1089,8 +1089,8 @@ export function createWardenMesh(id: HeroId, kit: WardenKit) {
 
   const skinTone = id === "mage" ? 0xd8b896 : id === "ranger" ? 0xb89068 : 0xc8a07c;
   const skinShade = id === "mage" ? 0xb08a68 : id === "ranger" ? 0x8a6848 : 0x9a7454;
-  const skin = mat(skinTone, { roughness: 0.58, metalness: 0.02, flatShading: false });
-  const skinDark = mat(skinShade, { roughness: 0.68, metalness: 0.02, flatShading: false });
+  const skin = mat(skinTone, { roughness: 0.62, metalness: 0.02 });
+  const skinDark = mat(skinShade, { roughness: 0.74, metalness: 0.02 });
   const hairCol = mat(id === "mage" ? 0x2a1838 : id === "ranger" ? 0x2a1c10 : 0x1a1208, { roughness: 0.97 });
 
   if (id === "fighter") dressFighter(g, kit, skin, skinDark, hairCol);

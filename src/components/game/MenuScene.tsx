@@ -176,11 +176,11 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     <>
       <hemisphereLight intensity={showHero ? 0.72 : 0.58} color={showHero ? "#f4f0ea" : theme.hemiSky} groundColor={showHero ? "#2a2622" : theme.hemiGround} />
       <directionalLight position={[6, 8, 4]} intensity={showHero ? 2.35 : 2.15} color={showHero ? "#fff1d4" : theme.dir} />
-      {showHero ? <directionalLight position={[1.1, 2.2, 2.4]} intensity={2.15} color="#ffe8c8" /> : null}
-      {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={1.05} color="#c8dcff" /> : null}
-      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={1.15} color="#fff6e8" /> : null}
-      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={1.35} color="#9ad0ff" /> : null}
-      {showHero ? <pointLight position={[0.2, 1.65, 1.15]} intensity={4.2} distance={3.4} color="#fff3e0" /> : null}
+      {showHero ? <directionalLight position={[1.1, 2.2, 2.4]} intensity={1.25} color="#ffe8c8" /> : null}
+      {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={0.85} color="#c8dcff" /> : null}
+      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={0.9} color="#fff6e8" /> : null}
+      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={1.2} color="#9ad0ff" /> : null}
+      {showHero ? <pointLight position={[0.2, 1.65, 1.15]} intensity={2.2} distance={3.2} color="#fff3e0" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />

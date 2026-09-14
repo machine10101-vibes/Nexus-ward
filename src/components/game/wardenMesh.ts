@@ -122,7 +122,7 @@ function skinMat(color: number, shade = false) {
       clearcoatRoughness: 0.64,
       envMapIntensity: 1.15,
       emissive: color,
-      emissiveIntensity: 0.055,
+      emissiveIntensity: 0.02,
     });
     skinCache.set(key, m);
   }
@@ -846,7 +846,7 @@ function dressFighter(
     trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28 }),
     trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14 }),
     metal: mat(steel, { metalness: 0.86, roughness: 0.18 }),
-    metalBright: mat(0xf4f8fc, { metalness: 0.96, roughness: 0.08, emissive: 0xc4d4e4, emissiveIntensity: 0.32 }),
+    metalBright: mat(0xe8eef4, { metalness: 0.92, roughness: 0.14, emissive: 0xa8b8c8, emissiveIntensity: 0.12 }),
     accent: mat(accentN, { metalness: 0.55, roughness: 0.22, emissive: accentN, emissiveIntensity: 0.55 }),
   };
 

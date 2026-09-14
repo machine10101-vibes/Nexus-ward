@@ -138,19 +138,21 @@ function makeHunterHead(
   skull.scale.set(1.02, 1.14, 1.0);
   addPart(skull, head, 1.1, 0x1a1008);
 
-  const jaw = new Mesh(new BoxGeometry(0.28, 0.17, 0.22), skinDark);
-  jaw.position.set(0, -0.13, 0.08);
+  const jaw = new Mesh(new SphereGeometry(0.16, 8, 6), skinDark);
+  jaw.scale.set(1.15, 0.72, 0.95);
+  jaw.position.set(0, -0.12, 0.08);
   addPart(jaw, head);
-  const chin = new Mesh(new BoxGeometry(0.13, 0.1, 0.13), skinDark);
-  chin.position.set(0, -0.2, 0.15);
+  const chin = new Mesh(new SphereGeometry(0.07, 6, 5), skinDark);
+  chin.position.set(0, -0.2, 0.16);
   head.add(chin);
-  const stubble = new Mesh(new BoxGeometry(0.24, 0.09, 0.07), mat(0x5a4030, { roughness: 0.95 }));
-  stubble.position.set(0, -0.15, 0.17);
+  const stubble = new Mesh(new BoxGeometry(0.2, 0.07, 0.06), mat(0x5a4030, { roughness: 0.95 }));
+  stubble.position.set(0, -0.15, 0.18);
   head.add(stubble);
 
   for (const sx of [-1, 1] as const) {
-    const cheek = new Mesh(new BoxGeometry(0.09, 0.13, 0.13), skinDark);
-    cheek.position.set(sx * 0.145, -0.02, 0.12);
+    const cheek = new Mesh(new SphereGeometry(0.07, 6, 5), skinDark);
+    cheek.scale.set(0.85, 1.05, 0.9);
+    cheek.position.set(sx * 0.13, -0.02, 0.12);
     head.add(cheek);
   }
 
@@ -193,9 +195,12 @@ function makeHunterHead(
     head.add(ear);
   }
 
-  const mouth = new Mesh(new BoxGeometry(0.11, 0.022, 0.045), mat(0x3a2014));
+  const mouth = new Mesh(new BoxGeometry(0.1, 0.018, 0.04), mat(0x3a2014));
   mouth.position.set(0, -0.145, 0.2);
   head.add(mouth);
+  const lip = new Mesh(new BoxGeometry(0.09, 0.012, 0.03), skinDark);
+  lip.position.set(0, -0.132, 0.21);
+  head.add(lip);
 
   const hairCap = new Mesh(new SphereGeometry(0.195, 8, 5), hairCol);
   hairCap.position.set(0, 0.08, -0.04);
@@ -268,7 +273,12 @@ function makeHunterLeg(side: number, m: BodyMats, opts: { bootFur: boolean; grea
     const plate = new Mesh(new BoxGeometry(0.16, 0.26, 0.1), m.metalBright);
     plate.position.set(0, 0.3, 0.07);
     addPart(plate, leg, 1.04);
+    const knee = new Mesh(new SphereGeometry(0.08, 6, 5), m.metal);
+    knee.position.set(0, 0.42, 0.08);
+    addPart(knee, leg);
   }
+
+  leg.name = side < 0 ? "legL" : "legR";
 
   if (opts.bootFur) {
     addSpikes(leg, 0, 0.36, 0.02, 0.125, 14, 0.1, 0.024, m.trim, m.trimDark, m.trimMid);
@@ -895,7 +905,7 @@ export function createWardenMesh(id: HeroId, kit: WardenKit) {
 
   const skin = mat(0xc8a07c, { roughness: 0.7, metalness: 0.03 });
   const skinDark = mat(0x9a7454, { roughness: 0.78, metalness: 0.03 });
-  const hairCol = mat(0x1e1208, { roughness: 0.97 });
+  const hairCol = mat(id === "mage" ? 0x2a1838 : id === "ranger" ? 0x2a1c10 : 0x1a1208, { roughness: 0.97 });
 
   if (id === "fighter") dressFighter(g, kit, skin, skinDark, hairCol);
   else if (id === "ranger") dressRanger(g, kit, skin, skinDark, hairCol);

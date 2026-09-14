@@ -948,6 +948,12 @@ export class GameEngine {
     return out;
   }
 
+  faceThreat(flying: boolean, reach = 10) {
+    const target = this.pickHeroTarget(reach, flying);
+    if (!target) return;
+    this.hero.yaw = Math.atan2(target.x - this.hero.x, target.z - this.hero.z);
+  }
+
   hostsOnLine(reach: number, width: number, flying: boolean) {
     const h = this.hero;
     const fx = Math.sin(h.yaw);
@@ -977,6 +983,7 @@ export class GameEngine {
     h.swing = 0.34;
     let n = 0;
     if (h.id === "fighter") {
+      this.faceThreat(false, stats.range + 3.4);
       if (slot === 0) {
         const hit = this.hostsInRange(stats.range + 1.15, false);
         for (const e of hit) {
@@ -984,78 +991,87 @@ export class GameEngine {
           n += 1;
         }
         this.spawnBurst(h.x + Math.sin(h.yaw) * 1.1, 0.7, h.z + Math.cos(h.yaw) * 1.1, 2.2, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 1.4, stats.color);
       } else if (slot === 1) {
-        const hit = this.hostsInRange(stats.range + 1.55, false);
+        const hit = this.hostsInRange(stats.range + 1.7, false);
         for (const e of hit) {
-          this.hurt(e, stats.damage * 1.35, stats.kind);
-          this.applySlow(e, 0.42, 2.4);
+          this.hurt(e, stats.damage * 0.95, stats.kind);
+          this.applySlow(e, 0.34, 3.2);
           n += 1;
         }
         this.spawnBurst(h.x, 0.45, h.z, 2.8, stats.color);
+        this.spawnBurst(h.x, 0.2, h.z, 1.6, "#c4a574");
       } else {
-        const hit = this.hostsOnLine(stats.range + 3.2, 0.85, false);
+        const hit = this.hostsOnLine(stats.range + 3.4, 0.85, false);
         for (const e of hit) {
           this.hurt(e, stats.damage * 2.6, stats.kind);
           n += 1;
         }
         const fx = Math.sin(h.yaw);
         const fz = Math.cos(h.yaw);
-        this.spawnBeam(h.x, 0.85, h.z, h.x + fx * 4.2, 0.7, h.z + fz * 4.2, stats.color, 0.2, 0.12, "rail");
+        this.spawnBeam(h.x, 0.85, h.z, h.x + fx * 4.4, 0.7, h.z + fz * 4.4, stats.color, 0.2, 0.12, "rail");
       }
     } else if (h.id === "ranger") {
+      this.faceThreat(true, stats.range + 2.8);
       const marked = this.hostsInRange(stats.range + 1.4, true);
       marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
       if (slot === 0) {
-        const shots = marked.slice(0, 5);
+        const shots = marked.slice(0, 3);
         for (const e of shots) {
+          this.hurt(e, stats.damage * 1.7, stats.kind);
           this.fireHero(e);
           n += 1;
         }
       } else if (slot === 1) {
-        const line = this.hostsOnLine(stats.range + 2.4, 0.7, true);
+        const line = this.hostsOnLine(stats.range + 2.6, 0.72, true);
         for (const e of line) {
-          this.hurt(e, stats.damage * 2.8, stats.kind);
+          this.hurt(e, stats.damage * 2.5, stats.kind);
+          this.applySlow(e, 0.48, 2.6);
           this.spawnBeam(h.x, 1.2, h.z, e.x, e.y + 0.25, e.z, stats.color, 0.12, 0.08, "rail");
           n += 1;
         }
-        if (!line.length) {
-          const fx = Math.sin(h.yaw);
-          const fz = Math.cos(h.yaw);
-          this.spawnBeam(h.x, 1.2, h.z, h.x + fx * (stats.range + 2), 1.1, h.z + fz * (stats.range + 2), stats.color, 0.12, 0.08, "rail");
-        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        this.spawnBeam(h.x, 1.2, h.z, h.x + fx * (stats.range + 2.2), 1.1, h.z + fz * (stats.range + 2.2), stats.color, 0.14, 0.09, "rail");
       } else {
         const shots = marked.slice(0, 8);
         for (const e of shots) {
-          this.hurt(e, stats.damage * 0.85, stats.kind);
-          this.fireHero(e);
+          this.hurt(e, stats.damage * 0.7, stats.kind);
+          this.applySlow(e, 0.52, 1.9);
+          this.spawnBurst(e.x, e.y + 0.3, e.z, 0.35, stats.color);
           n += 1;
         }
       }
-    } else if (slot === 0) {
-      const reach = 4.4 + (h.loadout.weapon === "nova-crozier" ? 0.6 : 0);
-      const hit = this.hostsInRange(reach, true);
-      for (const e of hit) {
-        this.hurt(e, stats.damage * 1.55, stats.kind);
-        n += 1;
-      }
-      this.spawnBurst(h.x, 1.1, h.z, 3.6, stats.color);
-    } else if (slot === 1) {
-      const marked = this.hostsInRange(stats.range + 1.2, true);
-      marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
-      const shots = marked.slice(0, 4);
-      for (const e of shots) {
-        this.hurt(e, stats.damage * 1.25, stats.kind);
-        this.spawnBeam(h.x, 1.35, h.z, e.x, e.y + 0.28, e.z, stats.color, 0.16, 0.08, "lance");
-        n += 1;
-      }
     } else {
-      const reach = 5.1 + (h.loadout.weapon === "nova-crozier" ? 0.5 : 0);
-      const hit = this.hostsInRange(reach, true);
-      for (const e of hit) {
-        this.hurt(e, stats.damage * 1.85, stats.kind);
-        n += 1;
+      this.faceThreat(true, stats.range + 2.2);
+      if (slot === 0) {
+        const reach = 4.4 + (h.loadout.weapon === "nova-crozier" ? 0.6 : 0);
+        const hit = this.hostsInRange(reach, true);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 1.55, stats.kind);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 1.1, h.z, 3.6, stats.color);
+      } else if (slot === 1) {
+        const marked = this.hostsInRange(stats.range + 1.2, true);
+        marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+        const shots = marked.slice(0, 4);
+        for (const e of shots) {
+          this.hurt(e, stats.damage * 1.35, stats.kind);
+          this.spawnBeam(h.x, 1.35, h.z, e.x, e.y + 0.28, e.z, stats.color, 0.16, 0.08, "lance");
+          n += 1;
+        }
+      } else {
+        const reach = 5.1 + (h.loadout.weapon === "nova-crozier" ? 0.5 : 0);
+        const hit = this.hostsInRange(reach, true);
+        for (const e of hit) {
+          this.hurt(e, stats.damage * 1.45, stats.kind);
+          this.applySlow(e, 0.38, 3.6);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 1.2, h.z, 4.4, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 2.2, stats.color);
       }
-      this.spawnBurst(h.x, 1.2, h.z, 4.4, stats.color);
     }
     this.lastEvent = n ? `${art.name} · ${n}` : `${art.name} · empty`;
     this.addTrauma(0.28);

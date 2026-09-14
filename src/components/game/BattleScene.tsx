@@ -672,7 +672,7 @@ function HeroLayer() {
     if (!g) return;
     g.position.set(hero.x, hero.y, hero.z);
     g.rotation.y = hero.yaw;
-    const punch = hero.swing > 0 ? 1 + hero.swing * 0.12 : 1;
+    const punch = hero.swing > 0 ? 1 + hero.swing * 0.04 : 1;
     g.scale.setScalar(punch);
     const ring = field.current;
     if (ring) {

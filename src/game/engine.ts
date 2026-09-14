@@ -51,6 +51,8 @@ export type HeroState = {
   loadout: HeroLoadout;
   stats: HeroStats;
   swing: number;
+  swingMax: number;
+  swingKind: 0 | 1 | 2 | -1;
   lastArt: 0 | 1 | 2 | -1;
   buffUntil: number;
   zoneUntil: number;
@@ -154,6 +156,8 @@ export class GameEngine {
     loadout: emptyLoadouts().fighter,
     stats: heroStats("fighter", emptyLoadouts().fighter),
     swing: 0,
+    swingMax: 0.28,
+    swingKind: -1,
     lastArt: -1,
     buffUntil: 0,
     zoneUntil: 0,
@@ -355,6 +359,8 @@ export class GameEngine {
       number,
     ];
     this.hero.swing = 0;
+    this.hero.swingMax = 0.28;
+    this.hero.swingKind = -1;
     this.hero.lastArt = -1;
     this.hero.buffUntil = 0;
     this.hero.zoneUntil = 0;
@@ -894,7 +900,9 @@ export class GameEngine {
       if (h.id === "fighter" && h.lastArt === 2) haste *= 1.16;
     }
     h.cooldown = 1 / (stats.fireRate * haste);
-    h.swing = 0.22;
+    h.swing = 0.28;
+    h.swingMax = 0.28;
+    h.swingKind = -1;
     this.sfx = "shoot";
     this.hudDirty = true;
   }
@@ -954,6 +962,7 @@ export class GameEngine {
       const rush = hot && h.lastArt === 2;
       const dmg = stats.damage * (rush ? 1.4 : 1);
       this.spawnBurst(target.x, target.y + 0.35, target.z, rush ? 0.85 : 0.55, stats.color);
+      this.spawnBeam(h.x, 1.15, h.z, target.x, target.y + 0.32, target.z, stats.color, 0.1, 0.05, "rail");
       this.hurt(target, dmg, kind);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.62, 1.15);
       const splash =
@@ -993,6 +1002,7 @@ export class GameEngine {
       bolt.targetSlot = target.slot;
       bolt.ttl = 2.2;
       bolt.color = stats.color;
+      this.spawnBurst(h.x + Math.sin(h.yaw) * 0.5, 1.22, h.z + Math.cos(h.yaw) * 0.5, 0.22, stats.color);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.58, 0.95);
       if (hot && h.lastArt === 2) {
         this.applySlow(target, 0.66, 0.8);
@@ -1063,7 +1073,9 @@ export class GameEngine {
     h.artCd[slot] = cd;
     h.artMax[slot] = cd;
     h.lastArt = slot;
-    h.swing = 0.42;
+    h.swingKind = slot;
+    h.swing = 0.52;
+    h.swingMax = 0.52;
     let n = 0;
     if (h.id === "fighter") {
       this.faceThreat(false, stats.range + 3.4);

@@ -883,6 +883,7 @@ function dressFighter(
   plackart.position.set(0, 1.02, 0.2);
   addPart(plackart, g);
   const tabard = new Mesh(new BoxGeometry(0.18, 0.72, 0.045), m.accent);
+  tabard.name = "clothSwing";
   tabard.position.set(0, 0.78, 0.26);
   addPart(tabard, g);
   const tabardBack = new Mesh(new BoxGeometry(0.2, 0.64, 0.04), m.wrapDark);
@@ -976,6 +977,7 @@ function dressRanger(
   bandolier.rotation.z = 0.55;
   g.add(bandolier);
   const cape = new Mesh(new BoxGeometry(0.38, 0.55, 0.06), m.wrapDark);
+  cape.name = "clothSwing";
   cape.position.set(0, 1.05, -0.26);
   cape.rotation.x = 0.18;
   addPart(cape, g);
@@ -1059,6 +1061,7 @@ function dressMage(
   hem.position.y = 0.18;
   addPart(hem, g);
   const overskirt = new Mesh(new CylinderGeometry(0.42, 0.22, 0.36, 8), m.wrapMid);
+  overskirt.name = "clothSwing";
   overskirt.position.y = 0.62;
   addPart(overskirt, g);
   addHunterTorso(g, m, { xStraps: false, chestKind: "cloth" });

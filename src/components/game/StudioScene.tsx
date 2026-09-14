@@ -45,6 +45,7 @@ export function StudioScene() {
       />
       <directionalLight position={[-6, 3.2, -2]} intensity={0.48} color="#c8dcff" />
       <directionalLight position={[-2, 4, 7]} intensity={0.38} color="#ffe0b8" />
+      <pointLight position={[0.25, 1.7, 1.3]} intensity={3.6} distance={4} color="#fff2dc" />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[6.4, 48]} />
         <meshStandardMaterial color="#1a1d24" roughness={0.92} metalness={0.08} />

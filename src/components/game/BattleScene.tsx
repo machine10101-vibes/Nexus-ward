@@ -670,30 +670,20 @@ function syncHeroCarry() {
 }
 
 function HeroAgroRing({ radius, color }: { radius: number; color: string }) {
-  const outer = Math.max(0.9, radius);
+  const outer = Math.max(1.2, radius);
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={2}>
-        <circleGeometry args={[outer, 48]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.12}
-          depthWrite={false}
-          toneMapped={false}
-          blending={AdditiveBlending}
-        />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} renderOrder={2}>
+        <circleGeometry args={[outer, 56]} />
+        <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} renderOrder={3}>
-        <ringGeometry args={[Math.max(0.35, outer - 0.12), outer, 48]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.72}
-          depthWrite={false}
-          toneMapped={false}
-          blending={AdditiveBlending}
-        />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.055, 0]} renderOrder={3}>
+        <ringGeometry args={[Math.max(0.5, outer - 0.18), outer, 56]} />
+        <meshBasicMaterial color={color} transparent opacity={0.8} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={3}>
+        <ringGeometry args={[Math.max(0.35, outer * 0.62), outer * 0.68, 40]} />
+        <meshBasicMaterial color={color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   );

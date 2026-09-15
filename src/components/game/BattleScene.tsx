@@ -669,6 +669,36 @@ function syncHeroCarry() {
   useGameStore.getState().syncHud();
 }
 
+function HeroAgroRing({ radius, color }: { radius: number; color: string }) {
+  const outer = Math.max(0.9, radius);
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={2}>
+        <circleGeometry args={[outer, 48]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.12}
+          depthWrite={false}
+          toneMapped={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]} renderOrder={3}>
+        <ringGeometry args={[Math.max(0.35, outer - 0.12), outer, 48]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.72}
+          depthWrite={false}
+          toneMapped={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function HeroDropPlane() {
   const carrying = useGameStore((s) => s.carryingHero);
   const map = engine.map;
@@ -752,7 +782,7 @@ function HeroLayer() {
           <ringGeometry args={[0.28, 0.38, 20]} />
           <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
         </mesh>
-        <RangeRing radius={hero.stats.range} color={hero.stats.color} />
+        <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
         <mesh ref={field} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} visible={false}>
           <ringGeometry args={[0.72, 1.05, 28]} />
           <meshBasicMaterial color={hero.stats.color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
@@ -780,7 +810,7 @@ function HeroLayer() {
               toneMapped={false}
             />
           </mesh>
-          <RangeRing radius={hero.stats.range} color={hero.stats.color} />
+          <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
         </group>
       ) : null}
     </>

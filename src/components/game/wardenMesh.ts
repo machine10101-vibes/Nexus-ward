@@ -696,10 +696,10 @@ function addFighterKit(armR: Group, armL: Group, kit: WardenKit, m: BodyMats) {
   const guard = new Mesh(new BoxGeometry(0.04, 0.18, 0.08), m.metalBright);
   guard.position.x = 0.14;
   sword.add(guard);
-  const bladeM = new Mesh(new BoxGeometry(blade, 0.055, 0.016), ion);
+  const bladeM = new Mesh(new BoxGeometry(blade, 0.078, 0.02), ion);
   bladeM.position.x = 0.16 + blade / 2;
   addPart(bladeM, sword);
-  const core = new Mesh(new BoxGeometry(blade * 0.92, 0.018, 0.008), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1.6 }));
+  const core = new Mesh(new BoxGeometry(blade * 0.92, 0.028, 0.01), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1.6 }));
   core.position.set(0.16 + blade / 2, 0, 0.01);
   sword.add(core);
   const tip = new Mesh(new ConeGeometry(0.028, 0.14, 5), ion);
@@ -806,7 +806,7 @@ function addMageKit(armL: Group, kit: WardenKit, m: BodyMats) {
   const staff = new Group();
   staff.name = "wep";
   staff.position.set(-0.12, -0.42, 0.28);
-  const shaft = new Mesh(new CylinderGeometry(0.016, 0.022, h, 7), mat(0x1c1828, { roughness: 0.28, metalness: 0.72 }));
+  const shaft = new Mesh(new CylinderGeometry(0.02, 0.026, h, 7), mat(0x1c1828, { roughness: 0.28, metalness: 0.72 }));
   shaft.position.y = h * 0.38;
   addPart(shaft, staff);
   for (const t of [0.1, 0.28, h * 0.48, h * 0.66] as const) {

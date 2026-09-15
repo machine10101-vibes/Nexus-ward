@@ -579,9 +579,10 @@ const KEYS: [string, string][] = [
   ["Space", "Deploy wave"],
   ["Q / E", "Surge / Overclock"],
   ["R / T / Y", "Warden arts (rebind in Settings)"],
+  ["G", "Pick up / plant warden"],
   ["U / X", "Upgrade / Salvage"],
   ["F / A", "Speed / Auto"],
-  ["Esc", "Cancel build, else pause"],
+  ["Esc", "Cancel carry or build, else pause"],
 ];
 
 function Help() {
@@ -613,7 +614,8 @@ function Help() {
         <li>
           <span className="text-fg">6. Surge (Q)</span> slams every host on the grid.{" "}
           <span className="text-fg">Overclock (E)</span> haste-fires the line.{" "}
-          <span className="text-fg">Warden arts (R / T / Y)</span> are the hero's three specials. Rebind them in Settings.
+          <span className="text-fg">Warden arts (R / T / Y)</span> are the hero's three specials. Rebind them in Settings.{" "}
+          <span className="text-fg">G</span> picks the warden up so you can drop them anywhere on the ward. They auto-attack hosts inside the agro ring.
         </li>
         <li>
           <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.

@@ -29,7 +29,7 @@ export function NexusWardApp() {
       if (e.code === "Escape") {
         if (s.screen === "playing") {
           if (engine.cancelBuild()) {
-            useGameStore.setState({ buildType: null });
+            useGameStore.setState({ buildType: null, carryingHero: engine.carryingHero });
             s.syncHud();
             audio.ui();
           } else {
@@ -63,6 +63,17 @@ export function NexusWardApp() {
       const artSlot = arts.findIndex((id) => s.settings.keys[id] === e.code);
       if (artSlot >= 0) {
         engine.castHeroAbility(artSlot as 0 | 1 | 2);
+        s.syncHud();
+      }
+      if (e.code === "KeyG") {
+        if (engine.carryingHero) {
+          const ghost = engine.heroGhost;
+          if (ghost) engine.dropHero(ghost.x, ghost.z);
+          else engine.cancelCarry();
+        } else {
+          engine.pickUpHero();
+        }
+        useGameStore.setState({ carryingHero: engine.carryingHero, buildType: engine.buildType });
         s.syncHud();
       }
       if (e.code === "KeyL") {

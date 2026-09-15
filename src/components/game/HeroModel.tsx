@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Object3D } from "three";
+import { Mesh, type Group, type Material, type Object3D } from "three";
 import { engine } from "@/game/engine";
 import { HEROES } from "@/game/heroes";
 import type { HeroId, ItemId } from "@/game/types";
@@ -13,27 +13,46 @@ function strikeCurve(swing: number, max: number) {
   return raw * raw * (3 - 2 * raw);
 }
 
+function ghostify(root: Group) {
+  root.traverse((obj) => {
+    if (!(obj instanceof Mesh)) return;
+    const src = obj.material as Material | Material[];
+    const list = Array.isArray(src) ? src : [src];
+    const cloned = list.map((m) => {
+      const next = m.clone();
+      next.transparent = true;
+      next.opacity = 0.38;
+      next.depthWrite = false;
+      return next;
+    });
+    obj.material = Array.isArray(src) ? cloned : cloned[0];
+  });
+}
+
 export function HeroModel({
   id,
   weapon = null,
   armor = null,
   scale = 1,
   animate = "idle",
+  ghost = false,
 }: {
   id: HeroId;
   weapon?: ItemId | null;
   armor?: ItemId | null;
   scale?: number;
   animate?: "idle" | "combat";
+  ghost?: boolean;
 }) {
   const root = useRef<Group>(null);
   const heavy = armor === "aegis-plate" || armor === "ghost-harness" || armor === "star-silk";
   const bigWep = weapon === "void-greatblade" || weapon === "rail-longarm" || weapon === "nova-crozier";
   const accent = HEROES[id].accent;
-  const mesh = useMemo(
-    () => createWardenMesh(id, { heavy, bigWep, accent }),
-    [id, heavy, bigWep, accent],
-  );
+  const mesh = useMemo(() => {
+    const next = createWardenMesh(id, { heavy, bigWep, accent });
+    if (ghost) ghostify(next);
+    return next;
+  }, [id, heavy, bigWep, accent, ghost]);
 
   useFrame((s) => {
     const g = root.current;

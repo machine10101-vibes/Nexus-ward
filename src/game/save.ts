@@ -44,6 +44,7 @@ export const RESERVED_CODES = new Set([
   "KeyU",
   "KeyX",
   "KeyF",
+  "KeyG",
 ]);
 
 export function formatKey(code: string) {

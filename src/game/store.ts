@@ -58,6 +58,7 @@ type GameStore = {
   hud: HudSnap;
   hoverPad: number | null;
   buildType: TowerId | null;
+  carryingHero: boolean;
   setScreen: (s: Screen) => void;
   setPreview: (id: MapId) => void;
   openHelp: () => void;
@@ -138,6 +139,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hud: emptyHud,
   hoverPad: null,
   buildType: "pulse",
+  carryingHero: false,
   setScreen: (screen) => set({ screen }),
   setPreview: (preview) => {
     if (get().preview === preview) return;
@@ -228,12 +230,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       screen: "playing",
       heroId,
       buildType: engine.buildType,
+      carryingHero: false,
       hud: snapHud(),
     });
   },
   abortToSelect: () => {
     engine.phase = "idle";
-    set({ screen: "select", mapId: null, hud: emptyHud });
+    engine.carryingHero = false;
+    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false });
   },
   pause: () => {
     if (get().screen === "playing") set({ screen: "paused" });
@@ -278,7 +282,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let s = screen;
     if (next.phase === "won" && screen === "playing") s = "won";
     if (next.phase === "lost" && screen === "playing") s = "lost";
-    set({ hud: next, screen: s, buildType: engine.buildType });
+    set({ hud: next, screen: s, buildType: engine.buildType, carryingHero: engine.carryingHero });
   },
   patchSettings: (p) => {
     const cur = get().settings;

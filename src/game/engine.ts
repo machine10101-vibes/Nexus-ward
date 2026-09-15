@@ -1,5 +1,6 @@
 import {
   AUTO_WAVE_DELAY,
+  CELL,
   ENEMIES,
   inflateSpawnCount,
   MAX_BEAMS,
@@ -144,6 +145,8 @@ export class GameEngine {
   placeGen = 0;
   rankGen = 0;
   leakGen = 0;
+  carryingHero = false;
+  heroGhost: { x: number; z: number } | null = null;
   hero: HeroState = {
     id: "fighter",
     x: 0,
@@ -333,6 +336,8 @@ export class GameEngine {
     this.leakGen = 0;
     this.fireGen = 0;
     this.lastShooter = null;
+    this.carryingHero = false;
+    this.heroGhost = null;
     this.placeHero(heroId, loadout);
   }
 
@@ -368,6 +373,8 @@ export class GameEngine {
     this.hero.zoneSlow = 0;
     this.hero.zoneDmg = 0;
     this.hero.zoneAcc = 0;
+    this.carryingHero = false;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
   }
 
   applyHeroGear(loadout: HeroLoadout) {
@@ -540,6 +547,11 @@ export class GameEngine {
   }
 
   selectPad(pad: number) {
+    if (this.carryingHero) {
+      const w = this.padWorld[pad];
+      if (w) this.dropHero(w.x, w.z);
+      return;
+    }
     if (this.occupied[pad] !== -1) {
       this.selectedTower = this.occupied[pad];
       this.buildType = null;
@@ -556,14 +568,78 @@ export class GameEngine {
 
   setBuildType(type: TowerId | null) {
     this.buildType = type;
-    if (type) this.selectedTower = null;
+    if (type) {
+      this.selectedTower = null;
+      this.cancelCarry();
+    }
     this.hudDirty = true;
   }
 
   cancelBuild() {
-    if (!this.buildType) return false;
+    let changed = false;
+    if (this.buildType) {
+      this.buildType = null;
+      changed = true;
+    }
+    if (this.cancelCarry()) changed = true;
+    if (changed) this.hudDirty = true;
+    return changed;
+  }
+
+  playInset(x: number, z: number) {
+    const arenaR = (this.map.cols * CELL) / 2 + 3.2;
+    const squash = ((this.map.rows * CELL) / 2 + 3.2) / arenaR;
+    return Math.hypot(x / arenaR, z / (arenaR * squash));
+  }
+
+  canPlaceHero(x: number, z: number) {
+    if (this.playInset(x, z) > 0.92) return false;
+    const core = this.endWorld();
+    return dist2(x, z, core.x, core.z) >= 1.6 * 1.6;
+  }
+
+  pickUpHero() {
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
     this.buildType = null;
+    this.selectedTower = null;
+    this.carryingHero = true;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
+    this.lastEvent = `${HEROES[this.hero.id].name} relocating · drop on open ground`;
     this.hudDirty = true;
+    this.sfx = "ui";
+    return true;
+  }
+
+  setHeroGhost(x: number, z: number) {
+    this.heroGhost = { x, z };
+  }
+
+  cancelCarry() {
+    if (!this.carryingHero) return false;
+    this.carryingHero = false;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
+    this.lastEvent = `${HEROES[this.hero.id].name} holding`;
+    this.hudDirty = true;
+    return true;
+  }
+
+  dropHero(x: number, z: number) {
+    if (!this.carryingHero) return false;
+    if (!this.canPlaceHero(x, z)) {
+      this.lastEvent = "Need open ground inside the ward";
+      this.sfx = "deny";
+      this.hudDirty = true;
+      return false;
+    }
+    this.hero.x = x;
+    this.hero.y = 0;
+    this.hero.z = z;
+    this.carryingHero = false;
+    this.heroGhost = { x, z };
+    this.lastEvent = `${HEROES[this.hero.id].name} planted · agro live`;
+    this.hudDirty = true;
+    this.sfx = "place";
+    this.spawnDecal(x, z, 1.15, this.hero.stats.color, "rank");
     return true;
   }
 
@@ -883,6 +959,7 @@ export class GameEngine {
   }
 
   tickHero(dt: number) {
+    if (this.carryingHero) return;
     if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return;
     const h = this.hero;
     const stats = h.stats;
@@ -919,6 +996,7 @@ export class GameEngine {
 
   tickHeroField(dt: number) {
     const h = this.hero;
+    if (this.carryingHero) return;
     if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return;
     if (this.time >= h.zoneUntil || h.zoneRange <= 0) return;
     h.zoneAcc += dt;
@@ -1064,6 +1142,7 @@ export class GameEngine {
   }
 
   castHeroAbility(slot: 0 | 1 | 2) {
+    if (this.carryingHero) return false;
     if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
     const h = this.hero;
     if (h.artCd[slot] > 0) return false;

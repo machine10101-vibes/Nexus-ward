@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Crosshair,
   FastForward,
+  Move,
   Minus,
   Pause,
   Play,
@@ -55,6 +56,7 @@ let padHintSpent = false;
 export function Hud() {
   const hud = useGameStore((s) => s.hud);
   const buildType = useGameStore((s) => s.buildType);
+  const carryingHero = useGameStore((s) => s.carryingHero);
   const hoverPad = useGameStore((s) => s.hoverPad);
   const screen = useGameStore((s) => s.screen);
   const leakPulse = usePulse(hud.leaked);
@@ -190,7 +192,11 @@ export function Hud() {
             <TowerCard />
           </div>
         ) : null}
-        {showHint ? (
+        {carryingHero ? (
+          <p className="mx-auto rounded-full border border-accent/40 bg-surface/90 px-3 py-1 font-display text-2xs uppercase tracking-label text-accent">
+            Drop the warden on open ground · G plant · Esc cancel
+          </p>
+        ) : showHint ? (
           <p className="mx-auto rounded-full border border-border bg-surface/90 px-3 py-1 font-display text-2xs uppercase tracking-label text-muted">
             Tap a lit platform to place
           </p>
@@ -227,6 +233,27 @@ export function Hud() {
               <FastForward className="size-4" />
             </AbilityIcon>
             <WardenArts heroId={hud.heroId ?? "fighter"} cds={hud.heroArtCd} max={hud.heroArtMax} />
+            <AbilityIcon
+              label={carryingHero ? "Plant warden" : "Relocate warden"}
+              hint="G"
+              ready
+              cd={0}
+              max={1}
+              hot={carryingHero}
+              onClick={() => {
+                if (engine.carryingHero) {
+                  const ghost = engine.heroGhost;
+                  if (ghost) engine.dropHero(ghost.x, ghost.z);
+                  else engine.cancelCarry();
+                } else {
+                  engine.pickUpHero();
+                }
+                useGameStore.setState({ carryingHero: engine.carryingHero, buildType: engine.buildType });
+                useGameStore.getState().syncHud();
+              }}
+            >
+              <Move className="size-4" />
+            </AbilityIcon>
             {canWave ? (
               <button
                 type="button"

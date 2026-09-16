@@ -193,6 +193,7 @@ export type Bolt = {
   targetSlot: number;
   ttl: number;
   color: string;
+  fromHero: boolean;
 };
 
 export type BeamStyle = "lance" | "chain" | "rail";

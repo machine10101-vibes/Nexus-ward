@@ -670,16 +670,24 @@ function syncHeroCarry() {
 }
 
 function HeroAgroRing({ radius, color }: { radius: number; color: string }) {
+  const wash = useRef<MeshBasicMaterial>(null);
+  const rim = useRef<MeshBasicMaterial>(null);
   const outer = Math.max(1.2, radius);
+  useFrame(() => {
+    const hot = engine.hero.aiming ? 1 : 0;
+    const pulse = 0.14 + hot * 0.08 + Math.sin(engine.visualTime * 5.2) * (hot ? 0.05 : 0.02);
+    if (wash.current) wash.current.opacity = pulse;
+    if (rim.current) rim.current.opacity = 0.72 + hot * 0.18;
+  });
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} renderOrder={2}>
         <circleGeometry args={[outer, 56]} />
-        <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={wash} color={color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.055, 0]} renderOrder={3}>
         <ringGeometry args={[Math.max(0.5, outer - 0.18), outer, 56]} />
-        <meshBasicMaterial color={color} transparent opacity={0.8} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={rim} color={color} transparent opacity={0.8} depthWrite={false} toneMapped={false} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={3}>
         <ringGeometry args={[Math.max(0.35, outer * 0.62), outer * 0.68, 40]} />
@@ -755,7 +763,7 @@ function HeroLayer() {
   return (
     <>
       <group ref={group} position={[hero.x, hero.y, hero.z]}>
-        <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.15} animate="combat" />
+        <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.28} animate="combat" />
         <mesh
           position={[0, 0.9, 0]}
           onPointerDown={(e) => {

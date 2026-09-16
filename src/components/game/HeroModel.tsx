@@ -67,7 +67,18 @@ export function HeroModel({
     const orbit = g.getObjectByName("orbit");
     const legL = g.getObjectByName("legL");
     const legR = g.getObjectByName("legR");
+    const wepGlow = g.getObjectByName("wepGlow");
+    const visorGlow = g.getObjectByName("visorGlow");
+    const shieldGlow = g.getObjectByName("shieldGlow");
     if (orbit) orbit.rotation.y = t * (0.85 + (animate === "combat" && engine.hero.swing > 0 ? 2.2 : 0));
+    const pulse = (obj: Object3D | undefined, base: number, amp: number, speed: number, strike = 0) => {
+      const mesh = obj as Mesh | undefined;
+      const mat = mesh?.material as { emissiveIntensity?: number } | undefined;
+      if (mat) mat.emissiveIntensity = base + Math.sin(t * speed) * amp + strike;
+    };
+    pulse(wepGlow, 1.15, 0.35, 7.5, animate === "combat" && engine.hero.swing > 0 ? 1.1 : 0);
+    pulse(visorGlow, 0.85, 0.25, 5.2, engine.hero.aiming ? 0.45 : 0);
+    pulse(shieldGlow, 0.7, 0.2, 4.4, engine.hero.aiming ? 0.35 : 0);
     const pose = (obj: Object3D | undefined, x: number, y = 0, z = 0) => {
       if (!obj) return;
       obj.rotation.x = x;
@@ -89,16 +100,16 @@ export function HeroModel({
       const clothBase = id === "ranger" ? 0.18 : 0;
 
       if (strike <= 0.02) {
-        g.position.y = Math.sin(t * 1.25) * 0.008;
+        g.position.y = Math.sin(t * 1.25) * 0.008 + (engine.hero.aiming ? 0.012 : 0);
         if (id === "fighter") {
-          pose(armR, -0.32);
-          pose(armL, 0.18);
+          pose(armR, engine.hero.aiming ? -0.42 : -0.32);
+          pose(armL, engine.hero.aiming ? 0.28 : 0.18);
         } else if (id === "ranger") {
-          pose(armR, -0.48);
-          pose(armL, -0.22);
+          pose(armR, engine.hero.aiming ? -0.62 : -0.48);
+          pose(armL, engine.hero.aiming ? -0.32 : -0.22);
         } else {
-          pose(armL, -0.28);
-          pose(armR, 0.06);
+          pose(armL, engine.hero.aiming ? -0.4 : -0.28);
+          pose(armR, engine.hero.aiming ? 0.16 : 0.06);
         }
         pose(legL, Math.sin(t * 0.7) * 0.02);
         pose(legR, Math.sin(t * 0.7 + 1) * 0.02);
@@ -139,43 +150,45 @@ export function HeroModel({
         }
       } else if (id === "ranger") {
         if (kind === 1) {
-          pose(armR, -0.55 - strike * 0.55);
-          pose(armL, -0.35 - strike * 0.4);
+          pose(armR, -0.55 - strike * 0.7);
+          pose(armL, -0.35 - strike * 0.55);
         } else if (kind === 2) {
-          pose(armR, -0.4 - strike * 0.25, strike * 0.7);
-          pose(armL, -0.2);
+          pose(armR, -0.4 - strike * 0.35, strike * 0.85);
+          pose(armL, -0.2 + strike * 0.15);
         } else if (kind === 0) {
-          pose(armR, -0.35 - strike * 0.55);
-          pose(armL, -0.18 - strike * 0.15);
+          pose(armR, -0.35 - strike * 0.7);
+          pose(armL, -0.18 - strike * 0.22);
         } else {
-          pose(armR, -0.4 - strike * 0.35);
-          pose(armL, -0.2 - strike * 0.08);
+          pose(armR, -0.4 - strike * 0.55);
+          pose(armL, -0.2 - strike * 0.12);
         }
-        if (wep) wep.rotation.set(0.35 - strike * 0.12, 0.55, 0.12);
+        if (wep) wep.rotation.set(0.35 - strike * 0.22, 0.55, 0.12);
         if (torso) {
-          torso.rotation.x = -strike * 0.05;
-          torso.rotation.z = 0;
+          torso.rotation.x = -strike * 0.12;
+          torso.rotation.z = strike * 0.06;
         }
         pose(legL, 0);
         pose(legR, 0);
       } else if (kind === 0) {
-        pose(armR, -strike * 0.7, 0, strike * 0.5);
-        pose(armL, -0.2 - strike * 0.85, 0, -strike * 0.45);
-        if (wep) wep.rotation.set(-strike * 0.25, 0, 0);
-        if (torso) torso.rotation.x = -strike * 0.06;
+        pose(armR, -strike * 0.85, 0, strike * 0.55);
+        pose(armL, -0.2 - strike * 1.05, 0, -strike * 0.5);
+        if (wep) wep.rotation.set(-strike * 0.35, 0, 0);
+        if (torso) torso.rotation.x = -strike * 0.1;
       } else if (kind === 2) {
-        pose(armL, -0.1 + strike * 0.85);
-        pose(armR, strike * 0.3);
-        if (wep) wep.rotation.set(strike * 0.35, 0, 0);
-        if (torso) torso.rotation.x = strike * 0.12;
+        pose(armL, -0.1 + strike * 1.05);
+        pose(armR, strike * 0.4);
+        if (wep) wep.rotation.set(strike * 0.5, 0, 0);
+        if (torso) torso.rotation.x = strike * 0.16;
       } else if (kind === 1) {
-        pose(armR, -strike * 0.25);
-        pose(armL, -0.25 - strike * 1.15);
-        if (wep) wep.rotation.set(-strike * 0.4, 0, 0);
+        pose(armR, -strike * 0.35);
+        pose(armL, -0.25 - strike * 1.35);
+        if (wep) wep.rotation.set(-strike * 0.55, 0, 0);
+        if (torso) torso.rotation.x = -strike * 0.08;
       } else {
         pose(armR, 0.05);
-        pose(armL, -0.15 - strike * 0.85);
-        if (wep) wep.rotation.set(-strike * 0.2, 0, 0);
+        pose(armL, -0.15 - strike * 1.05);
+        if (wep) wep.rotation.set(-strike * 0.32, 0, 0);
+        if (torso) torso.rotation.x = -strike * 0.06;
       }
       if (head) head.rotation.x = -0.14 - strike * (kind === 1 && id === "fighter" ? 0.2 : 0.08);
       if (cloth) cloth.rotation.x = clothBase + strike * 0.22;

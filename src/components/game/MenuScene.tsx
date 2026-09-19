@@ -161,10 +161,10 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
     if (showHero) {
-      cam.position.x = 1.72 + Math.sin(t * 0.1) * 0.08;
-      cam.position.y = 1.42 + Math.sin(t * 0.07) * 0.02;
-      cam.position.z = 3.55;
-      cam.lookAt(0, 0.92, 0);
+      cam.position.x = 1.28 + Math.sin(t * 0.1) * 0.06;
+      cam.position.y = 1.48 + Math.sin(t * 0.07) * 0.02;
+      cam.position.z = 2.85;
+      cam.lookAt(0, 1.18, 0);
       return;
     }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
@@ -174,13 +174,13 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
 
   return (
     <>
-      <hemisphereLight intensity={showHero ? 0.58 : 0.58} color={showHero ? "#efe8e0" : theme.hemiSky} groundColor={showHero ? "#2a2622" : theme.hemiGround} />
-      <directionalLight position={[6, 8, 4]} intensity={showHero ? 1.72 : 2.15} color={showHero ? "#f4e6c8" : theme.dir} />
-      {showHero ? <directionalLight position={[1.1, 2.2, 2.4]} intensity={0.72} color="#f0d8b0" /> : null}
-      {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={0.55} color="#b8cce8" /> : null}
-      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={0.48} color="#f6ead4" /> : null}
-      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={0.62} color="#88b8d8" /> : null}
-      {showHero ? <pointLight position={[0.2, 1.65, 1.15]} intensity={1.05} distance={3.2} color="#f4e6d0" /> : null}
+      <hemisphereLight intensity={showHero ? 0.64 : 0.58} color={showHero ? "#f2ece4" : theme.hemiSky} groundColor={showHero ? "#2a2622" : theme.hemiGround} />
+      <directionalLight position={[6, 8, 4]} intensity={showHero ? 1.95 : 2.15} color={showHero ? "#f6ead0" : theme.dir} />
+      {showHero ? <directionalLight position={[1.1, 2.2, 2.4]} intensity={0.95} color="#f2d8b4" /> : null}
+      {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={0.62} color="#c0d4ec" /> : null}
+      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={0.58} color="#fff2e0" /> : null}
+      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={0.7} color="#9ac4dc" /> : null}
+      {showHero ? <pointLight position={[0.15, 1.58, 1.05]} intensity={1.45} distance={2.8} color="#f6e6d0" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />

@@ -134,7 +134,7 @@ function skinMat(color: number, shade = false) {
       clearcoatRoughness: 0.72,
       envMapIntensity: 0.95,
       emissive: color,
-      emissiveIntensity: 0.008,
+      emissiveIntensity: 0.012,
     });
     skinCache.set(key, m);
   }
@@ -455,7 +455,7 @@ function makeHunterArm(
 }
 
 function addHunterHips(g: Group, m: BodyMats, longSkirt = false) {
-  const hips = new Mesh(new CylinderGeometry(0.24, 0.28, 0.22, 8), m.wrap);
+  const hips = new Mesh(new CylinderGeometry(0.2, 0.24, 0.2, 8), m.wrap);
   hips.position.y = 0.78;
   addPart(hips, g);
 
@@ -482,27 +482,27 @@ function addHunterTorso(
 ) {
   const torso = new Group();
   torso.name = "playerTorso";
-  const rib = new Mesh(new CylinderGeometry(0.22, 0.28, 0.52, 12), m.wrap);
+  const rib = new Mesh(new CylinderGeometry(0.18, 0.24, 0.5, 12), m.wrap);
   rib.position.y = 1.12;
   addPart(rib, torso, 1.05, 0x0a0806);
 
   if (opts.chestKind === "plate") {
-    const pecL = new Mesh(new BoxGeometry(0.2, 0.28, 0.14), m.metalBright);
-    pecL.position.set(-0.1, 1.22, 0.16);
+    const pecL = new Mesh(new BoxGeometry(0.17, 0.24, 0.12), m.metalBright);
+    pecL.position.set(-0.09, 1.22, 0.14);
     addPart(pecL, torso);
-    const pecR = new Mesh(new BoxGeometry(0.2, 0.28, 0.14), m.metal);
-    pecR.position.set(0.1, 1.22, 0.16);
+    const pecR = new Mesh(new BoxGeometry(0.17, 0.24, 0.12), m.metal);
+    pecR.position.set(0.09, 1.22, 0.14);
     addPart(pecR, torso);
-    const belly = new Mesh(new BoxGeometry(0.36, 0.16, 0.12), m.wrapMid);
-    belly.position.set(0, 1.0, 0.15);
+    const belly = new Mesh(new BoxGeometry(0.3, 0.14, 0.1), m.wrapMid);
+    belly.position.set(0, 1.0, 0.13);
     addPart(belly, torso);
   } else if (opts.chestKind === "cloth") {
-    const robe = new Mesh(new BoxGeometry(0.4, 0.32, 0.16), m.wrapMid);
-    robe.position.set(0, 1.2, 0.15);
+    const robe = new Mesh(new BoxGeometry(0.34, 0.3, 0.14), m.wrapMid);
+    robe.position.set(0, 1.2, 0.13);
     addPart(robe, torso);
   } else {
-    const chestPlate = new Mesh(new BoxGeometry(0.4, 0.3, 0.16), m.wrapMid);
-    chestPlate.position.set(0, 1.2, 0.15);
+    const chestPlate = new Mesh(new BoxGeometry(0.34, 0.26, 0.14), m.wrapMid);
+    chestPlate.position.set(0, 1.2, 0.13);
     addPart(chestPlate, torso);
   }
 
@@ -873,7 +873,7 @@ function dressFighter(
     torso.add(vent);
   }
   for (let i = 0; i < 5; i++) {
-    const lame = new Mesh(new BoxGeometry(0.35 - i * 0.018, 0.05, 0.125), i % 2 ? m.metal : m.metalBright);
+    const lame = new Mesh(new BoxGeometry(0.3 - i * 0.016, 0.045, 0.11), i % 2 ? m.metal : m.metalBright);
     lame.position.set(0, 1.1 - i * 0.055, 0.175);
     addPart(lame, torso);
   }
@@ -886,7 +886,7 @@ function dressFighter(
     rivet.position.set(sx * 0.1, 1.24, 0.24);
     torso.add(rivet);
   }
-  const plackart = new Mesh(new BoxGeometry(0.32, 0.1, 0.1), m.metalBright);
+  const plackart = new Mesh(new BoxGeometry(0.28, 0.09, 0.09), m.metalBright);
   plackart.position.set(0, 1.02, 0.2);
   addPart(plackart, torso);
   const tabard = new Mesh(new BoxGeometry(0.14, 0.68, 0.03), m.accent);

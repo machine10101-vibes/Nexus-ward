@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { AUTO_WAVE_DELAY } from "./config";
 import { engine } from "./engine";
-import { loadSave, recordResult, saveSettings, type Settings } from "./save";
+import { ITEMS } from "./heroes";
+import { loadSave, recordResult, saveHero, saveSettings, type HeroSave, type Settings } from "./save";
 import { audio } from "./audio";
-import type { MapId, Screen, TowerId } from "./types";
+import type { HeroId, ItemId, ItemSlot, MapId, Screen, TowerId } from "./types";
 
 export type HudSnap = {
   gold: number;
@@ -32,15 +33,23 @@ export type HudSnap = {
   denyGen: number;
   rankGen: number;
   placeGen: number;
+  heroId: HeroId | null;
+  heroArtCd: [number, number, number];
+  heroArtMax: [number, number, number];
+  heroKills: number;
 };
 
 type GameStore = {
   screen: Screen;
   mapId: MapId | null;
   preview: MapId;
+  heroId: HeroId | null;
+  previewHero: HeroId;
+  heroSave: HeroSave;
   helpFrom: Screen;
   settingsFrom: Screen;
   studioFrom: Screen;
+  loadoutFrom: Screen;
   studioId: string;
   studioVariant: number;
   studioSpin: boolean;
@@ -50,6 +59,7 @@ type GameStore = {
   hud: HudSnap;
   hoverPad: number | null;
   buildType: TowerId | null;
+  carryingHero: boolean;
   setScreen: (s: Screen) => void;
   setPreview: (id: MapId) => void;
   openHelp: () => void;
@@ -60,7 +70,13 @@ type GameStore = {
   toggleStudioSpin: () => void;
   fitStudio: () => void;
   closeOverlay: () => void;
+  startHeroSelect: (id: MapId) => void;
+  setPreviewHero: (id: HeroId) => void;
+  confirmHero: (id: HeroId) => void;
   startBriefing: (id: MapId) => void;
+  openLoadout: () => void;
+  equipItem: (id: ItemId) => void;
+  unequipSlot: (slot: ItemSlot) => void;
   dropIn: () => void;
   abortToSelect: () => void;
   pause: () => void;
@@ -99,15 +115,23 @@ const emptyHud: HudSnap = {
   denyGen: 0,
   rankGen: 0,
   placeGen: 0,
+  heroId: null,
+  heroArtCd: [0, 0, 0],
+  heroArtMax: [16, 18, 20],
+  heroKills: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
   screen: "title",
   mapId: null,
   preview: "mycelion",
+  heroId: save.hero.last,
+  previewHero: save.hero.last,
+  heroSave: save.hero,
   helpFrom: "title",
   settingsFrom: "title",
   studioFrom: "title",
+  loadoutFrom: "briefing",
   studioId: "pulse",
   studioVariant: 3,
   studioSpin: false,
@@ -117,6 +141,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hud: emptyHud,
   hoverPad: null,
   buildType: "pulse",
+  carryingHero: false,
   setScreen: (screen) => set({ screen }),
   setPreview: (preview) => {
     if (get().preview === preview) return;
@@ -141,29 +166,80 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toggleStudioSpin: () => set({ studioSpin: !get().studioSpin }),
   fitStudio: () => set({ studioFit: get().studioFit + 1, studioSpin: false }),
   closeOverlay: () => {
-    const { screen, helpFrom, settingsFrom, studioFrom } = get();
+    const { screen, helpFrom, settingsFrom, studioFrom, loadoutFrom } = get();
     if (screen === "help") set({ screen: helpFrom });
     else if (screen === "settings") set({ screen: settingsFrom });
     else if (screen === "studio") set({ screen: studioFrom === "studio" ? "title" : studioFrom });
+    else if (screen === "loadout") set({ screen: loadoutFrom === "loadout" ? "briefing" : loadoutFrom });
+  },
+  startHeroSelect: (id) => {
+    audio.ui();
+    set({ mapId: id, preview: id, screen: "hero", previewHero: get().heroSave.last });
+  },
+  setPreviewHero: (previewHero) => {
+    if (get().previewHero === previewHero) return;
+    set({ previewHero });
+  },
+  confirmHero: (id) => {
+    audio.ui();
+    const heroSave = { ...get().heroSave, last: id };
+    saveHero(heroSave);
+    set({ heroId: id, previewHero: id, heroSave, screen: "briefing" });
   },
   startBriefing: (id) => {
     audio.ui();
     set({ mapId: id, preview: id, screen: "briefing" });
   },
+  openLoadout: () => {
+    const { screen } = get();
+    audio.ui();
+    if (screen === "loadout") {
+      get().closeOverlay();
+      return;
+    }
+    set({ loadoutFrom: screen === "playing" ? "paused" : screen, screen: "loadout" });
+  },
+  equipItem: (id) => {
+    const { heroSave, previewHero, heroId } = get();
+    const who = heroId ?? previewHero;
+    if (!heroSave.owned.includes(id)) return;
+    const item = ITEMS[id];
+    if (!item || item.hero !== who) return;
+    const nextLoad = { ...heroSave.loadouts[who], [item.slot]: id };
+    const next = { ...heroSave, last: who, loadouts: { ...heroSave.loadouts, [who]: nextLoad } };
+    saveHero(next);
+    set({ heroSave: next });
+    if (engine.hero.id === who) engine.applyHeroGear(nextLoad);
+    audio.ui();
+  },
+  unequipSlot: (slot) => {
+    const { heroSave, previewHero, heroId } = get();
+    const who = heroId ?? previewHero;
+    const nextLoad = { ...heroSave.loadouts[who], [slot]: null };
+    const next = { ...heroSave, last: who, loadouts: { ...heroSave.loadouts, [who]: nextLoad } };
+    saveHero(next);
+    set({ heroSave: next });
+    if (engine.hero.id === who) engine.applyHeroGear(nextLoad);
+    audio.ui();
+  },
   dropIn: () => {
     const id = get().mapId;
+    const heroId = get().heroId ?? get().heroSave.last;
     if (!id) return;
-    engine.load(id);
+    engine.load(id, heroId, get().heroSave.loadouts[heroId]);
     audio.wave();
     set({
       screen: "playing",
+      heroId,
       buildType: engine.buildType,
+      carryingHero: false,
       hud: snapHud(),
     });
   },
   abortToSelect: () => {
     engine.phase = "idle";
-    set({ screen: "select", mapId: null, hud: emptyHud });
+    engine.carryingHero = false;
+    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false });
   },
   pause: () => {
     if (get().screen === "playing") set({ screen: "paused" });
@@ -198,6 +274,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.denyGen === cur.denyGen &&
       next.rankGen === cur.rankGen &&
       next.placeGen === cur.placeGen &&
+      next.heroId === cur.heroId &&
+      next.heroKills === cur.heroKills &&
+      next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
       return;
@@ -206,10 +285,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let s = screen;
     if (next.phase === "won" && screen === "playing") s = "won";
     if (next.phase === "lost" && screen === "playing") s = "lost";
-    set({ hud: next, screen: s, buildType: engine.buildType });
+    set({ hud: next, screen: s, buildType: engine.buildType, carryingHero: engine.carryingHero });
   },
   patchSettings: (p) => {
-    const settings = { ...get().settings, ...p };
+    const cur = get().settings;
+    const settings = { ...cur, ...p, keys: { ...cur.keys, ...p.keys } };
     set({ settings });
     saveSettings(settings);
     audio.setVolumes(settings);
@@ -218,7 +298,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const id = get().mapId;
     if (!id) return;
     const s = recordResult(id, engine.wave, engine.lives, won);
-    set({ completed: s.completed });
+    set({ completed: s.completed, heroSave: s.hero });
     if (won) audio.win();
     else audio.lose();
   },
@@ -255,6 +335,10 @@ function snapHud(): HudSnap {
     denyGen: engine.denyGen,
     rankGen: engine.rankGen,
     placeGen: engine.placeGen,
+    heroId: engine.hero.id,
+    heroArtCd: [...engine.hero.artCd],
+    heroArtMax: [...engine.hero.artMax],
+    heroKills: engine.hero.kills,
   };
 }
 

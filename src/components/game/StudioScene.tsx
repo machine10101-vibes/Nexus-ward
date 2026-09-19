@@ -4,6 +4,8 @@ import { useGameStore } from "@/game/store";
 import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { PlanetGlobe } from "./Planet";
 import { EnemyModel, HexPad, NexusCore, SpawnGate, TowerModel } from "./models";
+import { HeroModel } from "./HeroModel";
+import { HEROES } from "@/game/heroes";
 import { studioEntry } from "./studioCatalog";
 
 type StudioControls = {
@@ -43,6 +45,7 @@ export function StudioScene() {
       />
       <directionalLight position={[-6, 3.2, -2]} intensity={0.48} color="#c8dcff" />
       <directionalLight position={[-2, 4, 7]} intensity={0.38} color="#ffe0b8" />
+      <pointLight position={[0.25, 1.7, 1.3]} intensity={3.6} distance={4} color="#fff2dc" />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[6.4, 48]} />
         <meshStandardMaterial color="#1a1d24" roughness={0.92} metalness={0.08} />
@@ -78,6 +81,25 @@ export function StudioScene() {
 
 function StudioSubject({ id, variant }: { id: string; variant: number }) {
   const entry = studioEntry(id);
+  if (entry.kind === "hero" && entry.hero) {
+    const h = HEROES[entry.hero];
+    const cleared = variant >= 2;
+    const weapon = cleared
+      ? entry.hero === "fighter"
+        ? "void-greatblade"
+        : entry.hero === "ranger"
+          ? "rail-longarm"
+          : "nova-crozier"
+      : h.starterWeapon;
+    const armor = cleared
+      ? entry.hero === "fighter"
+        ? "aegis-plate"
+        : entry.hero === "ranger"
+          ? "ghost-harness"
+          : "star-silk"
+      : h.starterArmor;
+    return <HeroModel id={entry.hero} weapon={weapon} armor={armor} scale={1.2} />;
+  }
   if (entry.kind === "tower" && entry.tower) {
     return <TowerModel type={entry.tower} level={Math.min(3, Math.max(1, variant))} />;
   }

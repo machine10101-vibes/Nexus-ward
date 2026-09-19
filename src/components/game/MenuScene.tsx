@@ -1,11 +1,12 @@
 import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Sparkles, Stars } from "@react-three/drei";
+import { ContactShadows, Sparkles, Stars } from "@react-three/drei";
 import { AdditiveBlending, BackSide, Color, DoubleSide, Vector3, type Mesh, type ShaderMaterial } from "three";
 import { useGameStore } from "@/game/store";
 import { PLANET_THEME } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetGlobe, PLANET_PALETTE } from "./Planet";
+import { HeroModel } from "./HeroModel";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
 import { useWorldLibrary, type WorldLibrary } from "./worldArt";
 
@@ -148,12 +149,24 @@ function MenuArt() {
 
 function MenuWorld({ lib }: { lib: WorldLibrary }) {
   const preview = useGameStore((s) => s.preview);
+  const screen = useGameStore((s) => s.screen);
+  const previewHero = useGameStore((s) => s.previewHero);
+  const heroSave = useGameStore((s) => s.heroSave);
+  const showHero = screen === "hero" || screen === "loadout";
   const pal = PLANET_PALETTE[preview];
   const theme = PLANET_THEME[preview];
+  const loadout = heroSave.loadouts[previewHero];
 
   useFrame((state) => {
     const cam = state.camera;
     const t = state.clock.elapsedTime;
+    if (showHero) {
+      cam.position.x = 1.28 + Math.sin(t * 0.1) * 0.06;
+      cam.position.y = 1.48 + Math.sin(t * 0.07) * 0.02;
+      cam.position.z = 2.85;
+      cam.lookAt(0, 1.18, 0);
+      return;
+    }
     cam.position.x = Math.sin(t * 0.07) * 0.7;
     cam.position.y = 0.32 + Math.sin(t * 0.05) * 0.18;
     cam.lookAt(0, 0, 0);
@@ -161,18 +174,35 @@ function MenuWorld({ lib }: { lib: WorldLibrary }) {
 
   return (
     <>
-      <hemisphereLight intensity={0.58} color={theme.hemiSky} groundColor={theme.hemiGround} />
-      <directionalLight position={[6, 8, 4]} intensity={2.15} color={theme.dir} />
+      <hemisphereLight intensity={showHero ? 0.64 : 0.58} color={showHero ? "#f2ece4" : theme.hemiSky} groundColor={showHero ? "#2a2622" : theme.hemiGround} />
+      <directionalLight position={[6, 8, 4]} intensity={showHero ? 1.95 : 2.15} color={showHero ? "#f6ead0" : theme.dir} />
+      {showHero ? <directionalLight position={[1.1, 2.2, 2.4]} intensity={0.95} color="#f2d8b4" /> : null}
+      {showHero ? <directionalLight position={[-3, 2.4, 4]} intensity={0.62} color="#c0d4ec" /> : null}
+      {showHero ? <directionalLight position={[2.2, 1.8, 3.2]} intensity={0.58} color="#fff2e0" /> : null}
+      {showHero ? <directionalLight position={[-1.2, 1.6, -2.4]} intensity={0.7} color="#9ac4dc" /> : null}
+      {showHero ? <pointLight position={[0.15, 1.58, 1.05]} intensity={1.45} distance={2.8} color="#f6e6d0" /> : null}
       <pointLight position={[-4, 2, 3]} intensity={22} distance={18} color={pal.atmo} />
       <pointLight position={[5, -1, 2]} intensity={10} distance={14} color={pal.ring} />
       <pointLight position={[16, 12, 9]} intensity={28} distance={40} color="#fff1d0" />
       <MenuSky lib={lib} preview={preview} />
       <SunGlint />
-      <PlanetGlobe id={preview} />
-      <PlanetRings color={pal.ring} />
-      <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
-      <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
-      <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
+      {showHero ? (
+        <>
+          <group position={[0, -2.6, -6]} scale={0.42}>
+            <PlanetGlobe id={preview} />
+          </group>
+          <HeroModel id={previewHero} weapon={loadout.weapon} armor={loadout.armor} scale={1.18} />
+          <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={2.8} blur={2.2} far={1.8} />
+        </>
+      ) : (
+        <>
+          <PlanetGlobe id={preview} />
+          <PlanetRings color={pal.ring} />
+          <CraterMoon position={[3.35, 0.85, -1.5]} radius={0.32} tint="#c6ccd2" />
+          <CraterMoon position={[-2.7, -0.45, 2.15]} radius={0.17} tint="#8a9098" />
+          <CraterMoon position={[1.8, -1.4, -2.4]} radius={0.1} tint={pal.atmo} glow />
+        </>
+      )}
     </>
   );
 }

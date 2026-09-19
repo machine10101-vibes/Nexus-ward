@@ -1,7 +1,8 @@
 import { ENEMIES, TOWERS, TOWER_ORDER, enemyTraitLine } from "@/game/config";
-import type { EnemyId, MapId, TowerId } from "@/game/types";
+import { HEROES, HERO_ORDER } from "@/game/heroes";
+import type { EnemyId, HeroId, MapId, TowerId } from "@/game/types";
 
-export type StudioKind = "tower" | "enemy" | "world";
+export type StudioKind = "tower" | "enemy" | "world" | "hero";
 
 export type StudioEntry = {
   id: string;
@@ -14,6 +15,7 @@ export type StudioEntry = {
   enemy?: EnemyId;
   world?: "globe" | "core" | "gate" | "pad";
   map?: MapId;
+  hero?: HeroId;
 };
 
 const ENEMY_ORDER: EnemyId[] = [
@@ -73,6 +75,15 @@ const FACTION_GROUP: Record<EnemyId, string> = {
 };
 
 export const STUDIO_CATALOG: StudioEntry[] = [
+  ...HERO_ORDER.map((id) => ({
+    id,
+    name: `${HEROES[id].name} · ${HEROES[id].title}`,
+    group: "Wardens",
+    kind: "hero" as const,
+    blurb: HEROES[id].blurb,
+    variants: ["Starter kit", "Cleared kit"],
+    hero: id,
+  })),
   ...TOWER_ORDER.map((id) => ({
     id,
     name: TOWERS[id].name,

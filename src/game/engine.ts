@@ -40,6 +40,9 @@ import type {
   TowerId,
 } from "./types";
 
+const HERO_SWING_AUTO = 0.38;
+const HERO_SWING_ART = 0.78;
+
 export type HeroState = {
   id: HeroId;
   x: number;
@@ -168,7 +171,7 @@ export class GameEngine {
     loadout: emptyLoadouts().fighter,
     stats: heroStats("fighter", emptyLoadouts().fighter),
     swing: 0,
-    swingMax: 0.28,
+    swingMax: HERO_SWING_AUTO,
     swingKind: -1,
     lastArt: -1,
     buffUntil: 0,
@@ -376,7 +379,7 @@ export class GameEngine {
       number,
     ];
     this.hero.swing = 0;
-    this.hero.swingMax = 0.28;
+    this.hero.swingMax = HERO_SWING_AUTO;
     this.hero.swingKind = -1;
     this.hero.lastArt = -1;
     this.hero.buffUntil = 0;
@@ -1001,8 +1004,8 @@ export class GameEngine {
       if (h.id === "fighter" && h.lastArt === 2) haste *= 1.16;
     }
     h.cooldown = 1 / (stats.fireRate * haste);
-    h.swing = 0.28;
-    h.swingMax = 0.28;
+    h.swing = HERO_SWING_AUTO;
+    h.swingMax = HERO_SWING_AUTO;
     h.swingKind = -1;
     this.sfx = "shoot";
     this.hudDirty = true;
@@ -1205,8 +1208,8 @@ export class GameEngine {
     h.artMax[slot] = cd;
     h.lastArt = slot;
     h.swingKind = slot;
-    h.swing = 0.52;
-    h.swingMax = 0.52;
+    h.swing = HERO_SWING_ART;
+    h.swingMax = HERO_SWING_ART;
     let n = 0;
     if (h.id === "fighter") {
       this.faceThreat(false, stats.range + 3.4);
@@ -1221,9 +1224,12 @@ export class GameEngine {
         }
         const fx = Math.sin(h.yaw);
         const fz = Math.cos(h.yaw);
-        this.spawnBurst(h.x + fx * 1.1, 0.7, h.z + fz * 1.1, 2.2, stats.color);
-        this.spawnBurst(h.x + fx * 0.4, 0.55, h.z + fz * 0.4, 1.6, stats.color);
-        this.spawnBurst(h.x, 0.55, h.z, 1.4, stats.color);
+        const px = Math.cos(h.yaw);
+        const pz = -Math.sin(h.yaw);
+        this.spawnBurst(h.x + fx * 0.35 - px * 0.85, 1.35, h.z + fz * 0.35 - pz * 0.85, 0.85, stats.color);
+        this.spawnBurst(h.x + fx * 1.05, 0.95, h.z + fz * 1.05, 1.7, stats.color);
+        this.spawnBurst(h.x + fx * 1.35 + px * 0.75, 0.48, h.z + fz * 1.35 + pz * 0.75, 1.55, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 1.25, stats.color);
       } else if (slot === 1) {
         h.buffUntil = this.time + 4.2;
         const hit = this.hostsInRange(stats.range + 1.7 + (aegis ? 0.25 : 0), false);
@@ -1232,8 +1238,9 @@ export class GameEngine {
           this.applySlow(e, aegis ? 0.28 : 0.34, aegis ? 4.0 : 3.2);
           n += 1;
         }
+        this.spawnBurst(h.x, 1.45, h.z, 1.1, stats.color);
         this.spawnBurst(h.x, 0.45, h.z, 2.8, stats.color);
-        this.spawnBurst(h.x, 0.2, h.z, 1.6, "#c4a574");
+        this.spawnBurst(h.x, 0.18, h.z, 1.7, "#c4a574");
         this.setHeroField(3.8, stats.range + 1.6 + (aegis ? 0.3 : 0), aegis ? 0.36 : 0.44, 0);
       } else {
         h.buffUntil = this.time + 2.8;
@@ -1244,9 +1251,9 @@ export class GameEngine {
         }
         const fx = Math.sin(h.yaw);
         const fz = Math.cos(h.yaw);
-        this.spawnBeam(h.x, 0.85, h.z, h.x + fx * 4.4, 0.7, h.z + fz * 4.4, stats.color, 0.2, 0.12, "rail");
-        for (const d of [1.2, 2.4, 3.6]) {
-          this.spawnBurst(h.x + fx * d, 0.65, h.z + fz * d, 0.7, stats.color);
+        this.spawnBeam(h.x, 1.05, h.z, h.x + fx * 4.4, 0.72, h.z + fz * 4.4, stats.color, 0.2, 0.12, "rail");
+        for (const d of [0.9, 2.0, 3.2, 4.2]) {
+          this.spawnBurst(h.x + fx * d, 0.95 - d * 0.06, h.z + fz * d, 0.62, stats.color);
         }
       }
     } else if (h.id === "ranger") {
@@ -1258,6 +1265,9 @@ export class GameEngine {
       if (slot === 0) {
         h.buffUntil = this.time + 4.0;
         const shots = marked.slice(0, ghost ? 4 : 3);
+        const mx = Math.sin(h.yaw);
+        const mz = Math.cos(h.yaw);
+        this.spawnBurst(h.x + mx * 0.58, 1.22, h.z + mz * 0.58, 0.28, stats.color);
         for (const e of shots) {
           this.heroHurt(e, stats.damage * 1.7, stats.kind);
           this.fireHero(e);
@@ -1299,8 +1309,9 @@ export class GameEngine {
           this.heroHurt(e, stats.damage * 1.55, stats.kind);
           n += 1;
         }
-        this.spawnBurst(h.x, 1.1, h.z, 3.6, stats.color);
-        this.spawnBurst(h.x, 0.7, h.z, 2.2, stats.color);
+        this.spawnBurst(h.x, 1.7, h.z, 1.4, stats.color);
+        this.spawnBurst(h.x, 1.15, h.z, 3.4, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 2.3, stats.color);
         this.setHeroField(2.0, reach * 0.72, 0, stats.damage * 0.08);
       } else if (slot === 1) {
         h.buffUntil = this.time + 3.0;

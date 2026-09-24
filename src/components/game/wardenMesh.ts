@@ -162,6 +162,23 @@ type BodyMats = {
   accent: MeshStandardMaterial;
 };
 
+function addStrand(
+  head: Object3D,
+  hair: MeshStandardMaterial,
+  x: number,
+  y: number,
+  z: number,
+  len: number,
+  rx: number,
+  ry = 0,
+  rz = 0,
+) {
+  const strand = new Mesh(new BoxGeometry(0.01, len, 0.005), hair);
+  strand.position.set(x, y, z);
+  strand.rotation.set(rx, ry, rz);
+  head.add(strand);
+}
+
 function addLock(
   head: Object3D,
   hair: MeshStandardMaterial,
@@ -210,6 +227,10 @@ function addHunterHair(head: Object3D, hairCol: MeshStandardMaterial, id: HeroId
     for (const sx of [-1, 1] as const) {
       addLock(head, hairCol, sx * 0.11, 0.02, 0.02, 0.42, 0.85, 0.55);
       addLock(head, hairCol, sx * 0.108, -0.02, 0.04, 0.32, 0.7, 0.4);
+      addStrand(head, mid, sx * 0.07, 0.09, 0.09, 0.07, -0.7, sx * 0.2, sx * 0.15);
+    }
+    for (const x of [-0.04, 0, 0.045] as const) {
+      addStrand(head, hairCol, x, 0.095, 0.1, 0.055, -0.85, x * 2);
     }
   } else if (id === "ranger") {
     addLock(head, mid, 0.02, 0.1, 0.04, 1.15, 0.55, 0.85, -0.28);
@@ -221,13 +242,18 @@ function addHunterHair(head: Object3D, hairCol: MeshStandardMaterial, id: HeroId
       addLock(head, mid, sx * 0.1, -0.04, 0.03, 0.38, 0.95, 0.42);
     }
     addLock(head, hairCol, 0.02, 0.08, -0.08, 1.1, 0.5, 0.7);
+    for (const x of [-0.05, -0.01, 0.04, 0.08] as const) {
+      addStrand(head, x > 0 ? mid : hairCol, x, 0.1, 0.08, 0.06, -0.75, x * 1.5);
+    }
   } else {
     addLock(head, mid, 0, 0.1, 0.02, 1.25, 0.6, 0.9, -0.2);
     addLock(head, hairCol, -0.04, 0.08, 0.1, 1.05, 0.32, 0.55, -0.4);
     addLock(head, mid, 0.05, 0.086, 0.09, 0.9, 0.3, 0.5, -0.35, 0.15);
     for (const sx of [-1, 1] as const) {
       addLock(head, hairCol, sx * 0.1, 0.02, -0.02, 0.55, 1.15, 0.7);
+      addStrand(head, mid, sx * 0.04, 0.09, 0.1, 0.08, -0.6, sx * 0.2);
     }
+    addStrand(head, hairCol, 0, 0.1, 0.09, 0.07, -0.8);
     const fall = new Mesh(new CapsuleGeometry(0.045, 0.22, 4, 8), hairCol);
     fall.position.set(-0.02, -0.08, -0.12);
     fall.rotation.x = 0.35;
@@ -327,12 +353,12 @@ function makeHunterHead(
   bridge.rotation.x = 0.42;
   bridge.position.set(0, 0.02, 0.13);
   head.add(bridge);
-  const nose = new Mesh(new ConeGeometry(0.018, 0.058, 8), skinDark);
+  const nose = new Mesh(new ConeGeometry(0.02, 0.064, 10), skinDark);
   nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, -0.004, 0.162);
+  nose.position.set(0, -0.004, 0.168);
   head.add(nose);
-  const tip = new Mesh(new SphereGeometry(0.014, 10, 8), skin);
-  tip.position.set(0, -0.026, 0.182);
+  const tip = new Mesh(new SphereGeometry(0.016, 12, 10), skin);
+  tip.position.set(0, -0.028, 0.19);
   head.add(tip);
   for (const sx of [-1, 1] as const) {
     const wing = new Mesh(new SphereGeometry(0.012, 8, 6), skinDark);
@@ -376,24 +402,28 @@ function makeHunterHead(
     lidLow.position.set(sx * 0.046, 0.004, 0.13);
     head.add(lidLow);
     const sclera = new Mesh(
-      new SphereGeometry(0.022, 12, 10),
-      mat(0xf4eee6, { roughness: 0.22, metalness: 0.04, flatShading: false }),
+      new SphereGeometry(0.026, 14, 12),
+      mat(0xf7f1ea, { roughness: 0.18, metalness: 0.02, flatShading: false, emissive: 0xf4eee6, emissiveIntensity: 0.18 }),
     );
-    sclera.scale.set(1.05, 0.85, 0.7);
-    sclera.position.set(sx * 0.046, 0.02, 0.14);
+    sclera.scale.set(1.08, 0.82, 0.72);
+    sclera.position.set(sx * 0.046, 0.02, 0.148);
     head.add(sclera);
     const iris = new Mesh(
-      new SphereGeometry(0.013, 12, 10),
-      mat(irisCol, { roughness: 0.24, flatShading: false, emissive: irisCol, emissiveIntensity: id === "mage" ? 0.4 : 0.1 }),
+      new SphereGeometry(0.015, 14, 12),
+      mat(irisCol, { roughness: 0.2, flatShading: false, emissive: irisCol, emissiveIntensity: id === "mage" ? 0.55 : 0.22 }),
     );
-    iris.position.set(sx * 0.046, 0.02, 0.154);
+    iris.position.set(sx * 0.046, 0.02, 0.164);
     head.add(iris);
-    const pupil = new Mesh(new SphereGeometry(0.0065, 8, 6), mat(0x080604, { flatShading: false }));
-    pupil.position.set(sx * 0.046, 0.02, 0.162);
+    const pupil = new Mesh(new SphereGeometry(0.007, 8, 6), mat(0x080604, { flatShading: false }));
+    pupil.position.set(sx * 0.046, 0.02, 0.174);
     head.add(pupil);
-    const hl = new Mesh(new SphereGeometry(0.0042, 6, 5), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.9 }));
-    hl.position.set(sx * 0.042, 0.026, 0.164);
+    const hl = new Mesh(new SphereGeometry(0.0048, 6, 5), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1.1 }));
+    hl.position.set(sx * 0.041, 0.027, 0.178);
     head.add(hl);
+    const lash = new Mesh(new BoxGeometry(0.048, 0.004, 0.006), hairCol);
+    lash.position.set(sx * 0.046, 0.04, 0.158);
+    lash.rotation.z = sx * -0.08;
+    head.add(lash);
     const caruncle = new Mesh(new SphereGeometry(0.004, 6, 5), blush);
     caruncle.position.set(sx * 0.034, 0.018, 0.148);
     head.add(caruncle);
@@ -472,9 +502,13 @@ function makeHunterLeg(side: number, m: BodyMats, opts: { bootFur: boolean; grea
   boot.position.set(0, 0.2, 0.02);
   addPart(boot, leg, 1.06);
 
-  const foot = new Mesh(new BoxGeometry(0.17, 0.1, 0.3), m.wrapDark);
-  foot.position.set(0, 0.05, 0.09);
+  const foot = new Mesh(new BoxGeometry(0.16, 0.09, 0.26), m.wrapDark);
+  foot.position.set(0, 0.05, 0.08);
   addPart(foot, leg);
+  const toe = new Mesh(new SphereGeometry(0.07, 10, 8), m.wrap);
+  toe.scale.set(1.05, 0.5, 1.15);
+  toe.position.set(0, 0.055, 0.2);
+  leg.add(toe);
   const sole = new Mesh(new BoxGeometry(0.18, 0.045, 0.32), mat(0x120c08, { roughness: 0.95 }));
   sole.position.set(0, 0.02, 0.08);
   leg.add(sole);
@@ -520,6 +554,9 @@ function makeHunterArm(
   upper.position.set(0, 0, 0);
   upper.rotation.z = side * 0.35;
   addPart(upper, arm, opts.sleeve === "bare" ? undefined : 1.04);
+  const elbow = new Mesh(new SphereGeometry(0.058, 12, 10), upperMat);
+  elbow.position.set(side * 0.07, -0.16, 0.01);
+  arm.add(elbow);
 
   const cuff = new Mesh(new CylinderGeometry(0.088, 0.096, 0.07, 8), opts.sleeve === "cloth" ? m.wrapMid : m.cloth);
   cuff.position.set(side * -0.02, 0.12, 0);
@@ -635,6 +672,11 @@ function addHunterTorso(
     const sternum = new Mesh(new BoxGeometry(0.04, 0.22, 0.03), m.metalBright);
     sternum.position.set(0, 1.22, 0.2);
     torso.add(sternum);
+    for (const y of [1.32, 1.16, 1.02] as const) {
+      const seam = new Mesh(new BoxGeometry(0.3, 0.008, 0.012), m.wrapDark);
+      seam.position.set(0, y, 0.2);
+      torso.add(seam);
+    }
   } else if (opts.chestKind === "cloth") {
     const robe = new Mesh(new BoxGeometry(0.32, 0.3, 0.13), m.wrapMid);
     robe.position.set(0, 1.2, 0.12);
@@ -1005,16 +1047,16 @@ function dressFighter(
   const accentN = hex(kit.accent);
   const steel = kit.heavy ? 0x9aa4ae : 0xd0d8e0;
   const m: BodyMats = {
-    cloth: mat(0x1a2026, { roughness: 0.9 }),
-    clothDark: mat(0x12161a, { roughness: 0.92 }),
-    wrap: mat(kit.heavy ? 0x1c2228 : 0x242a30, { metalness: 0.22, roughness: 0.7 }),
-    wrapDark: mat(0x101418, { metalness: 0.28, roughness: 0.72 }),
-    wrapMid: mat(kit.heavy ? 0xa8b2bc : 0xd4dce4, { metalness: 0.92, roughness: 0.12 }),
-    trim: mat(steel, { metalness: 0.88, roughness: 0.16 }),
-    trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28 }),
-    trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14 }),
-    metal: mat(steel, { metalness: 0.86, roughness: 0.18 }),
-    metalBright: mat(0xe8eef4, { metalness: 0.92, roughness: 0.14, emissive: 0xa8b8c8, emissiveIntensity: 0.12 }),
+    cloth: mat(0x1a2026, { roughness: 0.9, flatShading: false }),
+    clothDark: mat(0x12161a, { roughness: 0.92, flatShading: false }),
+    wrap: mat(kit.heavy ? 0x1c2228 : 0x242a30, { metalness: 0.22, roughness: 0.7, flatShading: false }),
+    wrapDark: mat(0x101418, { metalness: 0.28, roughness: 0.72, flatShading: false }),
+    wrapMid: mat(kit.heavy ? 0xa8b2bc : 0xd4dce4, { metalness: 0.92, roughness: 0.12, flatShading: false }),
+    trim: mat(steel, { metalness: 0.88, roughness: 0.16, flatShading: false }),
+    trimDark: mat(0x3a424a, { metalness: 0.7, roughness: 0.28, flatShading: false }),
+    trimMid: mat(0xc8d0d8, { metalness: 0.9, roughness: 0.14, flatShading: false }),
+    metal: mat(steel, { metalness: 0.86, roughness: 0.18, flatShading: false }),
+    metalBright: mat(0xe8eef4, { metalness: 0.92, roughness: 0.14, emissive: 0xa8b8c8, emissiveIntensity: 0.12, flatShading: false }),
     accent: mat(accentN, { metalness: 0.55, roughness: 0.22, emissive: accentN, emissiveIntensity: 0.55 }),
   };
 
@@ -1112,16 +1154,16 @@ function dressRanger(
 ) {
   const accentN = hex(kit.accent);
   const m: BodyMats = {
-    cloth: mat(0x1a2226, { roughness: 0.82, metalness: 0.18 }),
-    clothDark: mat(0x101618, { roughness: 0.86, metalness: 0.2 }),
-    wrap: mat(kit.heavy ? 0x1c2428 : 0x243034, { roughness: 0.42, metalness: 0.55 }),
-    wrapDark: mat(0x12181c, { roughness: 0.5, metalness: 0.48 }),
-    wrapMid: mat(kit.heavy ? 0x3a4c56 : 0x4a6470, { roughness: 0.36, metalness: 0.62 }),
-    trim: mat(0x8aa4b0, { roughness: 0.28, metalness: 0.78 }),
-    trimDark: mat(0x2a3438, { roughness: 0.4, metalness: 0.6 }),
-    trimMid: mat(0x6a8490, { roughness: 0.3, metalness: 0.7 }),
-    metal: mat(0xe4ecf4, { metalness: 0.9, roughness: 0.16 }),
-    metalBright: mat(0xf6fafc, { metalness: 0.96, roughness: 0.1, emissive: 0xb8c8d8, emissiveIntensity: 0.42 }),
+    cloth: mat(0x1a2226, { roughness: 0.82, metalness: 0.18, flatShading: false }),
+    clothDark: mat(0x101618, { roughness: 0.86, metalness: 0.2, flatShading: false }),
+    wrap: mat(kit.heavy ? 0x1c2428 : 0x243034, { roughness: 0.42, metalness: 0.55, flatShading: false }),
+    wrapDark: mat(0x12181c, { roughness: 0.5, metalness: 0.48, flatShading: false }),
+    wrapMid: mat(kit.heavy ? 0x3a4c56 : 0x4a6470, { roughness: 0.36, metalness: 0.62, flatShading: false }),
+    trim: mat(0x8aa4b0, { roughness: 0.28, metalness: 0.78, flatShading: false }),
+    trimDark: mat(0x2a3438, { roughness: 0.4, metalness: 0.6, flatShading: false }),
+    trimMid: mat(0x6a8490, { roughness: 0.3, metalness: 0.7, flatShading: false }),
+    metal: mat(0xe4ecf4, { metalness: 0.9, roughness: 0.16, flatShading: false }),
+    metalBright: mat(0xf6fafc, { metalness: 0.96, roughness: 0.1, emissive: 0xb8c8d8, emissiveIntensity: 0.42, flatShading: false }),
     accent: mat(accentN, { metalness: 0.55, roughness: 0.18, emissive: accentN, emissiveIntensity: 0.7 }),
   };
 
@@ -1193,7 +1235,11 @@ function dressRanger(
     const cup = new Mesh(new TorusGeometry(0.02, 0.005, 5, 10), m.metal);
     cup.position.set(sx * 0.046, 0.022, 0.148);
     head.add(cup);
-    const glass = new Mesh(new SphereGeometry(0.016, 8, 6), liveGlow(0x4ad0f0, 0.55));
+    const lens = liveGlow(0x4ad0f0, 0.35);
+    lens.transparent = true;
+    lens.opacity = 0.42;
+    lens.depthWrite = false;
+    const glass = new Mesh(new SphereGeometry(0.016, 10, 8), lens);
     if (sx < 0) glass.name = "visorGlow";
     glass.position.set(sx * 0.046, 0.022, 0.156);
     head.add(glass);
@@ -1213,15 +1259,15 @@ function dressMage(
 ) {
   const accentN = hex(kit.accent);
   const m: BodyMats = {
-    cloth: mat(kit.heavy ? 0x2a2448 : 0x383264, { roughness: 0.86 }),
-    clothDark: mat(0x1a1630, { roughness: 0.9 }),
-    wrap: mat(kit.heavy ? 0x3c366c : 0x5c54a0, { roughness: 0.82 }),
-    wrapDark: mat(kit.heavy ? 0x1c1834 : 0x2a2448, { roughness: 0.88 }),
-    wrapMid: mat(kit.heavy ? 0x9a8cd8 : 0x8a82c4, { roughness: 0.64, emissive: accentN, emissiveIntensity: 0.22 }),
-    trim: mat(0x6a62a0, { roughness: 0.8 }),
-    trimDark: mat(0x2a2448, { roughness: 0.88 }),
-    trimMid: mat(0x9a8ed4, { roughness: 0.72, emissive: accentN, emissiveIntensity: 0.18 }),
-    metal: mat(0xc8c0e8, { metalness: 0.62, roughness: 0.22 }),
+    cloth: mat(kit.heavy ? 0x2a2448 : 0x383264, { roughness: 0.86, flatShading: false }),
+    clothDark: mat(0x1a1630, { roughness: 0.9, flatShading: false }),
+    wrap: mat(kit.heavy ? 0x3c366c : 0x5c54a0, { roughness: 0.82, flatShading: false }),
+    wrapDark: mat(kit.heavy ? 0x1c1834 : 0x2a2448, { roughness: 0.88, flatShading: false }),
+    wrapMid: mat(kit.heavy ? 0x9a8cd8 : 0x8a82c4, { roughness: 0.64, emissive: accentN, emissiveIntensity: 0.22, flatShading: false }),
+    trim: mat(0x6a62a0, { roughness: 0.8, flatShading: false }),
+    trimDark: mat(0x2a2448, { roughness: 0.88, flatShading: false }),
+    trimMid: mat(0x9a8ed4, { roughness: 0.72, emissive: accentN, emissiveIntensity: 0.18, flatShading: false }),
+    metal: mat(0xc8c0e8, { metalness: 0.62, roughness: 0.22, flatShading: false }),
     metalBright: mat(accentN, { metalness: 0.35, roughness: 0.14, emissive: accentN, emissiveIntensity: 1.1 }),
     accent: mat(accentN, { metalness: 0.28, roughness: 0.14, emissive: accentN, emissiveIntensity: 1.25 }),
   };

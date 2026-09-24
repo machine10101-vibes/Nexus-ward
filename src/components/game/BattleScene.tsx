@@ -38,9 +38,10 @@ import {
   SpawnGate,
   TowerModel,
 } from "./models";
+import { HeroModel } from "./HeroModel";
 import { PlanetGlobe } from "./Planet";
 import { PathLane } from "./PathLane";
-import { WorldGround } from "./WorldGround";
+import { arenaMetrics, WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld, unionCells } from "@/game/maps";
 import type { MapDef, MapId, TowerId } from "@/game/types";
@@ -120,7 +121,8 @@ export function BattleScene() {
     screen === "lost" ||
     screen === "help" ||
     screen === "settings" ||
-    screen === "studio";
+    screen === "studio" ||
+    screen === "loadout";
 
   useFrame((state, dt) => {
     engine.update(dt, paused);
@@ -143,6 +145,8 @@ export function BattleScene() {
         <World mapId={mapId} quality={quality} />
       </Suspense>
       <Pads />
+      <HeroDropPlane />
+      <HeroLayer />
       <TowersLayer />
       <SynergyLinks />
       <EnemyLayer />
@@ -390,9 +394,11 @@ function Pads() {
               engine.hoverPad = i;
               useGameStore.setState({ hoverPad: i });
               const before = engine.towers.length;
+              const wasCarry = engine.carryingHero;
               engine.selectPad(i);
               if (engine.towers.length > before) audio.place();
-              else audio.ui();
+              else if (!wasCarry) audio.ui();
+              useGameStore.setState({ carryingHero: engine.carryingHero });
               useGameStore.getState().syncHud();
             }}
           >
@@ -655,6 +661,157 @@ function SynergyLinks() {
         );
       })}
     </group>
+  );
+}
+
+function syncHeroCarry() {
+  useGameStore.setState({ carryingHero: engine.carryingHero, buildType: engine.buildType });
+  useGameStore.getState().syncHud();
+}
+
+function HeroAgroRing({ radius, color }: { radius: number; color: string }) {
+  const wash = useRef<MeshBasicMaterial>(null);
+  const rim = useRef<MeshBasicMaterial>(null);
+  const outer = Math.max(1.2, radius);
+  useFrame(() => {
+    const hot = engine.hero.aiming ? 1 : 0;
+    const pulse = 0.14 + hot * 0.08 + Math.sin(engine.visualTime * 5.2) * (hot ? 0.05 : 0.02);
+    if (wash.current) wash.current.opacity = pulse;
+    if (rim.current) rim.current.opacity = 0.72 + hot * 0.18;
+  });
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} renderOrder={2}>
+        <circleGeometry args={[outer, 56]} />
+        <meshBasicMaterial ref={wash} color={color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.055, 0]} renderOrder={3}>
+        <ringGeometry args={[Math.max(0.5, outer - 0.18), outer, 56]} />
+        <meshBasicMaterial ref={rim} color={color} transparent opacity={0.8} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={3}>
+        <ringGeometry args={[Math.max(0.35, outer * 0.62), outer * 0.68, 40]} />
+        <meshBasicMaterial color={color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function HeroDropPlane() {
+  const carrying = useGameStore((s) => s.carryingHero);
+  const map = engine.map;
+  const { arenaR, squash } = arenaMetrics(map.cols, map.rows);
+  if (!carrying) return null;
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, 0.02, 0]}
+      onPointerMove={(e) => {
+        e.stopPropagation();
+        engine.setHeroGhost(e.point.x, e.point.z);
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        if (engine.dropHero(e.point.x, e.point.z)) audio.place();
+        syncHeroCarry();
+      }}
+    >
+      <planeGeometry args={[arenaR * 2.4, arenaR * squash * 2.4]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+function HeroLayer() {
+  const hero = engine.hero;
+  const stamp = useGameStore((s) => `${s.hud.heroId}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.weapon}-${s.heroSave.loadouts[s.hud.heroId ?? "fighter"]?.armor}`);
+  const carrying = useGameStore((s) => s.carryingHero);
+  void stamp;
+  const group = useRef<Group>(null);
+  const field = useRef<Mesh>(null);
+  const ghost = useRef<Group>(null);
+  const ghostWash = useRef<MeshBasicMaterial>(null);
+  useFrame(() => {
+    const g = group.current;
+    if (g) {
+      g.position.set(hero.x, hero.y, hero.z);
+      g.rotation.y = hero.yaw;
+      g.visible = !engine.carryingHero;
+      const punch = hero.swing > 0 ? 1 + hero.swing * 0.04 : 1;
+      g.scale.setScalar(punch);
+    }
+    const ring = field.current;
+    if (ring) {
+      const live = !engine.carryingHero && hero.zoneUntil > engine.time && hero.zoneRange > 0;
+      ring.visible = live;
+      if (live) {
+        const r = Math.max(1.1, hero.zoneRange * 0.55);
+        ring.scale.setScalar(r);
+        const mat = ring.material as MeshBasicMaterial;
+        mat.opacity = 0.22 + Math.sin(engine.visualTime * 6) * 0.08;
+      }
+    }
+    const gh = ghost.current;
+    const spot = engine.heroGhost;
+    if (gh && spot) {
+      gh.position.set(spot.x, 0.14, spot.z);
+      gh.visible = engine.carryingHero;
+      const wash = ghostWash.current;
+      if (wash) wash.color.set(engine.canPlaceHero(spot.x, spot.z) ? hero.stats.color : "#c45a4a");
+    }
+  });
+  return (
+    <>
+      <group ref={group} position={[hero.x, hero.y, hero.z]}>
+        <HeroModel key={stamp} id={hero.id} weapon={hero.loadout.weapon} armor={hero.loadout.armor} scale={1.28} animate="combat" />
+        <mesh
+          position={[0, 0.9, 0]}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            engine.pickUpHero();
+            audio.ui();
+            syncHeroCarry();
+          }}
+        >
+          <capsuleGeometry args={[0.48, 1.15, 4, 8]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <ringGeometry args={[0.28, 0.38, 20]} />
+          <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
+        </mesh>
+        <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
+        <mesh ref={field} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} visible={false}>
+          <ringGeometry args={[0.72, 1.05, 28]} />
+          <meshBasicMaterial color={hero.stats.color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
+        </mesh>
+      </group>
+      {carrying ? (
+        <group ref={ghost} position={[hero.x, 0.14, hero.z]}>
+          <HeroModel
+            key={`${stamp}-ghost`}
+            id={hero.id}
+            weapon={hero.loadout.weapon}
+            armor={hero.loadout.armor}
+            scale={1.15}
+            animate="idle"
+            ghost
+          />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <ringGeometry args={[0.3, 0.44, 20]} />
+            <meshBasicMaterial
+              ref={ghostWash}
+              color={hero.stats.color}
+              transparent
+              opacity={0.7}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+          <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
+        </group>
+      ) : null}
+    </>
   );
 }
 

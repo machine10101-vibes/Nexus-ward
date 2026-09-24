@@ -1,5 +1,6 @@
 import {
   AUTO_WAVE_DELAY,
+  CELL,
   ENEMIES,
   inflateSpawnCount,
   MAX_BEAMS,
@@ -18,6 +19,7 @@ import {
   towerStats,
   upgradeCost,
 } from "./config";
+import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { MAPS, cellToWorld } from "./maps";
 import type {
   Beam,
@@ -30,12 +32,41 @@ import type {
   Enemy,
   EnemyId,
   Floater,
+  HeroId,
   MapDef,
   MapId,
   Targeting,
   Tower,
   TowerId,
 } from "./types";
+
+const HERO_SWING_AUTO = 0.38;
+const HERO_SWING_ART = 0.78;
+
+export type HeroState = {
+  id: HeroId;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  cooldown: number;
+  artCd: [number, number, number];
+  artMax: [number, number, number];
+  loadout: HeroLoadout;
+  stats: HeroStats;
+  swing: number;
+  swingMax: number;
+  swingKind: 0 | 1 | 2 | -1;
+  lastArt: 0 | 1 | 2 | -1;
+  buffUntil: number;
+  zoneUntil: number;
+  zoneRange: number;
+  zoneSlow: number;
+  zoneDmg: number;
+  zoneAcc: number;
+  kills: number;
+  aiming: boolean;
+};
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
@@ -47,6 +78,13 @@ function dist2(ax: number, ay: number, bx: number, by: number) {
   const dx = ax - bx;
   const dy = ay - by;
   return dx * dx + dy * dy;
+}
+
+function lerpAngle(from: number, to: number, t: number) {
+  let d = to - from;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return from + d * Math.min(1, Math.max(0, t));
 }
 
 export class GameEngine {
@@ -119,6 +157,32 @@ export class GameEngine {
   placeGen = 0;
   rankGen = 0;
   leakGen = 0;
+  carryingHero = false;
+  heroGhost: { x: number; z: number } | null = null;
+  hero: HeroState = {
+    id: "fighter",
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    cooldown: 0,
+    artCd: [0, 0, 0],
+    artMax: [16, 18, 20],
+    loadout: emptyLoadouts().fighter,
+    stats: heroStats("fighter", emptyLoadouts().fighter),
+    swing: 0,
+    swingMax: HERO_SWING_AUTO,
+    swingKind: -1,
+    lastArt: -1,
+    buffUntil: 0,
+    zoneUntil: 0,
+    zoneRange: 0,
+    zoneSlow: 0,
+    zoneDmg: 0,
+    zoneAcc: 0,
+    kills: 0,
+    aiming: false,
+  };
 
   constructor() {
     this.resetPools();
@@ -186,6 +250,7 @@ export class GameEngine {
       targetSlot: -1,
       ttl: 0,
       color: "#fff",
+      fromHero: false,
     };
   }
 
@@ -230,7 +295,7 @@ export class GameEngine {
     return { slot, alive: false, kind: "frost", x: 0, z: 0, ttl: 0, maxTtl: 1, size: 1, color: "#fff" };
   }
 
-  load(id: MapId) {
+  load(id: MapId, heroId: HeroId = "fighter", loadout: HeroLoadout = emptyLoadouts()[heroId]) {
     const map = MAPS[id];
     this.map = map;
     this.phase = "build";
@@ -286,6 +351,58 @@ export class GameEngine {
     this.leakGen = 0;
     this.fireGen = 0;
     this.lastShooter = null;
+    this.carryingHero = false;
+    this.heroGhost = null;
+    this.placeHero(heroId, loadout);
+  }
+
+  placeHero(id: HeroId, loadout: HeroLoadout) {
+    const end = this.endWorld();
+    const prev = this.waypoints[this.waypoints.length - 2] ?? end;
+    const dx = end.x - prev.x;
+    const dz = end.z - prev.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const ux = dx / len;
+    const uz = dz / len;
+    this.hero.id = id;
+    this.hero.loadout = { ...loadout };
+    this.hero.stats = heroStats(id, loadout);
+    this.hero.x = end.x - ux * 2.05 + -uz * 1.55;
+    this.hero.y = 0;
+    this.hero.z = end.z - uz * 2.05 + ux * 1.55;
+    this.hero.yaw = Math.atan2(dx, dz);
+    this.hero.cooldown = 0;
+    this.hero.artCd = [0, 0, 0];
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
+    this.hero.swing = 0;
+    this.hero.swingMax = HERO_SWING_AUTO;
+    this.hero.swingKind = -1;
+    this.hero.lastArt = -1;
+    this.hero.buffUntil = 0;
+    this.hero.zoneUntil = 0;
+    this.hero.zoneRange = 0;
+    this.hero.zoneSlow = 0;
+    this.hero.zoneDmg = 0;
+    this.hero.zoneAcc = 0;
+    this.hero.kills = 0;
+    this.hero.aiming = false;
+    this.carryingHero = false;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
+  }
+
+  applyHeroGear(loadout: HeroLoadout) {
+    this.hero.loadout = { ...loadout };
+    this.hero.stats = heroStats(this.hero.id, loadout);
+    this.hero.artMax = [0, 1, 2].map((slot) => artCooldown(this.hero.id, slot as 0 | 1 | 2, loadout)) as [
+      number,
+      number,
+      number,
+    ];
+    this.hudDirty = true;
   }
 
   startWave() {
@@ -447,6 +564,11 @@ export class GameEngine {
   }
 
   selectPad(pad: number) {
+    if (this.carryingHero) {
+      const w = this.padWorld[pad];
+      if (w) this.dropHero(w.x, w.z);
+      return;
+    }
     if (this.occupied[pad] !== -1) {
       this.selectedTower = this.occupied[pad];
       this.buildType = null;
@@ -463,14 +585,79 @@ export class GameEngine {
 
   setBuildType(type: TowerId | null) {
     this.buildType = type;
-    if (type) this.selectedTower = null;
+    if (type) {
+      this.selectedTower = null;
+      this.cancelCarry();
+    }
     this.hudDirty = true;
   }
 
   cancelBuild() {
-    if (!this.buildType) return false;
+    let changed = false;
+    if (this.buildType) {
+      this.buildType = null;
+      changed = true;
+    }
+    if (this.cancelCarry()) changed = true;
+    if (changed) this.hudDirty = true;
+    return changed;
+  }
+
+  playInset(x: number, z: number) {
+    const arenaR = (this.map.cols * CELL) / 2 + 3.2;
+    const squash = ((this.map.rows * CELL) / 2 + 3.2) / arenaR;
+    return Math.hypot(x / arenaR, z / (arenaR * squash));
+  }
+
+  canPlaceHero(x: number, z: number) {
+    if (this.playInset(x, z) > 0.92) return false;
+    const core = this.endWorld();
+    return dist2(x, z, core.x, core.z) >= 1.6 * 1.6;
+  }
+
+  pickUpHero() {
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
     this.buildType = null;
+    this.selectedTower = null;
+    this.carryingHero = true;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
+    this.lastEvent = `${HEROES[this.hero.id].name} relocating · drop on open ground`;
     this.hudDirty = true;
+    this.sfx = "ui";
+    return true;
+  }
+
+  setHeroGhost(x: number, z: number) {
+    this.heroGhost = { x, z };
+  }
+
+  cancelCarry() {
+    if (!this.carryingHero) return false;
+    this.carryingHero = false;
+    this.heroGhost = { x: this.hero.x, z: this.hero.z };
+    this.lastEvent = `${HEROES[this.hero.id].name} holding`;
+    this.hudDirty = true;
+    return true;
+  }
+
+  dropHero(x: number, z: number) {
+    if (!this.carryingHero) return false;
+    if (!this.canPlaceHero(x, z)) {
+      this.lastEvent = "Need open ground inside the ward";
+      this.sfx = "deny";
+      this.hudDirty = true;
+      return false;
+    }
+    this.hero.x = x;
+    this.hero.y = 0;
+    this.hero.z = z;
+    this.faceThreat(this.hero.stats.hitsFlying, 14);
+    this.carryingHero = false;
+    this.heroGhost = { x, z };
+    this.lastEvent = `${HEROES[this.hero.id].name} planted · agro live`;
+    this.hudDirty = true;
+    this.sfx = "place";
+    this.spawnDecal(x, z, 1.15, this.hero.stats.color, "rank");
     return true;
   }
 
@@ -592,6 +779,10 @@ export class GameEngine {
     this.time += dt;
     if (this.surgeCd > 0) this.surgeCd = Math.max(0, this.surgeCd - dt);
     if (this.overclockCd > 0) this.overclockCd = Math.max(0, this.overclockCd - dt);
+    this.hero.artCd[0] = Math.max(0, this.hero.artCd[0] - dt);
+    this.hero.artCd[1] = Math.max(0, this.hero.artCd[1] - dt);
+    this.hero.artCd[2] = Math.max(0, this.hero.artCd[2] - dt);
+    if (this.hero.swing > 0) this.hero.swing = Math.max(0, this.hero.swing - dt);
     if (this.phase === "build") {
       this.buildClock += dt;
       if (this.autoWave && this.wave > 0 && this.wave < this.map.waves.length) {
@@ -604,6 +795,8 @@ export class GameEngine {
     if (this.phase === "combat") this.spawnStep(dt);
     this.moveEnemies(dt);
     this.tickTowers(dt);
+    this.tickHero(dt);
+    this.tickHeroField(dt);
     this.moveBolts(dt);
     if (this.phase === "combat") this.checkWaveEnd();
   }
@@ -783,6 +976,375 @@ export class GameEngine {
     }
   }
 
+  tickHero(dt: number) {
+    if (this.carryingHero) return;
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return;
+    const h = this.hero;
+    const stats = h.stats;
+    h.cooldown = Math.max(0, h.cooldown - dt);
+    const target = this.pickHeroTarget(stats.range, stats.hitsFlying);
+    if (!target) {
+      h.aiming = false;
+      const scout = this.pickHeroTarget(18, true);
+      if (scout) {
+        const want = Math.atan2(scout.x - h.x, scout.z - h.z);
+        h.yaw = lerpAngle(h.yaw, want, 1 - Math.exp(-dt * 3.2));
+      }
+      return;
+    }
+    h.aiming = true;
+    const dx = target.x - h.x;
+    const dz = target.z - h.z;
+    h.yaw = Math.atan2(dx, dz);
+    if (h.cooldown > 0) return;
+    this.fireHero(target);
+    let haste = this.time < this.overclockUntil ? 1.35 : 1;
+    if (this.time < h.buffUntil) {
+      if (h.id === "ranger" && h.lastArt === 0) haste *= 1.38;
+      if (h.id === "fighter" && h.lastArt === 2) haste *= 1.16;
+    }
+    h.cooldown = 1 / (stats.fireRate * haste);
+    h.swing = HERO_SWING_AUTO;
+    h.swingMax = HERO_SWING_AUTO;
+    h.swingKind = -1;
+    this.sfx = "shoot";
+    this.hudDirty = true;
+  }
+
+  setHeroField(duration: number, range: number, slow: number, dmg: number) {
+    const h = this.hero;
+    h.zoneUntil = this.time + duration;
+    h.zoneRange = range;
+    h.zoneSlow = slow;
+    h.zoneDmg = dmg;
+    h.zoneAcc = 0;
+    this.spawnDecal(h.x, h.z, Math.max(1.2, range * 0.72), h.stats.color, "frost");
+  }
+
+  tickHeroField(dt: number) {
+    const h = this.hero;
+    if (this.carryingHero) return;
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return;
+    if (this.time >= h.zoneUntil || h.zoneRange <= 0) return;
+    h.zoneAcc += dt;
+    if (h.zoneAcc < 0.4) return;
+    h.zoneAcc = 0;
+    const flying = h.id !== "fighter";
+    const hit = this.hostsInRange(h.zoneRange, flying);
+    for (const e of hit) {
+      if (h.zoneDmg > 0) this.heroHurt(e, h.zoneDmg, h.stats.kind);
+      if (h.zoneSlow > 0) this.applySlow(e, h.zoneSlow, 0.85);
+    }
+    this.spawnDecal(h.x, h.z, Math.max(1.2, h.zoneRange * 0.72), h.stats.color, "frost");
+    if (h.id === "mage") this.spawnBurst(h.x, 0.85, h.z, h.zoneRange * 0.45, h.stats.color);
+  }
+
+  pickHeroTarget(range: number, flying: boolean): Enemy | null {
+    const r2 = range * range;
+    const id = this.hero.id;
+    let best: Enemy | null = null;
+    let bestScore = -Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      const d2 = dist2(this.hero.x, this.hero.z, e.x, e.z);
+      if (d2 > r2) continue;
+      let score = e.progress - d2 * 0.02;
+      if (id === "fighter") {
+        score = -d2 + this.clumpScore(e) * 0.85 + (e.boss ? 48 : 0) + e.hp * 0.015;
+      } else if (id === "ranger") {
+        score = e.progress + (e.flying ? 10 : 0) + (e.boss ? 24 : 0) - d2 * 0.012;
+      } else {
+        score = this.clumpScore(e) * 1.25 + e.hp * 0.03 + (e.boss ? 36 : 0) - d2 * 0.008;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  clumpScore(e: Enemy) {
+    let n = 0;
+    for (const o of this.enemies) {
+      if (!o.alive || o.slot === e.slot) continue;
+      if (dist2(e.x, e.z, o.x, o.z) <= 1.7 * 1.7) n += 1;
+    }
+    return n;
+  }
+
+  heroHurt(e: Enemy, raw: number, kind: DamageKind | string) {
+    const live = e.alive;
+    this.hurt(e, raw, kind);
+    if (live && !e.alive) {
+      this.hero.kills += 1;
+      this.lastEvent = `${HEROES[this.hero.id].name} · ${this.hero.kills}`;
+      this.hudDirty = true;
+    }
+  }
+
+  fireHero(target: Enemy) {
+    const h = this.hero;
+    const stats = h.stats;
+    const kind = stats.kind;
+    const y = 1.15;
+    const hot = this.time < h.buffUntil;
+    if (h.id === "fighter") {
+      const rush = hot && h.lastArt === 2;
+      const dmg = stats.damage * (rush ? 1.4 : 1);
+      this.spawnBurst(target.x, target.y + 0.35, target.z, rush ? 0.85 : 0.55, stats.color);
+      this.spawnBeam(h.x, 1.15, h.z, target.x, target.y + 0.32, target.z, stats.color, 0.1, 0.05, "rail");
+      this.heroHurt(target, dmg, kind);
+      if (hot && h.lastArt === 1) this.applySlow(target, 0.62, 1.15);
+      const splash =
+        (this.hero.loadout.weapon === "void-greatblade" ? 1.35 : 0.85) * (hot && h.lastArt === 0 ? 1.45 : 1);
+      for (const e of this.enemies) {
+        if (!e.alive || e.slot === target.slot || e.flying) continue;
+        if (dist2(target.x, target.z, e.x, e.z) <= splash * splash) {
+          this.heroHurt(e, dmg * 0.45, kind);
+          if (hot && h.lastArt === 1) this.applySlow(e, 0.7, 0.85);
+        }
+      }
+    } else if (h.id === "ranger") {
+      const bolt = this.bolts.find((b) => !b.alive);
+      if (!bolt) {
+        this.heroHurt(target, stats.damage, kind);
+        if (hot && h.lastArt !== 0) this.applySlow(target, h.lastArt === 1 ? 0.58 : 0.64, 0.85);
+        return;
+      }
+      const dx = target.x - h.x;
+      const dy = target.y + 0.25 - y;
+      const dz = target.z - h.z;
+      const len = Math.hypot(dx, dy, dz) || 1;
+      const speed = 20;
+      bolt.alive = true;
+      bolt.kind = "bolt";
+      bolt.x = h.x;
+      bolt.y = y;
+      bolt.z = h.z;
+      bolt.vx = (dx / len) * speed;
+      bolt.vy = (dy / len) * speed;
+      bolt.vz = (dz / len) * speed;
+      bolt.speed = speed;
+      bolt.damage = stats.damage;
+      bolt.splash = 0;
+      bolt.slow = 0;
+      bolt.slowTime = 0;
+      bolt.targetSlot = target.slot;
+      bolt.ttl = 2.2;
+      bolt.color = stats.color;
+      bolt.fromHero = true;
+      this.spawnBurst(h.x + Math.sin(h.yaw) * 0.5, 1.22, h.z + Math.cos(h.yaw) * 0.5, 0.22, stats.color);
+      if (hot && h.lastArt === 1) this.applySlow(target, 0.58, 0.95);
+      if (hot && h.lastArt === 2) {
+        this.applySlow(target, 0.66, 0.8);
+        this.spawnBurst(target.x, target.y + 0.28, target.z, 0.4, stats.color);
+      }
+    } else {
+      this.spawnBeam(h.x, 1.35, h.z, target.x, target.y + 0.28, target.z, stats.color, 0.14, 0.07, "lance");
+      this.heroHurt(target, stats.damage, kind);
+      if (hot && h.lastArt === 0) {
+        for (const e of this.enemies) {
+          if (!e.alive || e.slot === target.slot) continue;
+          if (dist2(target.x, target.z, e.x, e.z) <= 1.2 * 1.2) this.heroHurt(e, stats.damage * 0.32, kind);
+        }
+        this.spawnBurst(target.x, target.y + 0.3, target.z, 0.95, stats.color);
+      }
+      if (hot && h.lastArt === 1) {
+        const extra = this.pickHeroTarget(stats.range + 0.8, true);
+        if (extra && extra.slot !== target.slot) {
+          this.spawnBeam(h.x, 1.28, h.z, extra.x, extra.y + 0.26, extra.z, stats.color, 0.1, 0.05, "lance");
+          this.heroHurt(extra, stats.damage * 0.45, kind);
+        }
+      }
+      if (hot && h.lastArt === 2) this.applySlow(target, 0.52, 1.45);
+    }
+  }
+
+  hostsInRange(range: number, flying: boolean) {
+    const r2 = range * range;
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      if (dist2(this.hero.x, this.hero.z, e.x, e.z) <= r2) out.push(e);
+    }
+    return out;
+  }
+
+  faceThreat(flying: boolean, reach = 10) {
+    const target = this.pickHeroTarget(reach, flying);
+    if (!target) return;
+    this.hero.yaw = Math.atan2(target.x - this.hero.x, target.z - this.hero.z);
+  }
+
+  hostsOnLine(reach: number, width: number, flying: boolean) {
+    const h = this.hero;
+    const fx = Math.sin(h.yaw);
+    const fz = Math.cos(h.yaw);
+    const out: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.flying && !flying) continue;
+      const dx = e.x - h.x;
+      const dz = e.z - h.z;
+      const along = dx * fx + dz * fz;
+      const perp = Math.abs(dx * fz - dz * fx);
+      if (along > 0.15 && along < reach && perp < width) out.push(e);
+    }
+    return out;
+  }
+
+  castHeroAbility(slot: 0 | 1 | 2) {
+    if (this.carryingHero) return false;
+    if (this.phase === "idle" || this.phase === "won" || this.phase === "lost") return false;
+    const h = this.hero;
+    if (h.artCd[slot] > 0) return false;
+    const stats = h.stats;
+    const art = HEROES[h.id].arts[slot];
+    const cd = artCooldown(h.id, slot, h.loadout);
+    h.artCd[slot] = cd;
+    h.artMax[slot] = cd;
+    h.lastArt = slot;
+    h.swingKind = slot;
+    h.swing = HERO_SWING_ART;
+    h.swingMax = HERO_SWING_ART;
+    let n = 0;
+    if (h.id === "fighter") {
+      this.faceThreat(false, stats.range + 3.4);
+      const great = h.loadout.weapon === "void-greatblade";
+      const aegis = h.loadout.armor === "aegis-plate";
+      if (slot === 0) {
+        h.buffUntil = this.time + 3.6;
+        const hit = this.hostsInRange(stats.range + 1.15 + (great ? 0.4 : 0), false);
+        for (const e of hit) {
+          this.heroHurt(e, stats.damage * (great ? 2.45 : 2.15), stats.kind);
+          n += 1;
+        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        const px = Math.cos(h.yaw);
+        const pz = -Math.sin(h.yaw);
+        this.spawnBurst(h.x + fx * 0.35 - px * 0.85, 1.35, h.z + fz * 0.35 - pz * 0.85, 0.85, stats.color);
+        this.spawnBurst(h.x + fx * 1.05, 0.95, h.z + fz * 1.05, 1.7, stats.color);
+        this.spawnBurst(h.x + fx * 1.35 + px * 0.75, 0.48, h.z + fz * 1.35 + pz * 0.75, 1.55, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 1.25, stats.color);
+      } else if (slot === 1) {
+        h.buffUntil = this.time + 4.2;
+        const hit = this.hostsInRange(stats.range + 1.7 + (aegis ? 0.25 : 0), false);
+        for (const e of hit) {
+          this.heroHurt(e, stats.damage * 0.95, stats.kind);
+          this.applySlow(e, aegis ? 0.28 : 0.34, aegis ? 4.0 : 3.2);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 1.45, h.z, 1.1, stats.color);
+        this.spawnBurst(h.x, 0.45, h.z, 2.8, stats.color);
+        this.spawnBurst(h.x, 0.18, h.z, 1.7, "#c4a574");
+        this.setHeroField(3.8, stats.range + 1.6 + (aegis ? 0.3 : 0), aegis ? 0.36 : 0.44, 0);
+      } else {
+        h.buffUntil = this.time + 2.8;
+        const hit = this.hostsOnLine(stats.range + 3.4 + (great ? 0.5 : 0), 0.85, false);
+        for (const e of hit) {
+          this.heroHurt(e, stats.damage * 2.6, stats.kind);
+          n += 1;
+        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        this.spawnBeam(h.x, 1.05, h.z, h.x + fx * 4.4, 0.72, h.z + fz * 4.4, stats.color, 0.2, 0.12, "rail");
+        for (const d of [0.9, 2.0, 3.2, 4.2]) {
+          this.spawnBurst(h.x + fx * d, 0.95 - d * 0.06, h.z + fz * d, 0.62, stats.color);
+        }
+      }
+    } else if (h.id === "ranger") {
+      this.faceThreat(true, stats.range + 2.8);
+      const marked = this.hostsInRange(stats.range + 1.4, true);
+      marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+      const longarm = h.loadout.weapon === "rail-longarm";
+      const ghost = h.loadout.armor === "ghost-harness";
+      if (slot === 0) {
+        h.buffUntil = this.time + 4.0;
+        const shots = marked.slice(0, ghost ? 4 : 3);
+        const mx = Math.sin(h.yaw);
+        const mz = Math.cos(h.yaw);
+        this.spawnBurst(h.x + mx * 0.58, 1.22, h.z + mz * 0.58, 0.28, stats.color);
+        for (const e of shots) {
+          this.heroHurt(e, stats.damage * 1.7, stats.kind);
+          this.fireHero(e);
+          n += 1;
+        }
+      } else if (slot === 1) {
+        h.buffUntil = this.time + 3.2;
+        const line = this.hostsOnLine(stats.range + 2.6 + (longarm ? 1.2 : 0), longarm ? 0.82 : 0.72, true);
+        for (const e of line) {
+          this.heroHurt(e, stats.damage * 2.5, stats.kind);
+          this.applySlow(e, 0.48, 2.6);
+          this.spawnBeam(h.x, 1.2, h.z, e.x, e.y + 0.25, e.z, stats.color, 0.12, 0.08, "rail");
+          n += 1;
+        }
+        const fx = Math.sin(h.yaw);
+        const fz = Math.cos(h.yaw);
+        const reach = stats.range + 2.2 + (longarm ? 1.1 : 0);
+        this.spawnBeam(h.x, 1.2, h.z, h.x + fx * reach, 1.1, h.z + fz * reach, stats.color, 0.14, 0.09, "rail");
+      } else {
+        h.buffUntil = this.time + 3.4;
+        const shots = marked.slice(0, ghost ? 10 : 8);
+        for (const e of shots) {
+          this.heroHurt(e, stats.damage * 0.7, stats.kind);
+          this.applySlow(e, 0.52, 1.9);
+          this.spawnBurst(e.x, e.y + 0.3, e.z, 0.35, stats.color);
+          n += 1;
+        }
+        this.setHeroField(3.2, stats.range * 0.82 + (ghost ? 0.4 : 0), 0.56, 0);
+      }
+    } else {
+      this.faceThreat(true, stats.range + 2.2);
+      const crozier = h.loadout.weapon === "nova-crozier";
+      const silk = h.loadout.armor === "star-silk";
+      if (slot === 0) {
+        h.buffUntil = this.time + 3.2;
+        const reach = 4.4 + (crozier ? 0.6 : 0) + (silk ? 0.25 : 0);
+        const hit = this.hostsInRange(reach, true);
+        for (const e of hit) {
+          this.heroHurt(e, stats.damage * 1.55, stats.kind);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 1.7, h.z, 1.4, stats.color);
+        this.spawnBurst(h.x, 1.15, h.z, 3.4, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 2.3, stats.color);
+        this.setHeroField(2.0, reach * 0.72, 0, stats.damage * 0.08);
+      } else if (slot === 1) {
+        h.buffUntil = this.time + 3.0;
+        const marked = this.hostsInRange(stats.range + 1.2 + (crozier ? 0.4 : 0), true);
+        marked.sort((a, b) => dist2(h.x, h.z, a.x, a.z) - dist2(h.x, h.z, b.x, b.z));
+        const shots = marked.slice(0, crozier ? 5 : 4);
+        for (const e of shots) {
+          this.heroHurt(e, stats.damage * 1.35, stats.kind);
+          this.spawnBeam(h.x, 1.35, h.z, e.x, e.y + 0.28, e.z, stats.color, 0.16, 0.08, "lance");
+          n += 1;
+        }
+      } else {
+        h.buffUntil = this.time + 4.6;
+        const reach = 5.1 + (crozier ? 0.5 : 0) + (silk ? 0.35 : 0);
+        const hit = this.hostsInRange(reach, true);
+        for (const e of hit) {
+          this.heroHurt(e, stats.damage * 1.45, stats.kind);
+          this.applySlow(e, silk ? 0.32 : 0.38, silk ? 4.4 : 3.6);
+          n += 1;
+        }
+        this.spawnBurst(h.x, 1.2, h.z, 4.4, stats.color);
+        this.spawnBurst(h.x, 0.55, h.z, 2.2, stats.color);
+        this.spawnBurst(h.x, 1.7, h.z, 1.6, stats.color);
+        this.setHeroField(4.4, reach * 0.88, silk ? 0.34 : 0.42, stats.damage * 0.1);
+      }
+    }
+    this.lastEvent = n ? `${art.name} · ${n}` : `${art.name} · empty`;
+    this.addTrauma(0.28);
+    this.sfx = "surge";
+    this.hudDirty = true;
+    return true;
+  }
+
   pickTarget(t: Tower, range: number, flying: boolean): Enemy | null {
     const r2 = range * range;
     let best: Enemy | null = null;
@@ -849,6 +1411,7 @@ export class GameEngine {
         bolt.targetSlot = target.slot;
         bolt.ttl = 2.4;
         bolt.color = def.color;
+        bolt.fromHero = false;
       }
     } else if (def.kind === "beam") {
       const wide = t.level >= 3;
@@ -965,7 +1528,8 @@ export class GameEngine {
       } else {
         const t = this.enemies[b.targetSlot];
         if (t?.alive && dist2(b.x, b.z, t.x, t.z) < 0.38 * 0.38 && Math.abs(b.y - t.y) < 0.9) {
-          this.hurt(t, b.damage, "bolt");
+          if (b.fromHero) this.heroHurt(t, b.damage, "bolt");
+          else this.hurt(t, b.damage, "bolt");
           this.spawnBurst(b.x, b.y, b.z, 0.35, b.color);
           b.alive = false;
         }

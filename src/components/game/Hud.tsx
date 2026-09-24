@@ -2,11 +2,15 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Crosshair,
   FastForward,
+  Move,
   Minus,
   Pause,
   Play,
   Radio,
+  Shield,
   Snowflake,
+  Sparkles,
+  Sword,
   Waves,
   Zap,
 } from "lucide-react";
@@ -22,10 +26,12 @@ import {
   towerStats,
   upgradeCost,
 } from "@/game/config";
+import { HEROES } from "@/game/heroes";
+import { formatKey } from "@/game/save";
 import { engine } from "@/game/engine";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
-import type { Targeting, TowerId } from "@/game/types";
+import type { HeroId, Targeting, TowerId } from "@/game/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<TowerId, typeof Zap> = {
@@ -50,6 +56,7 @@ let padHintSpent = false;
 export function Hud() {
   const hud = useGameStore((s) => s.hud);
   const buildType = useGameStore((s) => s.buildType);
+  const carryingHero = useGameStore((s) => s.carryingHero);
   const hoverPad = useGameStore((s) => s.hoverPad);
   const screen = useGameStore((s) => s.screen);
   const leakPulse = usePulse(hud.leaked);
@@ -172,6 +179,7 @@ export function Hud() {
         <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
+          {hud.heroKills > 0 ? <StatusChip>{HEROES[hud.heroId ?? "fighter"].name} · {hud.heroKills}</StatusChip> : null}
           {hud.autoIn >= 0 ? <StatusChip muted>Auto in {hud.autoIn.toFixed(1)}s</StatusChip> : null}
         </div>
         {hud.event ? (
@@ -185,7 +193,11 @@ export function Hud() {
             <TowerCard />
           </div>
         ) : null}
-        {showHint ? (
+        {carryingHero ? (
+          <p className="mx-auto rounded-full border border-accent/40 bg-surface/90 px-3 py-1 font-display text-2xs uppercase tracking-label text-accent">
+            Drop the warden on open ground · G plant · Esc cancel
+          </p>
+        ) : showHint ? (
           <p className="mx-auto rounded-full border border-border bg-surface/90 px-3 py-1 font-display text-2xs uppercase tracking-label text-muted">
             Tap a lit platform to place
           </p>
@@ -220,6 +232,28 @@ export function Hud() {
               }}
             >
               <FastForward className="size-4" />
+            </AbilityIcon>
+            <WardenArts heroId={hud.heroId ?? "fighter"} cds={hud.heroArtCd} max={hud.heroArtMax} />
+            <AbilityIcon
+              label={carryingHero ? "Plant warden" : "Relocate warden"}
+              hint="G"
+              ready
+              cd={0}
+              max={1}
+              hot={carryingHero}
+              onClick={() => {
+                if (engine.carryingHero) {
+                  const ghost = engine.heroGhost;
+                  if (ghost) engine.dropHero(ghost.x, ghost.z);
+                  else engine.cancelCarry();
+                } else {
+                  engine.pickUpHero();
+                }
+                useGameStore.setState({ carryingHero: engine.carryingHero, buildType: engine.buildType });
+                useGameStore.getState().syncHud();
+              }}
+            >
+              <Move className="size-4" />
             </AbilityIcon>
             {canWave ? (
               <button
@@ -433,6 +467,43 @@ function StatusChip({ children, muted }: { children: ReactNode; muted?: boolean 
     >
       {children}
     </span>
+  );
+}
+
+function WardenArts({
+  heroId,
+  cds,
+  max,
+}: {
+  heroId: HeroId;
+  cds: [number, number, number];
+  max: [number, number, number];
+}) {
+  const keys = useGameStore((s) => s.settings.keys);
+  const binds = [keys.art1, keys.art2, keys.art3] as const;
+  return (
+    <>
+      {([0, 1, 2] as const).map((slot) => {
+        const art = HEROES[heroId].arts[slot];
+        const Icon = slot === 0 ? Sword : slot === 1 ? (heroId === "fighter" ? Shield : heroId === "ranger" ? Minus : Sparkles) : Zap;
+        return (
+          <AbilityIcon
+            key={slot}
+            label={art.name}
+            hint={formatKey(binds[slot])}
+            ready={cds[slot] <= 0}
+            cd={cds[slot]}
+            max={max[slot]}
+            onClick={() => {
+              engine.castHeroAbility(slot);
+              useGameStore.getState().syncHud();
+            }}
+          >
+            <Icon className="size-4" />
+          </AbilityIcon>
+        );
+      })}
+    </>
   );
 }
 

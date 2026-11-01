@@ -44,6 +44,9 @@ const ENEMY_ORDER: EnemyId[] = [
   "overlord",
   "sovereign",
   "relic",
+  "nidus",
+  "skiff",
+  "bastion",
 ];
 
 const FACTION_GROUP: Record<EnemyId, string> = {
@@ -72,6 +75,9 @@ const FACTION_GROUP: Record<EnemyId, string> = {
   overlord: "Hybrid hosts",
   sovereign: "Hybrid hosts",
   relic: "Hybrid hosts",
+  nidus: "Organic hosts",
+  skiff: "Mechanical hosts",
+  bastion: "Hybrid hosts",
 };
 
 export const STUDIO_CATALOG: StudioEntry[] = [

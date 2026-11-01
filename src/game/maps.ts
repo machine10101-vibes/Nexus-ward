@@ -240,6 +240,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "myrmidon", count: 8, interval: 0.82, delay: 0 },
           { enemy: "thorn", count: 6, interval: 0.9, delay: 0.5 },
+          { enemy: "nidus", count: 2, interval: 1.6, delay: 1.2 },
           { enemy: "brood", count: 10, interval: 0.4, delay: 0.8 },
           { enemy: "bloom", count: 10, interval: 0.42, delay: 1.1 },
         ],
@@ -349,6 +350,8 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "siege", count: 6, interval: 1.05, delay: 0 },
+          { enemy: "skiff", count: 4, interval: 0.7, delay: 0.4 },
+          { enemy: "bastion", count: 2, interval: 1.5, delay: 1.1 },
           { enemy: "walker", count: 6, interval: 0.55, delay: 0.8 },
         ],
       },
@@ -548,6 +551,9 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "amalgam", count: 24, interval: 0.55, delay: 0 },
           { enemy: "relic", count: 6, interval: 0.7, delay: 0.4 },
+          { enemy: "nidus", count: 2, interval: 1.5, delay: 0.8 },
+          { enemy: "skiff", count: 3, interval: 0.65, delay: 0.5 },
+          { enemy: "bastion", count: 2, interval: 1.4, delay: 1.2 },
           { enemy: "chimera", count: 12, interval: 0.38, delay: 0.5 },
           { enemy: "husk", count: 8, interval: 0.9, delay: 1 },
         ],

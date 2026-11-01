@@ -180,6 +180,7 @@ export function Hud() {
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
           {hud.heroKills > 0 ? <StatusChip>{HEROES[hud.heroId ?? "fighter"].name} · {hud.heroKills}</StatusChip> : null}
+          {hud.heroChain > 0 ? <StatusChip>Chain {hud.heroChain}</StatusChip> : null}
           {hud.autoIn >= 0 ? <StatusChip muted>Auto in {hud.autoIn.toFixed(1)}s</StatusChip> : null}
         </div>
         {hud.event ? (

@@ -1231,6 +1231,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#e08848" eInt={2.7} />
         </mesh>
         <PulseLight position={[0, 0.76, 0.24]} r={0.028} color="#e08848" base={2.4} amp={0.45} speed={5.2} />
+        {([-0.2, 0.2] as const).map((x) => (
+          <mesh key={`brace-${x}`} position={[x, 0.62, 0.02]} rotation={[0.1, 0, x > 0 ? -0.4 : 0.4]} castShadow>
+            <boxGeometry args={[0.06, 0.18, 0.22]} />
+            <Mat color="#8a929a" metalness={0.82} roughness={0.22} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.58, 0.22]} castShadow>
+          <boxGeometry args={[0.24, 0.16, 0.045]} />
+          <Mat color="#d5dee6" metalness={0.88} roughness={0.14} eInt={0.22} />
+        </mesh>
+        <mesh position={[0, 0.58, 0.25]}>
+          <boxGeometry args={[0.08, 0.04, 0.012]} />
+          <Mat color="#e08848" eInt={1.4} />
+        </mesh>
         <mesh position={[0, 0.88, -0.04]} rotation={[0.2, 0, 0]} castShadow>
           <cylinderGeometry args={[0.012, 0.012, 0.22, 6]} />
           <Mat color="#2a2e32" metalness={0.72} />
@@ -1269,6 +1283,16 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#c46a3a" eInt={2.2} />
         </mesh>
         <PulseLight position={[0, 0.68, 0.7]} r={0.035} color="#e08848" base={2.0} amp={0.45} speed={3.6} />
+        <mesh position={[0, 0.5, 0.32]} rotation={[0.2, 0, 0]}>
+          <torusGeometry args={[0.16, 0.018, 6, 16]} />
+          <Mat color="#9ec8d4" eInt={1.1} metalness={0.4} roughness={0.2} />
+        </mesh>
+        {([-0.12, 0.12] as const).map((x) => (
+          <mesh key={`emitter-${x}`} position={[x, 0.5, 0.3]}>
+            <boxGeometry args={[0.03, 0.05, 0.03]} />
+            <Mat color="#d7eef4" eInt={1.5} />
+          </mesh>
+        ))}
         {([-0.26, 0.26] as const).map((x) => (
           <group key={`track-${x}`}>
             <mesh position={[x, 0.12, 0]} castShadow>
@@ -1881,6 +1905,169 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <JointLeg side={-1} z={-0.12} color="#2a4a3c" len={0.22} />
           <MechKnee side={1} z={0.08} color="#4a5858" hip={0.24} len={0.2} />
           <JointLeg side={1} z={-0.14} color="#3a484c" metal={0.65} len={0.2} />
+        </WalkLegs>
+      </group>
+    );
+  }
+
+  if (type === "nidus") {
+    return (
+      <group scale={1.16}>
+        <mesh position={[0, 0.2, 0.16]} scale={[0.95, 0.7, 1.05]} castShadow>
+          <sphereGeometry args={[0.16, 14, 12]} />
+          <Mat color="#2f7a54" roughness={0.42} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.22, -0.02]} scale={[1.15, 0.78, 1.25]} castShadow>
+          <sphereGeometry args={[0.22, 16, 12]} />
+          <Mat color="#1a4030" roughness={0.48} metalness={0.08} />
+        </mesh>
+        <Scute position={[0, 0.36, 0.02]} rotation={[0.2, 0, 0]} size={[0.28, 0.045, 0.22]} color="#12281c" />
+        <Scute position={[0, 0.32, 0.2]} rotation={[0.35, 0, 0]} size={[0.18, 0.035, 0.12]} color="#163428" />
+        <mesh position={[0, 0.42, -0.24]} castShadow>
+          <sphereGeometry args={[0.2, 16, 14]} />
+          <Mat color="#3dcaa0" roughness={0.22} emissive="#14684a" eInt={0.7} />
+        </mesh>
+        <mesh position={[0, 0.42, -0.24]}>
+          <sphereGeometry args={[0.12, 12, 10]} />
+          <Mat color="#e8fff2" roughness={0.16} emissive="#7dffa8" eInt={1.15} />
+        </mesh>
+        {[0, 1, 2, 3].map((i) => {
+          const a = (i / 4) * Math.PI * 2 + 0.4;
+          return (
+            <mesh key={`egg-${i}`} position={[Math.cos(a) * 0.1, 0.44 + (i % 2) * 0.04, -0.24 + Math.sin(a) * 0.07]} castShadow>
+              <sphereGeometry args={[0.042, 8, 6]} />
+              <Mat color="#d8ffe8" roughness={0.24} emissive="#8ef0b8" eInt={0.55} />
+            </mesh>
+          );
+        })}
+        {([-0.12, 0.12] as const).map((x) => (
+          <mesh key={`bud-${x}`} position={[x, 0.14, -0.3]} castShadow>
+            <sphereGeometry args={[0.05, 8, 6]} />
+            <Mat color="#24583c" roughness={0.4} emissive="#6ad4a0" eInt={0.35} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.1, -0.16]} castShadow>
+          <sphereGeometry args={[0.042, 8, 6]} />
+          <Mat color="#1e4a34" roughness={0.42} emissive="#7dffa8" eInt={0.45} />
+        </mesh>
+        {([-0.055, 0.055] as const).map((x) => (
+          <PulseLight key={`eye-${x}`} position={[x, 0.26, 0.3]} r={0.026} color="#d8ffe8" base={2.6} amp={0.45} speed={3.4} />
+        ))}
+        <Mandibles color="#122820" y={0.16} z={0.32} spread={0.08} len={0.16} />
+        <Antennae color="#1c3a2c" y={0.34} z={0.22} spread={0.09} />
+        <PulseLight position={[0, 0.44, -0.24]} r={0.07} color="#7dffa8" base={1.7} amp={0.7} speed={2.2} />
+        <WalkLegs>
+          {([-1, 1] as const).flatMap((s) =>
+            [0.16, -0.02, -0.22].map((z) => <JointLeg key={`${s}${z}`} side={s} z={z} color="#163428" len={0.26} />),
+          )}
+        </WalkLegs>
+      </group>
+    );
+  }
+
+  if (type === "skiff") {
+    return (
+      <HoverFloat amp={0.05}>
+        <mesh position={[0, 0.16, 0.02]} castShadow>
+          <boxGeometry args={[0.2, 0.08, 0.64]} />
+          <Mat color="#5a646c" metalness={0.8} roughness={0.22} />
+        </mesh>
+        <mesh position={[0, 0.18, 0.28]} rotation={[-0.12, 0, 0]} castShadow>
+          <boxGeometry args={[0.12, 0.055, 0.2]} />
+          <Mat color="#3a444c" metalness={0.74} roughness={0.26} />
+        </mesh>
+        <mesh position={[0, 0.2, 0.42]} rotation={[0.25, 0, 0]} castShadow>
+          <coneGeometry args={[0.045, 0.16, 5]} />
+          <Mat color="#9ec8d4" metalness={0.5} roughness={0.2} eInt={0.55} />
+        </mesh>
+        {([-1, 1] as const).map((s) => (
+          <group key={`wing-${s}`}>
+            <mesh position={[0.26 * s, 0.16, -0.02]} rotation={[0, 0, -0.16 * s]} castShadow>
+              <boxGeometry args={[0.3, 0.022, 0.16]} />
+              <Mat color="#4a545c" metalness={0.78} roughness={0.24} />
+            </mesh>
+            <mesh position={[0.4 * s, 0.2, -0.02]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.1, 0.012, 6, 14]} />
+              <Mat color="#d0ecff" metalness={0.4} roughness={0.18} eInt={0.75} />
+            </mesh>
+            <Rotor position={[0.4 * s, 0.22, -0.02]} width={0.26} />
+          </group>
+        ))}
+        <mesh position={[0, 0.22, 0.06]} castShadow>
+          <boxGeometry args={[0.13, 0.06, 0.16]} />
+          <Mat color="#2a3238" metalness={0.7} roughness={0.28} />
+        </mesh>
+        <mesh position={[0, 0.24, 0.14]}>
+          <boxGeometry args={[0.07, 0.02, 0.035]} />
+          <Mat color="#7ec8e8" eInt={1.8} />
+        </mesh>
+        {([-0.05, 0.05] as const).map((x) => (
+          <mesh key={`thrust-${x}`} position={[x, 0.16, -0.34]} rotation={[Math.PI / 2, 0, 0]}>
+            <coneGeometry args={[0.032, 0.1, 6]} />
+            <Mat color="#d0ecff" emissive="#9ad4ff" eInt={1.7} />
+          </mesh>
+        ))}
+        <PulseLight position={[0, 0.16, -0.4]} r={0.04} color="#d0ecff" base={2.4} amp={0.8} speed={7} />
+      </HoverFloat>
+    );
+  }
+
+  if (type === "bastion") {
+    return (
+      <group scale={1.08}>
+        <mesh position={[0, 0.26, 0]} castShadow>
+          <cylinderGeometry args={[0.34, 0.38, 0.2, 8]} />
+          <Mat color="#3e4c4a" metalness={0.68} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0.4, 0]} castShadow>
+          <cylinderGeometry args={[0.24, 0.28, 0.14, 8]} />
+          <Mat color="#2c3836" metalness={0.62} roughness={0.32} />
+        </mesh>
+        {[0, 1, 2, 3].map((i) => {
+          const a = (i / 4) * Math.PI * 2;
+          return (
+            <mesh key={`skirt-${i}`} position={[Math.cos(a) * 0.34, 0.22, Math.sin(a) * 0.34]} rotation={[0, -a, 0]} castShadow>
+              <boxGeometry args={[0.16, 0.16, 0.04]} />
+              <Mat color="#6a7874" metalness={0.74} roughness={0.22} />
+            </mesh>
+          );
+        })}
+        <mesh position={[0, 0.48, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.36, 0.016, 8, 24]} />
+          <Mat color="#9ec8c0" eInt={1.2} metalness={0.3} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.32, 0]} rotation={[Math.PI / 2, 0, 0.25]}>
+          <torusGeometry args={[0.44, 0.008, 6, 28]} />
+          <Mat color="#cfe8e2" eInt={0.5} metalness={0.25} roughness={0.24} />
+        </mesh>
+        <mesh position={[0, 0.54, 0]} castShadow>
+          <cylinderGeometry args={[0.09, 0.13, 0.07, 8]} />
+          <Mat color="#24302e" metalness={0.6} roughness={0.34} />
+        </mesh>
+        <mesh position={[0, 0.62, 0]} rotation={[0.35, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.07, 0.1, 0.035, 10]} />
+          <Mat color="#8ec8c0" metalness={0.4} roughness={0.22} eInt={0.5} />
+        </mesh>
+        <mesh position={[0, 0.44, 0.2]} castShadow>
+          <boxGeometry args={[0.16, 0.09, 0.07]} />
+          <Mat color="#1e2826" metalness={0.55} roughness={0.36} />
+        </mesh>
+        <mesh position={[0, 0.46, 0.25]}>
+          <boxGeometry args={[0.09, 0.022, 0.012]} />
+          <Mat color="#e7f6f2" eInt={1.7} />
+        </mesh>
+        {([-0.2, 0.2] as const).map((x) => (
+          <mesh key={`pauldron-${x}`} position={[x, 0.46, 0.02]} rotation={[0.08, 0, x > 0 ? -0.32 : 0.32]} castShadow>
+            <boxGeometry args={[0.09, 0.14, 0.1]} />
+            <Mat color="#5c6a66" metalness={0.76} roughness={0.22} />
+          </mesh>
+        ))}
+        <PulseLight position={[0, 0.48, 0]} r={0.045} color="#9ec8c0" base={1.6} amp={0.4} speed={1.8} />
+        <WalkLegs>
+          <MechKnee side={-1} z={0.12} color="#3a4848" hip={0.14} len={0.22} />
+          <MechKnee side={1} z={0.12} color="#3a4848" hip={0.14} len={0.22} />
+          <MechKnee side={-1} z={-0.14} color="#3a4848" hip={0.14} len={0.2} />
+          <MechKnee side={1} z={-0.14} color="#3a4848" hip={0.14} len={0.2} />
         </WalkLegs>
       </group>
     );

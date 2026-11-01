@@ -66,6 +66,8 @@ export type HeroState = {
   zoneAcc: number;
   kills: number;
   aiming: boolean;
+  chain: number;
+  chainUntil: number;
 };
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
@@ -182,6 +184,8 @@ export class GameEngine {
     zoneAcc: 0,
     kills: 0,
     aiming: false,
+    chain: 0,
+    chainUntil: 0,
   };
 
   constructor() {
@@ -390,6 +394,8 @@ export class GameEngine {
     this.hero.zoneAcc = 0;
     this.hero.kills = 0;
     this.hero.aiming = false;
+    this.hero.chain = 0;
+    this.hero.chainUntil = 0;
     this.carryingHero = false;
     this.heroGhost = { x: this.hero.x, z: this.hero.z };
   }
@@ -929,6 +935,66 @@ export class GameEngine {
     if (skill === "shield" && e.skillT >= 6.8) {
       e.skillT = 0;
       e.shieldHp = e.boss ? 90 : 32;
+      return;
+    }
+    if (skill === "call" && e.skillT >= 5.4) {
+      e.skillT = 0;
+      let alive = 0;
+      for (const o of this.enemies) if (o.alive) alive += 1;
+      if (alive >= MAX_ENEMIES - 4) return;
+      const wps = this.paths[e.pathId] ?? this.waypoints;
+      const back = wps[Math.max(0, e.wp - 1)] ?? { x: e.x, z: e.z };
+      this.spawnEnemy("mite", {
+        x: back.x,
+        z: back.z,
+        y: 0.28 * ENEMIES.mite.scale,
+        wp: Math.max(1, e.wp),
+        progress: Math.max(0, e.progress - 0.35),
+        lane: e.lane + (e.slot % 2 === 0 ? 0.2 : -0.2),
+        gold: 2,
+        pathId: e.pathId,
+      });
+      this.spawnBurst(e.x, e.y + 0.45, e.z, 0.4, "#7dffa8");
+      return;
+    }
+    if (skill === "blink" && e.skillT >= (e.flying ? 3.2 : 4.8)) {
+      e.skillT = 0;
+      this.spawnBurst(e.x, e.y + 0.2, e.z, 0.35, "#d0ecff");
+      const wps = this.paths[e.pathId] ?? this.waypoints;
+      let remain = e.flying ? 2.6 : 1.8;
+      while (remain > 0.02 && e.alive && e.wp < wps.length) {
+        const target = wps[e.wp];
+        const dx = target.x - e.x;
+        const dz = target.z - e.z;
+        const dist = Math.hypot(dx, dz) || 0.001;
+        if (dist <= remain) {
+          e.x = target.x;
+          e.z = target.z;
+          e.wp += 1;
+          e.progress = e.wp;
+          remain -= dist;
+          if (e.wp >= wps.length) return;
+        } else {
+          e.x += (dx / dist) * remain;
+          e.z += (dz / dist) * remain;
+          remain = 0;
+        }
+      }
+      this.spawnBurst(e.x, e.y + 0.25, e.z, 0.5, "#d0ecff");
+      return;
+    }
+    if (skill === "anchor" && e.skillT >= 2.2) {
+      e.skillT = 0;
+      const reach = 1.85 * 1.85;
+      for (const o of this.enemies) {
+        if (!o.alive || o.slot === e.slot) continue;
+        if (dist2(e.x, e.z, o.x, o.z) > reach) continue;
+        if (o.slowFactor < 1) {
+          o.slowFactor = 1;
+          o.slowUntil = 0;
+        }
+      }
+      this.spawnBurst(e.x, 0.45, e.z, 0.7, "#9ec8c0");
     }
   }
 
@@ -1078,8 +1144,22 @@ export class GameEngine {
     const live = e.alive;
     this.hurt(e, raw, kind);
     if (live && !e.alive) {
-      this.hero.kills += 1;
-      this.lastEvent = `${HEROES[this.hero.id].name} · ${this.hero.kills}`;
+      const h = this.hero;
+      h.kills += 1;
+      if (this.time <= h.chainUntil) h.chain += 1;
+      else h.chain = 1;
+      h.chainUntil = this.time + 7;
+      if (h.chain >= 3) {
+        h.chain = 0;
+        let slot: 0 | 1 | 2 = 0;
+        if (h.artCd[1] > h.artCd[slot]) slot = 1;
+        if (h.artCd[2] > h.artCd[slot]) slot = 2;
+        h.artCd[slot] *= 0.5;
+        this.lastEvent = `${HEROES[h.id].name} · chain cut`;
+        this.spawnBurst(h.x, 1.15, h.z, 0.9, h.stats.color);
+      } else {
+        this.lastEvent = `${HEROES[h.id].name} · ${h.kills} · chain ${h.chain}`;
+      }
       this.hudDirty = true;
     }
   }

@@ -729,6 +729,7 @@ function HeroLayer() {
   void stamp;
   const group = useRef<Group>(null);
   const field = useRef<Mesh>(null);
+  const chain = useRef<Group>(null);
   const ghost = useRef<Group>(null);
   const ghostWash = useRef<MeshBasicMaterial>(null);
   useFrame(() => {
@@ -739,6 +740,16 @@ function HeroLayer() {
       g.visible = !engine.carryingHero;
       const punch = hero.swing > 0 ? 1 + hero.swing * 0.04 : 1;
       g.scale.setScalar(punch);
+    }
+    const links = chain.current;
+    if (links) {
+      const n = hero.chain;
+      const live = !engine.carryingHero && n > 0 && engine.time <= hero.chainUntil;
+      links.visible = live;
+      if (live) {
+        links.rotation.y = engine.visualTime * (1.6 + n);
+        links.scale.setScalar(0.85 + n * 0.12);
+      }
     }
     const ring = field.current;
     if (ring) {
@@ -781,6 +792,16 @@ function HeroLayer() {
           <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
         </mesh>
         <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
+        <group ref={chain} position={[0, 1.05, 0]} visible={false}>
+          <mesh rotation={[1.15, 0, 0]}>
+            <torusGeometry args={[0.46, 0.014, 6, 28]} />
+            <meshBasicMaterial color={hero.stats.color} transparent opacity={0.72} depthWrite={false} toneMapped={false} />
+          </mesh>
+          <mesh rotation={[1.35, 0.7, 0.25]}>
+            <torusGeometry args={[0.32, 0.01, 6, 24]} />
+            <meshBasicMaterial color={hero.stats.color} transparent opacity={0.4} depthWrite={false} toneMapped={false} />
+          </mesh>
+        </group>
         <mesh ref={field} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} visible={false}>
           <ringGeometry args={[0.72, 1.05, 28]} />
           <meshBasicMaterial color={hero.stats.color} transparent opacity={0.28} depthWrite={false} toneMapped={false} />
@@ -835,7 +856,10 @@ function EnemyLayer() {
       if (shadow) shadow.position.y = -e.y + 0.03;
       const ringMat = shadow?.material as MeshBasicMaterial | undefined;
       if (ringMat) {
-        ringMat.opacity = e.shieldHp > 0 ? 0.95 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        const hard = engine.time < e.hardenUntil;
+        const plated = e.shieldHp > 0;
+        ringMat.opacity = plated ? 0.95 : hard ? 0.92 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        ringMat.color.set(plated ? "#9ec8d4" : hard ? "#e7eef4" : FACTION_MARK[ENEMIES[e.type].faction]);
       }
     }
   });

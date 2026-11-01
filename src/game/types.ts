@@ -26,7 +26,10 @@ export type EnemyId =
   | "amalgam"
   | "specter"
   | "sovereign"
-  | "relic";
+  | "relic"
+  | "nidus"
+  | "skiff"
+  | "bastion";
 export type HeroId = "fighter" | "ranger" | "mage";
 export type ItemSlot = "weapon" | "armor";
 export type ItemId =
@@ -45,7 +48,7 @@ export type ItemId =
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type DamageKind = ProjectileKind | "surge";
-export type EnemySkill = "regen" | "sprint" | "split" | "shield" | "harden";
+export type EnemySkill = "regen" | "sprint" | "split" | "shield" | "harden" | "call" | "blink" | "anchor";
 export type Screen =
   | "title"
   | "select"

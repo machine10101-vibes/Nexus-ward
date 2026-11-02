@@ -525,6 +525,13 @@ function TowersLayer() {
       }
       const tick = tickRefs.current[i];
       if (tick) tick.visible = t.aiming;
+      const pad = g.parent?.children[0] as Mesh | undefined;
+      const padMat = pad?.material as MeshBasicMaterial | undefined;
+      if (padMat) {
+        const sapped = engine.time < t.sapUntil;
+        padMat.color.set(sapped ? "#c084fc" : TOWERS[t.type].color);
+        padMat.opacity = sapped ? 0.9 : 0.4 + t.level * 0.12;
+      }
     }
   });
   void count;
@@ -852,7 +859,8 @@ function EnemyLayer() {
       const slow = e.slowFactor < 0.95 ? 0.94 : 1;
       const burst = engine.time < e.sprintUntil ? 1.07 : 1;
       const phased = engine.time < e.phaseUntil;
-      g.scale.setScalar((1 + flash * 0.08) * slow * burst * (phased ? 0.86 : 1));
+      const enraged = e.enraged;
+      g.scale.setScalar((1 + flash * 0.08) * slow * burst * (phased ? 0.86 : 1) * (enraged ? 1.08 : 1));
       const shadow = g.children[1] as Mesh | undefined;
       if (shadow) shadow.position.y = -e.y + 0.03;
       const ringMat = shadow?.material as MeshBasicMaterial | undefined;
@@ -860,9 +868,22 @@ function EnemyLayer() {
         const hard = engine.time < e.hardenUntil;
         const plated = e.shieldHp > 0;
         const sprinting = engine.time < e.sprintUntil;
-        ringMat.opacity = phased ? 0.28 : plated ? 0.95 : hard ? 0.92 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        const wounded = e.maxHp > 0 && e.hp / e.maxHp <= 0.32;
+        ringMat.opacity = phased ? 0.28 : enraged ? 0.95 : plated ? 0.95 : hard ? 0.92 : wounded ? 0.9 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
         ringMat.color.set(
-          phased ? "#c4b5fd" : plated ? "#9ec8d4" : hard ? "#e7eef4" : sprinting ? "#f4efe4" : FACTION_MARK[ENEMIES[e.type].faction],
+          phased
+            ? "#c4b5fd"
+            : enraged
+              ? "#e07a5a"
+              : plated
+                ? "#9ec8d4"
+                : hard
+                  ? "#e7eef4"
+                  : wounded
+                    ? "#e07a5a"
+                    : sprinting
+                      ? "#f4efe4"
+                      : FACTION_MARK[ENEMIES[e.type].faction],
         );
       }
       const brand = g.children[2] as Mesh | undefined;

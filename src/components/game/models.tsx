@@ -2186,6 +2186,112 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     );
   }
 
+  if (type === "marrow") {
+    return (
+      <group scale={1.08}>
+        <mesh position={[0, 0.22, 0.06]} scale={[1.05, 0.75, 1.1]} castShadow>
+          <sphereGeometry args={[0.18, 14, 12]} />
+          <Mat color="#1e4a34" roughness={0.46} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 0.34, -0.08]} castShadow>
+          <sphereGeometry args={[0.14, 14, 12]} />
+          <Mat color="#3dcaa0" roughness={0.28} emissive="#14684a" eInt={0.55} />
+        </mesh>
+        <mesh position={[0, 0.36, -0.08]}>
+          <sphereGeometry args={[0.07, 10, 8]} />
+          <Mat color="#e8fff2" roughness={0.16} emissive="#7dffa8" eInt={1.05} />
+        </mesh>
+        {([-0.1, 0.1] as const).map((x) => (
+          <mesh key={`tendril-${x}`} position={[x, 0.28, 0.16]} rotation={[0.8, 0, x * 0.4]} castShadow>
+            <cylinderGeometry args={[0.012, 0.02, 0.22, 6]} />
+            <Mat color="#163428" roughness={0.5} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.24, 0.22]}>
+          <boxGeometry args={[0.06, 0.06, 0.012]} />
+          <Mat color="#d8ffe8" eInt={1.4} />
+        </mesh>
+        <PulseLight position={[0, 0.36, -0.08]} r={0.04} color="#7dffa8" base={1.8} amp={0.55} speed={2.4} />
+        <WalkLegs>
+          {([-1, 1] as const).flatMap((s) =>
+            [0.1, -0.08].map((z) => <JointLeg key={`${s}${z}`} side={s} z={z} color="#163428" len={0.22} />),
+          )}
+        </WalkLegs>
+      </group>
+    );
+  }
+
+  if (type === "gnaw") {
+    return (
+      <group>
+        <mesh position={[0, 0.24, -0.06]} scale={[0.85, 0.7, 1.35]} castShadow>
+          <sphereGeometry args={[0.16, 14, 12]} />
+          <Mat color="#3a3048" roughness={0.4} metalness={0.22} />
+        </mesh>
+        <mesh position={[0, 0.26, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.09, 0.018, 6, 14]} />
+          <Mat color="#c084fc" eInt={1.15} metalness={0.35} roughness={0.22} />
+        </mesh>
+        {[0, 1, 2, 3].map((i) => {
+          const a = (i / 4) * Math.PI * 2;
+          return (
+            <mesh key={`tooth-${i}`} position={[Math.cos(a) * 0.07, 0.26, 0.2 + Math.sin(a) * 0.02]} rotation={[1.2, 0, a]} castShadow>
+              <coneGeometry args={[0.016, 0.06, 4]} />
+              <Mat color="#e9d5ff" roughness={0.3} eInt={0.35} />
+            </mesh>
+          );
+        })}
+        <mesh position={[0, 0.28, 0.02]}>
+          <sphereGeometry args={[0.045, 10, 8]} />
+          <Mat color="#e9d5ff" emissive="#c084fc" eInt={0.9} roughness={0.2} />
+        </mesh>
+        <PulseLight position={[0, 0.26, 0.16]} r={0.03} color="#c084fc" base={1.7} amp={0.6} speed={3.6} />
+        <WalkLegs>
+          <JointLeg side={-1} z={0.08} color="#2a2438" metal={0.35} len={0.2} />
+          <JointLeg side={1} z={0.08} color="#2a2438" metal={0.35} len={0.2} />
+          <MechKnee side={-1} z={-0.1} color="#4a4458" hip={0.16} len={0.18} />
+          <MechKnee side={1} z={-0.1} color="#4a4458" hip={0.16} len={0.18} />
+        </WalkLegs>
+      </group>
+    );
+  }
+
+  if (type === "cinder") {
+    return (
+      <group>
+        <mesh position={[0, 0.28, 0]} castShadow>
+          <cylinderGeometry args={[0.16, 0.18, 0.22, 8]} />
+          <Mat color="#4a4038" metalness={0.62} roughness={0.32} />
+        </mesh>
+        <mesh position={[0, 0.4, 0]} castShadow>
+          <cylinderGeometry args={[0.1, 0.12, 0.06, 8]} />
+          <Mat color="#2a2420" metalness={0.7} roughness={0.28} />
+        </mesh>
+        <mesh position={[0, 0.48, 0]} castShadow>
+          <cylinderGeometry args={[0.012, 0.016, 0.1, 5]} />
+          <Mat color="#e07a5a" emissive="#e07a5a" eInt={1.2} />
+        </mesh>
+        {([-0.08, 0.08] as const).map((x) => (
+          <mesh key={`crack-${x}`} position={[x, 0.28, 0.14]} rotation={[0, 0, x]} castShadow>
+            <boxGeometry args={[0.02, 0.12, 0.012]} />
+            <Mat color="#ffb088" eInt={1.5} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.22, 0.16]}>
+          <boxGeometry args={[0.08, 0.03, 0.012]} />
+          <Mat color="#ffd0b0" eInt={1.3} />
+        </mesh>
+        <PulseLight position={[0, 0.52, 0]} r={0.028} color="#e07a5a" base={2.1} amp={0.7} speed={4.2} />
+        <WalkLegs>
+          <MechKnee side={-1} z={0.04} color="#3a342e" hip={0.14} len={0.18} />
+          <MechKnee side={1} z={0.04} color="#3a342e" hip={0.14} len={0.18} />
+          <MechKnee side={-1} z={-0.08} color="#3a342e" hip={0.14} len={0.16} />
+          <MechKnee side={1} z={-0.08} color="#3a342e" hip={0.14} len={0.16} />
+        </WalkLegs>
+      </group>
+    );
+  }
+
   return (
     <group>
       <mesh position={[0, 0.26, -0.04]} castShadow>

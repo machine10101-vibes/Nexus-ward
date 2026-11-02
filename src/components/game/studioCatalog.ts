@@ -50,6 +50,9 @@ const ENEMY_ORDER: EnemyId[] = [
   "shade",
   "herald",
   "howler",
+  "marrow",
+  "gnaw",
+  "cinder",
 ];
 
 const FACTION_GROUP: Record<EnemyId, string> = {
@@ -84,6 +87,9 @@ const FACTION_GROUP: Record<EnemyId, string> = {
   shade: "Organic hosts",
   herald: "Hybrid hosts",
   howler: "Mechanical hosts",
+  marrow: "Organic hosts",
+  gnaw: "Hybrid hosts",
+  cinder: "Mechanical hosts",
 };
 
 export const STUDIO_CATALOG: StudioEntry[] = [

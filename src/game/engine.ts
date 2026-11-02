@@ -239,6 +239,7 @@ export class GameEngine {
       hardenUntil: 0,
       sprintUntil: 0,
       phaseUntil: 0,
+      enraged: false,
     };
   }
 
@@ -566,6 +567,7 @@ export class GameEngine {
       invested: def.cost,
       kills: 0,
       aiming: false,
+      sapUntil: 0,
     };
     this.towers.push(tower);
     this.occupied[pad] = tower.id;
@@ -872,6 +874,7 @@ export class GameEngine {
     slot.hardenUntil = 0;
     slot.sprintUntil = 0;
     slot.phaseUntil = 0;
+    slot.enraged = false;
     this.spawnGen += 1;
     this.hudDirty = true;
   }
@@ -1047,6 +1050,50 @@ export class GameEngine {
       best.cooldown = Math.max(best.cooldown, 0.62);
       this.spawnBeam(e.x, e.y + 0.45, e.z, best.x, 0.95, best.z, "#e7c27a", 0.18, 0.04, "chain");
       this.spawnBurst(best.x, 0.9, best.z, 0.45, "#e7c27a");
+      return;
+    }
+    if (skill === "graft" && e.skillT >= 3.8) {
+      e.skillT = 0;
+      let best: Enemy | null = null;
+      let bestRatio = 0.98;
+      const reach = 2.4 * 2.4;
+      for (const o of this.enemies) {
+        if (!o.alive || o.slot === e.slot || o.maxHp <= 0) continue;
+        if (dist2(e.x, e.z, o.x, o.z) > reach) continue;
+        const ratio = o.hp / o.maxHp;
+        if (ratio < bestRatio) {
+          bestRatio = ratio;
+          best = o;
+        }
+      }
+      this.spawnBurst(e.x, e.y + 0.4, e.z, 0.32, "#7dffa8");
+      if (!best) return;
+      const heal = Math.max(8, Math.round(best.maxHp * 0.08));
+      best.hp = Math.min(best.maxHp, best.hp + heal);
+      this.spawnBeam(e.x, e.y + 0.35, e.z, best.x, best.y + 0.3, best.z, "#7dffa8", 0.16, 0.04, "lance");
+      this.spawnBurst(best.x, best.y + 0.35, best.z, 0.42, "#7dffa8");
+      return;
+    }
+    if (skill === "sap" && e.skillT >= 4.2) {
+      e.skillT = 0;
+      let best: Tower | null = null;
+      let bestD = 6.5 * 6.5;
+      for (const t of this.towers) {
+        const d = dist2(e.x, e.z, t.x, t.z);
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+      if (!best) return;
+      best.sapUntil = this.time + 2.6;
+      this.spawnBeam(e.x, e.y + 0.4, e.z, best.x, 0.9, best.z, "#c084fc", 0.2, 0.045, "chain");
+      this.spawnBurst(best.x, 0.85, best.z, 0.5, "#c084fc");
+      return;
+    }
+    if (skill === "spite" && e.skillT >= 4.6) {
+      e.skillT = 0;
+      this.spawnBurst(e.x, e.y + 0.35, e.z, 0.28, "#e07a5a");
     }
   }
 
@@ -1197,6 +1244,13 @@ export class GameEngine {
     let amount = raw;
     const h = this.hero;
     let branded = false;
+    let finished = false;
+    if (e.alive && e.maxHp > 0 && e.hp / e.maxHp <= 0.32) {
+      amount *= 1.4;
+      finished = true;
+      this.spawnBurst(e.x, e.y + 0.42, e.z, 0.62, "#e07a5a");
+      this.spawnBeam(h.x, 1.05, h.z, e.x, e.y + 0.3, e.z, "#e07a5a", 0.1, 0.035, "rail");
+    }
     if (mark && e.alive) {
       if (h.focusSlot === e.slot && this.time <= h.focusUntil) h.focusHits += 1;
       else {
@@ -1228,6 +1282,8 @@ export class GameEngine {
         h.artCd[slot] *= 0.5;
         this.lastEvent = `${HEROES[h.id].name} · chain cut`;
         this.spawnBurst(h.x, 1.15, h.z, 0.9, h.stats.color);
+      } else if (finished) {
+        this.lastEvent = `${HEROES[h.id].name} · finisher`;
       } else if (branded) {
         this.lastEvent = `${HEROES[h.id].name} · brand`;
       } else {
@@ -1537,7 +1593,8 @@ export class GameEngine {
     this.fireGen += 1;
     const syn = this.synergy(t) ? 1.15 : 1;
     const rank = t.level >= 3 ? 1.12 : 1;
-    const dmg = stats.damage * syn * rank;
+    const sap = this.time < t.sapUntil ? 0.62 : 1;
+    const dmg = stats.damage * syn * rank * sap;
     if (def.kind === "bolt" || def.kind === "shell") {
       const lead = def.kind === "shell" ? 0.35 : 0.12;
       const aimX = target.x + target.vx * lead;
@@ -1731,10 +1788,37 @@ export class GameEngine {
     e.hp -= dmg;
     e.hitFlash = 1;
     if (def.skill === "harden") e.hardenUntil = this.time + 2.2;
+    if (e.hp > 0 && e.boss && !e.enraged && e.maxHp > 0 && e.hp / e.maxHp <= 0.42) {
+      e.enraged = true;
+      e.sprintUntil = this.time + 2.8;
+      e.hardenUntil = Math.max(e.hardenUntil, this.time + 3.2);
+      if (def.skill === "shield") e.shieldHp = Math.max(e.shieldHp, 90);
+      this.spawnBurst(e.x, e.y + 0.8, e.z, 1.4, "#e07a5a");
+      this.lastEvent = `${def.name} · enraged`;
+      this.addTrauma(0.35);
+      this.hudDirty = true;
+    }
     if (e.hp <= 0) this.kill(e);
   }
 
   kill(e: Enemy) {
+    if (ENEMIES[e.type].skill === "spite") {
+      let best: Tower | null = null;
+      let bestD = 7.2 * 7.2;
+      for (const t of this.towers) {
+        const d = dist2(e.x, e.z, t.x, t.z);
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+      this.spawnBurst(e.x, e.y + 0.45, e.z, 0.9, "#e07a5a");
+      if (best) {
+        best.cooldown = Math.max(best.cooldown, 0.75);
+        this.spawnBeam(e.x, e.y + 0.4, e.z, best.x, 0.9, best.z, "#e07a5a", 0.2, 0.05, "chain");
+        this.spawnBurst(best.x, 0.85, best.z, 0.55, "#e07a5a");
+      }
+    }
     if (ENEMIES[e.type].skill === "split") {
       const lane = e.lane;
       this.spawnEnemy("mite", {

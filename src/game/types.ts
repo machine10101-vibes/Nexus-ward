@@ -32,7 +32,10 @@ export type EnemyId =
   | "bastion"
   | "shade"
   | "herald"
-  | "howler";
+  | "howler"
+  | "marrow"
+  | "gnaw"
+  | "cinder";
 export type HeroId = "fighter" | "ranger" | "mage";
 export type ItemSlot = "weapon" | "armor";
 export type ItemId =
@@ -62,7 +65,10 @@ export type EnemySkill =
   | "anchor"
   | "veil"
   | "rally"
-  | "jam";
+  | "jam"
+  | "graft"
+  | "sap"
+  | "spite";
 export type Screen =
   | "title"
   | "select"
@@ -176,6 +182,8 @@ export type Enemy = {
   sprintUntil: number;
   /** While this is in the future the host slips single-target locks. */
   phaseUntil: number;
+  /** Bosses set this once, the first time they drop under 42% health. */
+  enraged: boolean;
 };
 
 export type Tower = {
@@ -192,6 +200,8 @@ export type Tower = {
   invested: number;
   kills: number;
   aiming: boolean;
+  /** While this is in the future the battery hits softer. */
+  sapUntil: number;
 };
 
 export type Bolt = {

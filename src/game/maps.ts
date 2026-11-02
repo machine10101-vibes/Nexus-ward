@@ -195,6 +195,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "husk", count: 6, interval: 1.05, delay: 0 },
+          { enemy: "marrow", count: 2, interval: 1.3, delay: 0.5 },
           { enemy: "brood", count: 8, interval: 0.45, delay: 0.8 },
         ],
       },
@@ -389,6 +390,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "razor", count: 10, interval: 0.48, delay: 0 },
+          { enemy: "cinder", count: 3, interval: 0.7, delay: 0.35 },
           { enemy: "drone", count: 10, interval: 0.32, delay: 0.4 },
           { enemy: "walker", count: 4, interval: 0.55, delay: 1 },
           { enemy: "bulwark", count: 8, interval: 0.9, delay: 1.2 },
@@ -505,6 +507,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "chimera", count: 8, interval: 0.5, delay: 0 },
+          { enemy: "gnaw", count: 2, interval: 0.9, delay: 0.4 },
           { enemy: "husk", count: 3, interval: 1.3, delay: 1.2 },
           { enemy: "walker", count: 4, interval: 0.7, delay: 0.8 },
         ],

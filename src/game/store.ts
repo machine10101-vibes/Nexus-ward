@@ -38,6 +38,7 @@ export type HudSnap = {
   heroArtMax: [number, number, number];
   heroKills: number;
   heroChain: number;
+  heroBrand: number;
 };
 
 type GameStore = {
@@ -121,6 +122,7 @@ const emptyHud: HudSnap = {
   heroArtMax: [16, 18, 20],
   heroKills: 0,
   heroChain: 0,
+  heroBrand: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -279,6 +281,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.heroId === cur.heroId &&
       next.heroKills === cur.heroKills &&
       next.heroChain === cur.heroChain &&
+      next.heroBrand === cur.heroBrand &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -343,6 +346,7 @@ function snapHud(): HudSnap {
     heroArtMax: [...engine.hero.artMax],
     heroKills: engine.hero.kills,
     heroChain: engine.time <= engine.hero.chainUntil ? engine.hero.chain : 0,
+    heroBrand: engine.time <= engine.hero.focusUntil ? engine.hero.focusHits : 0,
   };
 }
 

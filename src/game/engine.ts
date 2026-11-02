@@ -68,6 +68,9 @@ export type HeroState = {
   aiming: boolean;
   chain: number;
   chainUntil: number;
+  focusSlot: number;
+  focusHits: number;
+  focusUntil: number;
 };
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
@@ -186,6 +189,9 @@ export class GameEngine {
     aiming: false,
     chain: 0,
     chainUntil: 0,
+    focusSlot: -1,
+    focusHits: 0,
+    focusUntil: 0,
   };
 
   constructor() {
@@ -232,6 +238,7 @@ export class GameEngine {
       shieldHp: 0,
       hardenUntil: 0,
       sprintUntil: 0,
+      phaseUntil: 0,
     };
   }
 
@@ -255,6 +262,7 @@ export class GameEngine {
       ttl: 0,
       color: "#fff",
       fromHero: false,
+      brand: false,
     };
   }
 
@@ -396,6 +404,9 @@ export class GameEngine {
     this.hero.aiming = false;
     this.hero.chain = 0;
     this.hero.chainUntil = 0;
+    this.hero.focusSlot = -1;
+    this.hero.focusHits = 0;
+    this.hero.focusUntil = 0;
     this.carryingHero = false;
     this.heroGhost = { x: this.hero.x, z: this.hero.z };
   }
@@ -860,6 +871,7 @@ export class GameEngine {
     slot.shieldHp = def.skill === "shield" ? (def.boss ? 90 : 32) : 0;
     slot.hardenUntil = 0;
     slot.sprintUntil = 0;
+    slot.phaseUntil = 0;
     this.spawnGen += 1;
     this.hudDirty = true;
   }
@@ -880,7 +892,8 @@ export class GameEngine {
         continue;
       }
       const sprint = this.time < e.sprintUntil ? 1.55 : 1;
-      const pace = e.speed * e.slowFactor * sprint;
+      const veil = this.time < e.phaseUntil ? 1.45 : 1;
+      const pace = e.speed * e.slowFactor * sprint * veil;
       const target = wps[e.wp];
       const prev = wps[Math.max(0, e.wp - 1)];
       const pdx = target.x - prev.x;
@@ -923,12 +936,17 @@ export class GameEngine {
     if (skill === "regen") {
       const rate = e.boss ? 16 : def.flying ? 3.2 : 5.5;
       if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + rate * dt);
+      if (e.skillT >= 2.4 && e.hp < e.maxHp) {
+        e.skillT = 0;
+        this.spawnBurst(e.x, e.y + 0.35, e.z, 0.22, "#7dffa8");
+      }
       return;
     }
     if (skill === "sprint") {
       if (e.skillT >= 3.1) {
         e.skillT = 0;
         e.sprintUntil = this.time + 0.85;
+        this.spawnBurst(e.x, e.y + 0.15, e.z, 0.28, "#d5dee6");
       }
       return;
     }
@@ -995,6 +1013,40 @@ export class GameEngine {
         }
       }
       this.spawnBurst(e.x, 0.45, e.z, 0.7, "#9ec8c0");
+      return;
+    }
+    if (skill === "veil" && e.skillT >= 4.4) {
+      e.skillT = 0;
+      e.phaseUntil = this.time + 1.15;
+      this.spawnBurst(e.x, e.y + 0.3, e.z, 0.4, "#c4b5fd");
+      return;
+    }
+    if (skill === "rally" && e.skillT >= 4) {
+      e.skillT = 0;
+      const reach = 2.15 * 2.15;
+      for (const o of this.enemies) {
+        if (!o.alive || o.slot === e.slot) continue;
+        if (dist2(e.x, e.z, o.x, o.z) > reach) continue;
+        o.sprintUntil = Math.max(o.sprintUntil, this.time + 0.95);
+      }
+      this.spawnBurst(e.x, e.y + 0.55, e.z, 0.85, "#e7d39a");
+      return;
+    }
+    if (skill === "jam" && e.skillT >= 3.6) {
+      e.skillT = 0;
+      let best: Tower | null = null;
+      let bestD = 6.2 * 6.2;
+      for (const t of this.towers) {
+        const d = dist2(e.x, e.z, t.x, t.z);
+        if (d < bestD) {
+          bestD = d;
+          best = t;
+        }
+      }
+      if (!best) return;
+      best.cooldown = Math.max(best.cooldown, 0.62);
+      this.spawnBeam(e.x, e.y + 0.45, e.z, best.x, 0.95, best.z, "#e7c27a", 0.18, 0.04, "chain");
+      this.spawnBurst(best.x, 0.9, best.z, 0.45, "#e7c27a");
     }
   }
 
@@ -1112,6 +1164,7 @@ export class GameEngine {
     let bestScore = -Infinity;
     for (const e of this.enemies) {
       if (!e.alive) continue;
+      if (this.time < e.phaseUntil) continue;
       if (e.flying && !flying) continue;
       const d2 = dist2(this.hero.x, this.hero.z, e.x, e.z);
       if (d2 > r2) continue;
@@ -1140,11 +1193,29 @@ export class GameEngine {
     return n;
   }
 
-  heroHurt(e: Enemy, raw: number, kind: DamageKind | string) {
+  heroHurt(e: Enemy, raw: number, kind: DamageKind | string, mark = false) {
+    let amount = raw;
+    const h = this.hero;
+    let branded = false;
+    if (mark && e.alive) {
+      if (h.focusSlot === e.slot && this.time <= h.focusUntil) h.focusHits += 1;
+      else {
+        h.focusHits = 1;
+        h.focusSlot = e.slot;
+      }
+      h.focusUntil = this.time + 5.5;
+      if (h.focusHits >= 3) {
+        amount *= 1.75;
+        h.focusHits = 0;
+        branded = true;
+        this.spawnBurst(e.x, e.y + 0.5, e.z, 0.8, "#f3e2b0");
+        this.spawnBeam(h.x, 1.12, h.z, e.x, e.y + 0.35, e.z, "#f3e2b0", 0.14, 0.045, "rail");
+      }
+      this.hudDirty = true;
+    }
     const live = e.alive;
-    this.hurt(e, raw, kind);
+    this.hurt(e, amount, kind);
     if (live && !e.alive) {
-      const h = this.hero;
       h.kills += 1;
       if (this.time <= h.chainUntil) h.chain += 1;
       else h.chain = 1;
@@ -1157,14 +1228,19 @@ export class GameEngine {
         h.artCd[slot] *= 0.5;
         this.lastEvent = `${HEROES[h.id].name} · chain cut`;
         this.spawnBurst(h.x, 1.15, h.z, 0.9, h.stats.color);
+      } else if (branded) {
+        this.lastEvent = `${HEROES[h.id].name} · brand`;
       } else {
         this.lastEvent = `${HEROES[h.id].name} · ${h.kills} · chain ${h.chain}`;
       }
       this.hudDirty = true;
+    } else if (branded) {
+      this.lastEvent = `${HEROES[h.id].name} · brand`;
+      this.hudDirty = true;
     }
   }
 
-  fireHero(target: Enemy) {
+  fireHero(target: Enemy, mark = true) {
     const h = this.hero;
     const stats = h.stats;
     const kind = stats.kind;
@@ -1175,7 +1251,7 @@ export class GameEngine {
       const dmg = stats.damage * (rush ? 1.4 : 1);
       this.spawnBurst(target.x, target.y + 0.35, target.z, rush ? 0.85 : 0.55, stats.color);
       this.spawnBeam(h.x, 1.15, h.z, target.x, target.y + 0.32, target.z, stats.color, 0.1, 0.05, "rail");
-      this.heroHurt(target, dmg, kind);
+      this.heroHurt(target, dmg, kind, mark);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.62, 1.15);
       const splash =
         (this.hero.loadout.weapon === "void-greatblade" ? 1.35 : 0.85) * (hot && h.lastArt === 0 ? 1.45 : 1);
@@ -1189,7 +1265,7 @@ export class GameEngine {
     } else if (h.id === "ranger") {
       const bolt = this.bolts.find((b) => !b.alive);
       if (!bolt) {
-        this.heroHurt(target, stats.damage, kind);
+        this.heroHurt(target, stats.damage, kind, mark);
         if (hot && h.lastArt !== 0) this.applySlow(target, h.lastArt === 1 ? 0.58 : 0.64, 0.85);
         return;
       }
@@ -1215,6 +1291,7 @@ export class GameEngine {
       bolt.ttl = 2.2;
       bolt.color = stats.color;
       bolt.fromHero = true;
+      bolt.brand = mark;
       this.spawnBurst(h.x + Math.sin(h.yaw) * 0.5, 1.22, h.z + Math.cos(h.yaw) * 0.5, 0.22, stats.color);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.58, 0.95);
       if (hot && h.lastArt === 2) {
@@ -1223,7 +1300,7 @@ export class GameEngine {
       }
     } else {
       this.spawnBeam(h.x, 1.35, h.z, target.x, target.y + 0.28, target.z, stats.color, 0.14, 0.07, "lance");
-      this.heroHurt(target, stats.damage, kind);
+      this.heroHurt(target, stats.damage, kind, mark);
       if (hot && h.lastArt === 0) {
         for (const e of this.enemies) {
           if (!e.alive || e.slot === target.slot) continue;
@@ -1350,7 +1427,7 @@ export class GameEngine {
         this.spawnBurst(h.x + mx * 0.58, 1.22, h.z + mz * 0.58, 0.28, stats.color);
         for (const e of shots) {
           this.heroHurt(e, stats.damage * 1.7, stats.kind);
-          this.fireHero(e);
+          this.fireHero(e, false);
           n += 1;
         }
       } else if (slot === 1) {
@@ -1431,6 +1508,7 @@ export class GameEngine {
     let bestScore = -Infinity;
     for (const e of this.enemies) {
       if (!e.alive) continue;
+      if (this.time < e.phaseUntil) continue;
       if (e.flying && !flying) continue;
       const d2 = dist2(t.x, t.z, e.x, e.z);
       if (d2 > r2) continue;
@@ -1492,6 +1570,7 @@ export class GameEngine {
         bolt.ttl = 2.4;
         bolt.color = def.color;
         bolt.fromHero = false;
+        bolt.brand = false;
       }
     } else if (def.kind === "beam") {
       const wide = t.level >= 3;
@@ -1564,6 +1643,7 @@ export class GameEngine {
     let bestD = Infinity;
     for (const e of this.enemies) {
       if (!e.alive || exclude.has(e.slot)) continue;
+      if (this.time < e.phaseUntil) continue;
       if (e.flying && !flying) continue;
       const d = dist2(x, z, e.x, e.z);
       if (d < r2 && d < bestD) {
@@ -1608,7 +1688,7 @@ export class GameEngine {
       } else {
         const t = this.enemies[b.targetSlot];
         if (t?.alive && dist2(b.x, b.z, t.x, t.z) < 0.38 * 0.38 && Math.abs(b.y - t.y) < 0.9) {
-          if (b.fromHero) this.heroHurt(t, b.damage, "bolt");
+          if (b.fromHero) this.heroHurt(t, b.damage, "bolt", b.brand);
           else this.hurt(t, b.damage, "bolt");
           this.spawnBurst(b.x, b.y, b.z, 0.35, b.color);
           b.alive = false;

@@ -29,7 +29,10 @@ export type EnemyId =
   | "relic"
   | "nidus"
   | "skiff"
-  | "bastion";
+  | "bastion"
+  | "shade"
+  | "herald"
+  | "howler";
 export type HeroId = "fighter" | "ranger" | "mage";
 export type ItemSlot = "weapon" | "armor";
 export type ItemId =
@@ -48,7 +51,18 @@ export type ItemId =
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type DamageKind = ProjectileKind | "surge";
-export type EnemySkill = "regen" | "sprint" | "split" | "shield" | "harden" | "call" | "blink" | "anchor";
+export type EnemySkill =
+  | "regen"
+  | "sprint"
+  | "split"
+  | "shield"
+  | "harden"
+  | "call"
+  | "blink"
+  | "anchor"
+  | "veil"
+  | "rally"
+  | "jam";
 export type Screen =
   | "title"
   | "select"
@@ -160,6 +174,8 @@ export type Enemy = {
   shieldHp: number;
   hardenUntil: number;
   sprintUntil: number;
+  /** While this is in the future the host slips single-target locks. */
+  phaseUntil: number;
 };
 
 export type Tower = {
@@ -197,6 +213,8 @@ export type Bolt = {
   ttl: number;
   color: string;
   fromHero: boolean;
+  /** Hero bolts with this set build the warden brand. Arts leave it off. */
+  brand: boolean;
 };
 
 export type BeamStyle = "lance" | "chain" | "rail";

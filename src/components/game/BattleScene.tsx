@@ -851,15 +851,26 @@ function EnemyLayer() {
       const flash = e.hitFlash;
       const slow = e.slowFactor < 0.95 ? 0.94 : 1;
       const burst = engine.time < e.sprintUntil ? 1.07 : 1;
-      g.scale.setScalar((1 + flash * 0.08) * slow * burst);
+      const phased = engine.time < e.phaseUntil;
+      g.scale.setScalar((1 + flash * 0.08) * slow * burst * (phased ? 0.86 : 1));
       const shadow = g.children[1] as Mesh | undefined;
       if (shadow) shadow.position.y = -e.y + 0.03;
       const ringMat = shadow?.material as MeshBasicMaterial | undefined;
       if (ringMat) {
         const hard = engine.time < e.hardenUntil;
         const plated = e.shieldHp > 0;
-        ringMat.opacity = plated ? 0.95 : hard ? 0.92 : ENEMIES[e.type].boss ? 0.8 : 0.55;
-        ringMat.color.set(plated ? "#9ec8d4" : hard ? "#e7eef4" : FACTION_MARK[ENEMIES[e.type].faction]);
+        const sprinting = engine.time < e.sprintUntil;
+        ringMat.opacity = phased ? 0.28 : plated ? 0.95 : hard ? 0.92 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        ringMat.color.set(
+          phased ? "#c4b5fd" : plated ? "#9ec8d4" : hard ? "#e7eef4" : sprinting ? "#f4efe4" : FACTION_MARK[ENEMIES[e.type].faction],
+        );
+      }
+      const brand = g.children[2] as Mesh | undefined;
+      if (brand && brand !== shadow) {
+        const focus = engine.hero;
+        const on = e.slot === focus.focusSlot && focus.focusHits > 0 && engine.time <= focus.focusUntil;
+        brand.visible = on;
+        if (on) brand.scale.setScalar(0.72 + focus.focusHits * 0.2);
       }
     }
   });
@@ -887,6 +898,10 @@ function EnemyLayer() {
                 depthWrite={false}
                 toneMapped={false}
               />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]} visible={false}>
+              <ringGeometry args={[0.18, 0.28, 20]} />
+              <meshBasicMaterial color="#f3e2b0" transparent opacity={0.85} depthWrite={false} toneMapped={false} />
             </mesh>
             <HpPip slot={e.slot} />
           </group>

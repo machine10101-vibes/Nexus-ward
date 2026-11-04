@@ -39,6 +39,9 @@ export type HudSnap = {
   heroKills: number;
   heroChain: number;
   heroBrand: number;
+  threat: string | null;
+  hold: boolean;
+  holdArmed: boolean;
 };
 
 type GameStore = {
@@ -123,6 +126,9 @@ const emptyHud: HudSnap = {
   heroKills: 0,
   heroChain: 0,
   heroBrand: 0,
+  threat: null,
+  hold: false,
+  holdArmed: false,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -282,6 +288,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.heroKills === cur.heroKills &&
       next.heroChain === cur.heroChain &&
       next.heroBrand === cur.heroBrand &&
+      next.threat === cur.threat &&
+      next.hold === cur.hold &&
+      next.holdArmed === cur.holdArmed &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -347,6 +356,9 @@ function snapHud(): HudSnap {
     heroKills: engine.hero.kills,
     heroChain: engine.time <= engine.hero.chainUntil ? engine.hero.chain : 0,
     heroBrand: engine.time <= engine.hero.focusUntil ? engine.hero.focusHits : 0,
+    threat: engine.threatLine(),
+    hold: engine.holdActive,
+    holdArmed: engine.pendingHold,
   };
 }
 

@@ -737,6 +737,7 @@ function HeroLayer() {
   const group = useRef<Group>(null);
   const field = useRef<Mesh>(null);
   const chain = useRef<Group>(null);
+  const holdRing = useRef<Mesh>(null);
   const ghost = useRef<Group>(null);
   const ghostWash = useRef<MeshBasicMaterial>(null);
   useFrame(() => {
@@ -748,6 +749,8 @@ function HeroLayer() {
       const punch = hero.swing > 0 ? 1 + hero.swing * 0.04 : 1;
       g.scale.setScalar(punch);
     }
+    const hold = holdRing.current;
+    if (hold) hold.visible = engine.holdActive && !engine.carryingHero;
     const links = chain.current;
     if (links) {
       const n = hero.chain;
@@ -797,6 +800,10 @@ function HeroLayer() {
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
           <ringGeometry args={[0.28, 0.38, 20]} />
           <meshBasicMaterial color={hero.stats.color} transparent opacity={0.55} depthWrite={false} toneMapped={false} />
+        </mesh>
+        <mesh ref={holdRing} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]} visible={false}>
+          <ringGeometry args={[0.42, 0.5, 28]} />
+          <meshBasicMaterial color="#e7c27a" transparent opacity={0.8} depthWrite={false} toneMapped={false} />
         </mesh>
         <HeroAgroRing radius={hero.stats.range} color={hero.stats.color} />
         <group ref={chain} position={[0, 1.05, 0]} visible={false}>
@@ -860,7 +867,7 @@ function EnemyLayer() {
       const burst = engine.time < e.sprintUntil ? 1.07 : 1;
       const phased = engine.time < e.phaseUntil;
       const enraged = e.enraged;
-      g.scale.setScalar((1 + flash * 0.08) * slow * burst * (phased ? 0.86 : 1) * (enraged ? 1.08 : 1));
+      g.scale.setScalar((1 + flash * 0.08) * slow * burst * (phased ? 0.86 : 1) * (enraged ? 1.08 : 1) * (e.elite ? 1.12 : 1));
       const shadow = g.children[1] as Mesh | undefined;
       if (shadow) shadow.position.y = -e.y + 0.03;
       const ringMat = shadow?.material as MeshBasicMaterial | undefined;
@@ -869,21 +876,23 @@ function EnemyLayer() {
         const plated = e.shieldHp > 0;
         const sprinting = engine.time < e.sprintUntil;
         const wounded = e.maxHp > 0 && e.hp / e.maxHp <= 0.32;
-        ringMat.opacity = phased ? 0.28 : enraged ? 0.95 : plated ? 0.95 : hard ? 0.92 : wounded ? 0.9 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        ringMat.opacity = phased ? 0.28 : enraged ? 0.95 : wounded ? 0.9 : e.elite ? 0.95 : plated ? 0.95 : hard ? 0.92 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
         ringMat.color.set(
           phased
             ? "#c4b5fd"
             : enraged
               ? "#e07a5a"
-              : plated
-                ? "#9ec8d4"
-                : hard
-                  ? "#e7eef4"
-                  : wounded
-                    ? "#e07a5a"
-                    : sprinting
-                      ? "#f4efe4"
-                      : FACTION_MARK[ENEMIES[e.type].faction],
+              : wounded
+                ? "#e07a5a"
+                : e.elite
+                  ? "#e7c27a"
+                  : plated
+                    ? "#9ec8d4"
+                    : hard
+                      ? "#e7eef4"
+                      : sprinting
+                        ? "#f4efe4"
+                        : FACTION_MARK[ENEMIES[e.type].faction],
         );
       }
       const brand = g.children[2] as Mesh | undefined;

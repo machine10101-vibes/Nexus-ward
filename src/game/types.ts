@@ -184,6 +184,8 @@ export type Enemy = {
   phaseUntil: number;
   /** Bosses set this once, the first time they drop under 42% health. */
   enraged: boolean;
+  /** Trailing veteran of a fat wave: more plate, more pay. */
+  elite: boolean;
 };
 
 export type Tower = {

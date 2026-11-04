@@ -535,6 +535,7 @@ function Result({ won }: { won: boolean }) {
     ["wave", `${engine.wave} / ${m.waves.length}`],
     ["kills", `${engine.kills}`],
     ["leaks", `${engine.leaked}`],
+    ["clean", `${engine.cleanWaves}`],
     ["salvage", `${engine.goldEarned}`],
   ];
   return (
@@ -543,10 +544,10 @@ function Result({ won }: { won: boolean }) {
       <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The core holds" : "Core collapsed"}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         {won
-          ? "The last incursion broke on the grid. The nexus still sings."
+          ? `The last incursion broke on the grid. Intact core paid +${engine.intactPurse}.`
           : "The lattice reached the heart. Salvage what you can and drop in again."}
       </p>
-      <dl className="mt-5 grid grid-cols-4 gap-2">
+      <dl className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
         {stats.map(([k, v]) => (
           <div key={k} className="rounded-lg border border-border px-2 py-2">
             <dd className="font-display text-base tabular-nums leading-none text-fg">{v}</dd>

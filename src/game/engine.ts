@@ -3,6 +3,7 @@ import {
   CELL,
   ENEMIES,
   inflateSpawnCount,
+  SKILL_COPY,
   MAX_BEAMS,
   MAX_BOLTS,
   MAX_BURSTS,
@@ -75,7 +76,7 @@ export type HeroState = {
 
 export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
-type SpawnEvent = { t: number; type: EnemyId; pathId: number };
+type SpawnEvent = { t: number; type: EnemyId; pathId: number; elite: boolean };
 
 const GATE_EVERY = 10;
 
@@ -162,6 +163,11 @@ export class GameEngine {
   placeGen = 0;
   rankGen = 0;
   leakGen = 0;
+  waveLeaks = 0;
+  pendingHold = false;
+  holdActive = false;
+  cleanWaves = 0;
+  intactPurse = 0;
   carryingHero = false;
   heroGhost: { x: number; z: number } | null = null;
   hero: HeroState = {
@@ -240,6 +246,7 @@ export class GameEngine {
       sprintUntil: 0,
       phaseUntil: 0,
       enraged: false,
+      elite: false,
     };
   }
 
@@ -362,6 +369,11 @@ export class GameEngine {
     this.placeGen = 0;
     this.rankGen = 0;
     this.leakGen = 0;
+    this.waveLeaks = 0;
+    this.pendingHold = false;
+    this.holdActive = false;
+    this.cleanWaves = 0;
+    this.intactPurse = 0;
     this.fireGen = 0;
     this.lastShooter = null;
     this.carryingHero = false;
@@ -426,6 +438,9 @@ export class GameEngine {
   startWave() {
     if (this.phase !== "build") return false;
     if (this.wave >= this.map.waves.length) return false;
+    this.holdActive = this.pendingHold;
+    this.pendingHold = false;
+    this.waveLeaks = 0;
     const bonus = this.earlyBonus();
     if (bonus > 0) {
       this.gold += bonus;
@@ -441,8 +456,14 @@ export class GameEngine {
     let spawnN = 0;
     for (const g of def.groups) {
       const count = inflateSpawnCount(g.enemy, g.count, waveIndex);
+      const eliteAt = !ENEMIES[g.enemy].boss && waveIndex >= 4 && count >= 4 ? count - 1 : -1;
       for (let i = 0; i < count; i++) {
-        this.spawnQueue.push({ t: g.delay + i * g.interval, type: g.enemy, pathId: spawnN % gates });
+        this.spawnQueue.push({
+          t: g.delay + i * g.interval,
+          type: g.enemy,
+          pathId: spawnN % gates,
+          elite: i === eliteAt,
+        });
         spawnN += 1;
       }
     }
@@ -534,10 +555,14 @@ export class GameEngine {
     const idx = this.phase === "combat" ? this.wave - 1 : this.wave;
     const def = this.map.waves[idx];
     if (!def) return [] as { enemy: EnemyId; count: number }[];
-    return def.groups.map((g) => ({
-      enemy: g.enemy,
-      count: inflateSpawnCount(g.enemy, g.count, idx),
-    }));
+    return def.groups.map((g) => {
+      const count = inflateSpawnCount(g.enemy, g.count, idx);
+      return {
+        enemy: g.enemy,
+        count,
+        elite: !ENEMIES[g.enemy].boss && idx >= 4 && count >= 4,
+      };
+    });
   }
 
   placeOnPad(pad: number) {
@@ -824,7 +849,7 @@ export class GameEngine {
     this.spawnT += dt;
     while (this.spawnI < this.spawnQueue.length && this.spawnQueue[this.spawnI].t <= this.spawnT) {
       const ev = this.spawnQueue[this.spawnI];
-      this.spawnEnemy(ev.type, undefined, ev.pathId);
+      this.spawnEnemy(ev.type, undefined, ev.pathId, ev.elite);
       this.spawnI++;
     }
   }
@@ -833,6 +858,7 @@ export class GameEngine {
     type: EnemyId,
     at?: { x: number; z: number; y: number; wp: number; progress: number; lane: number; gold?: number; pathId?: number },
     pathId = 0,
+    elite = false,
   ) {
     const def = ENEMIES[type];
     const slot = this.enemies.find((e) => !e.alive);
@@ -875,6 +901,16 @@ export class GameEngine {
     slot.sprintUntil = 0;
     slot.phaseUntil = 0;
     slot.enraged = false;
+    slot.elite = false;
+    if (elite && !def.boss) {
+      slot.elite = true;
+      slot.maxHp = Math.round(slot.maxHp * 1.65);
+      slot.hp = slot.maxHp;
+      slot.armor += 3;
+      slot.gold = Math.round(slot.gold * 1.6);
+      this.spawnBurst(slot.x, slot.y + 0.45, slot.z, 0.5, "#e7c27a");
+      this.spawnFloater(slot.x, slot.y + 0.95, slot.z, "Elite");
+    }
     this.spawnGen += 1;
     this.hudDirty = true;
   }
@@ -1107,6 +1143,7 @@ export class GameEngine {
     e.alive = false;
     this.lives = Math.max(0, this.lives - e.leak);
     this.leaked += 1;
+    this.waveLeaks += 1;
     this.leakGen += 1;
     this.hudDirty = true;
     this.lastEvent = `Core breached · −${e.leak}`;
@@ -1245,6 +1282,7 @@ export class GameEngine {
     const h = this.hero;
     let branded = false;
     let finished = false;
+    if (this.holdActive) amount *= 1.18;
     if (e.alive && e.maxHp > 0 && e.hp / e.maxHp <= 0.32) {
       amount *= 1.4;
       finished = true;
@@ -1937,10 +1975,23 @@ export class GameEngine {
     if (this.phase !== "combat") return;
     if (this.spawnI < this.spawnQueue.length) return;
     if (this.livingCount() > 0) return;
+    const clean = this.waveLeaks === 0;
+    const purse = clean ? 6 + this.wave * 2 : 0;
+    if (purse > 0) {
+      this.gold += purse;
+      this.goldEarned += purse;
+      this.cleanWaves += 1;
+    }
+    this.holdActive = false;
+    this.pendingHold = clean;
     if (this.wave >= this.map.waves.length) {
+      this.intactPurse = this.lives * 5;
+      this.gold += this.intactPurse;
+      this.goldEarned += this.intactPurse;
       this.phase = "won";
       this.hudDirty = true;
-      this.lastEvent = "Core holds";
+      this.lastEvent =
+        this.intactPurse > 0 ? `Core holds · +${this.intactPurse} intact` : "Core holds";
       this.addTrauma(0.3);
       return;
     }
@@ -1948,8 +1999,47 @@ export class GameEngine {
     this.buildClock = 0;
     this.autoT = 0;
     this.hudDirty = true;
-    this.lastEvent = `Wave ${this.wave} cleared`;
-    if (this.combo >= 4) this.lastEvent = `Wave ${this.wave} cleared · combo ${this.combo}`;
+    this.lastEvent = clean
+      ? `Incursion ${this.wave} clear · +${purse} clean`
+      : `Incursion ${this.wave} clear · core bled`;
+  }
+
+  threatLine(): string | null {
+    if (this.phase === "combat") {
+      for (const e of this.enemies) {
+        if (e.alive && e.boss) return `${ENEMIES[e.type].name} on the field`;
+      }
+      for (const e of this.enemies) {
+        if (e.alive && e.elite) return "Elite on the field";
+      }
+      return null;
+    }
+    if (this.phase !== "build") return null;
+    const def = this.map.waves[this.wave];
+    if (!def) return null;
+    const boss = def.groups.find((g) => ENEMIES[g.enemy].boss);
+    if (boss) return `${ENEMIES[boss.enemy].name} inbound`;
+    const hot = def.groups.find((g) => {
+      const skill = ENEMIES[g.enemy].skill;
+      return (
+        skill === "veil" ||
+        skill === "sap" ||
+        skill === "spite" ||
+        skill === "call" ||
+        skill === "blink" ||
+        skill === "graft" ||
+        skill === "jam" ||
+        skill === "anchor"
+      );
+    });
+    if (hot) {
+      const d = ENEMIES[hot.enemy];
+      return d.skill ? `${d.name} · ${SKILL_COPY[d.skill]}` : d.name;
+    }
+    if (this.wave >= 4 && def.groups.some((g) => !ENEMIES[g.enemy].boss && inflateSpawnCount(g.enemy, g.count, this.wave) >= 4)) {
+      return "An elite trails this wave";
+    }
+    return null;
   }
 
   pathCountForIndex(waveIndex: number) {

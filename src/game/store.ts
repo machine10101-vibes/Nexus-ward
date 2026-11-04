@@ -42,6 +42,7 @@ export type HudSnap = {
   threat: string | null;
   hold: boolean;
   holdArmed: boolean;
+  breach: boolean;
 };
 
 type GameStore = {
@@ -89,6 +90,7 @@ type GameStore = {
   syncHud: () => void;
   patchSettings: (p: Partial<Settings>) => void;
   noteResult: (won: boolean) => void;
+  keepHolding: () => void;
 };
 
 const save = loadSave();
@@ -129,6 +131,7 @@ const emptyHud: HudSnap = {
   threat: null,
   hold: false,
   holdArmed: false,
+  breach: false,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -247,9 +250,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
   abortToSelect: () => {
+    const id = get().mapId;
+    let completed = get().completed;
+    let heroSave = get().heroSave;
+    if (id && engine.breach && engine.wave > 0) {
+      const s = recordResult(id, engine.wave, engine.lives, false);
+      completed = s.completed;
+      heroSave = s.hero;
+    }
     engine.phase = "idle";
     engine.carryingHero = false;
-    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false });
+    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false, completed, heroSave });
   },
   pause: () => {
     if (get().screen === "playing") set({ screen: "paused" });
@@ -291,6 +302,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.threat === cur.threat &&
       next.hold === cur.hold &&
       next.holdArmed === cur.holdArmed &&
+      next.breach === cur.breach &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -316,6 +328,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ completed: s.completed, heroSave: s.hero });
     if (won) audio.win();
     else audio.lose();
+  },
+  keepHolding: () => {
+    if (!engine.openBreach()) return;
+    audio.wave();
+    set({ screen: "playing" });
+    get().syncHud();
   },
 }));
 
@@ -344,7 +362,10 @@ function snapHud(): HudSnap {
     bonus: engine.earlyBonus(),
     leaked: engine.leaked,
     autoIn:
-      engine.autoWave && engine.phase === "build" && engine.wave > 0 && engine.wave < engine.map.waves.length
+      engine.autoWave &&
+      engine.phase === "build" &&
+      engine.wave > 0 &&
+      (engine.breach || engine.wave < engine.map.waves.length)
         ? Math.max(0, AUTO_WAVE_DELAY - engine.autoT)
         : -1,
     denyGen: engine.denyGen,
@@ -359,6 +380,7 @@ function snapHud(): HudSnap {
     threat: engine.threatLine(),
     hold: engine.holdActive,
     holdArmed: engine.pendingHold,
+    breach: engine.breach,
   };
 }
 

@@ -158,7 +158,9 @@ function Select() {
                 </p>
                 {best[id] ? (
                   <p className="mt-1 font-mono text-2xs tabular-nums text-subtle">
-                    Best wave {best[id]!.wave} · cores {best[id]!.cores}
+                    {best[id]!.wave > m.waves.length
+                      ? `Breach ${best[id]!.wave - m.waves.length} past the line · cores ${best[id]!.cores}`
+                      : `Best wave ${best[id]!.wave} · cores ${best[id]!.cores}`}
                   </p>
                 ) : (
                   <p className="mt-1 font-mono text-2xs text-subtle">Uncharted</p>
@@ -330,6 +332,10 @@ function Briefing() {
             <span>{m.waves.length} incursions</span>
             <span>first contact · {first}</span>
           </div>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Clear the line and the win offers to keep holding. The breach rotates this world's hosts and does not end.
+            Best depth saves with the world.
+          </p>
           <p className="mt-3 text-sm text-fg">
             Warden · {h.name} ({h.title}) · {ITEMS[loadout.weapon ?? h.starterWeapon]?.name ?? "unarmed"} /{" "}
             {ITEMS[loadout.armor ?? h.starterArmor]?.name ?? "unarmored"}
@@ -532,7 +538,7 @@ function Result({ won }: { won: boolean }) {
   }, [won]);
   const m = engine.map;
   const stats: [string, string][] = [
-    ["wave", `${engine.wave} / ${m.waves.length}`],
+    ["wave", engine.breach ? `${engine.wave} · breach` : `${engine.wave} / ${m.waves.length}`],
     ["kills", `${engine.kills}`],
     ["leaks", `${engine.leaked}`],
     ["clean", `${engine.cleanWaves}`],
@@ -544,8 +550,10 @@ function Result({ won }: { won: boolean }) {
       <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The core holds" : "Core collapsed"}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         {won
-          ? `The last incursion broke on the grid. Intact core paid +${engine.intactPurse}.`
-          : "The lattice reached the heart. Salvage what you can and drop in again."}
+          ? `The last incursion broke on the grid. Intact core paid +${engine.intactPurse}. Keep holding and the breach stays open on this same grid.`
+          : engine.breach
+            ? `The breach reached incursion ${engine.wave}. The core gave out ${engine.wave - m.waves.length} waves past the scripted line.`
+            : "The lattice reached the heart. Salvage what you can and drop in again."}
       </p>
       <dl className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
         {stats.map(([k, v]) => (
@@ -556,9 +564,22 @@ function Result({ won }: { won: boolean }) {
         ))}
       </dl>
       <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+        {won && !engine.breach ? (
+          <button
+            type="button"
+            className="h-11 flex-1 rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+            onClick={() => useGameStore.getState().keepHolding()}
+          >
+            Keep holding
+          </button>
+        ) : null}
         <button
           type="button"
-          className="h-11 flex-1 rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+          className={
+            won && !engine.breach
+              ? "h-11 flex-1 rounded-lg border border-border text-sm text-fg transition-colors duration-[var(--motion-quick)] hover:border-border-strong"
+              : "h-11 flex-1 rounded-lg bg-fg text-sm text-bg transition-transform duration-[var(--motion-quick)] active:scale-[0.96]"
+          }
           onClick={() => useGameStore.getState().dropIn()}
         >
           Redeploy
@@ -620,6 +641,11 @@ function Help() {
         </li>
         <li>
           <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.
+        </li>
+        <li>
+          <span className="text-fg">8. Keep holding</span> after the core holds. The same grid stays planted and the breach
+          opens: rotating packs from that world, with the faction boss every fourth wave. It does not end. Leaving or
+          losing saves the deepest incursion with the world.
         </li>
       </ol>
       <div className="mt-5 rounded-lg border border-border p-2">

@@ -21,7 +21,7 @@ import {
   upgradeCost,
 } from "./config";
 import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
-import { MAPS, cellToWorld } from "./maps";
+import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld } from "./maps";
 import type {
   Beam,
   BeamStyle,
@@ -168,6 +168,8 @@ export class GameEngine {
   holdActive = false;
   cleanWaves = 0;
   intactPurse = 0;
+  /** Set when the player keeps holding after the scripted line breaks. */
+  breach = false;
   carryingHero = false;
   heroGhost: { x: number; z: number } | null = null;
   hero: HeroState = {
@@ -374,6 +376,7 @@ export class GameEngine {
     this.holdActive = false;
     this.cleanWaves = 0;
     this.intactPurse = 0;
+    this.breach = false;
     this.fireGen = 0;
     this.lastShooter = null;
     this.carryingHero = false;
@@ -435,9 +438,30 @@ export class GameEngine {
     this.hudDirty = true;
   }
 
+  /** Scripted incursion, or a breach pack once the player has kept holding. */
+  waveDef(index: number) {
+    if (index < 0) return undefined;
+    if (index < this.map.waves.length) return this.map.waves[index];
+    if (!this.breach) return undefined;
+    return breachWave(this.map.id, index);
+  }
+
+  /** Resume the same grid after a scripted clear. The breach does not end. */
+  openBreach() {
+    if (this.phase !== "won" || this.breach) return false;
+    this.breach = true;
+    this.phase = "build";
+    this.buildClock = 0;
+    this.autoT = 0;
+    this.holdActive = false;
+    this.lastEvent = "Breach open · the scar keeps coming";
+    this.hudDirty = true;
+    return true;
+  }
+
   startWave() {
     if (this.phase !== "build") return false;
-    if (this.wave >= this.map.waves.length) return false;
+    if (this.wave >= this.map.waves.length && !this.breach) return false;
     this.holdActive = this.pendingHold;
     this.pendingHold = false;
     this.waveLeaks = 0;
@@ -450,14 +474,18 @@ export class GameEngine {
       this.lastBonus = 0;
     }
     const waveIndex = this.wave;
-    const def = this.map.waves[waveIndex];
+    const def = this.waveDef(waveIndex);
+    if (!def) return false;
     const gates = this.pathCountForIndex(waveIndex);
     this.spawnQueue = [];
     let spawnN = 0;
     for (const g of def.groups) {
-      const count = inflateSpawnCount(g.enemy, g.count, waveIndex);
-      const eliteAt = !ENEMIES[g.enemy].boss && waveIndex >= 4 && count >= 4 ? count - 1 : -1;
+      const boss = !!ENEMIES[g.enemy].boss;
+      let count = inflateSpawnCount(g.enemy, g.count, waveIndex);
+      if (this.breach && !boss) count = Math.min(count, BREACH_CAP);
+      const eliteAt = !boss && waveIndex >= 4 && count >= 4 ? count - 1 : -1;
       for (let i = 0; i < count; i++) {
+        if (this.breach && spawnN >= BREACH_BUDGET) break;
         this.spawnQueue.push({
           t: g.delay + i * g.interval,
           type: g.enemy,
@@ -466,6 +494,7 @@ export class GameEngine {
         });
         spawnN += 1;
       }
+      if (this.breach && spawnN >= BREACH_BUDGET) break;
     }
     this.spawnQueue.sort((a, b) => a.t - b.t);
     this.spawnI = 0;
@@ -475,11 +504,16 @@ export class GameEngine {
     this.wave += 1;
     this.hudDirty = true;
     const opened = waveIndex > 0 && waveIndex % GATE_EVERY === 0 && gates > 1;
-    this.lastEvent = opened
-      ? `Incursion ${this.wave} · gate ${gates} online`
-      : bonus > 0
-        ? `Incursion ${this.wave} · +${bonus} early`
-        : `Incursion ${this.wave} of ${this.map.waves.length}`;
+    const breachN = this.wave - this.map.waves.length;
+    this.lastEvent = this.breach
+      ? bonus > 0
+        ? `Breach ${breachN} · +${bonus} early`
+        : `Breach ${breachN} · incursion ${this.wave}`
+      : opened
+        ? `Incursion ${this.wave} · gate ${gates} online`
+        : bonus > 0
+          ? `Incursion ${this.wave} · +${bonus} early`
+          : `Incursion ${this.wave} of ${this.map.waves.length}`;
     this.addTrauma(0.18);
     this.sfx = "wave";
     this.autoT = 0;
@@ -553,16 +587,24 @@ export class GameEngine {
 
   nextWaveGroups() {
     const idx = this.phase === "combat" ? this.wave - 1 : this.wave;
-    const def = this.map.waves[idx];
+    const def = this.waveDef(idx);
     if (!def) return [] as { enemy: EnemyId; count: number }[];
-    return def.groups.map((g) => {
-      const count = inflateSpawnCount(g.enemy, g.count, idx);
-      return {
+    let left = this.breach ? BREACH_BUDGET : Number.POSITIVE_INFINITY;
+    const out: { enemy: EnemyId; count: number; elite: boolean }[] = [];
+    for (const g of def.groups) {
+      const boss = !!ENEMIES[g.enemy].boss;
+      let count = inflateSpawnCount(g.enemy, g.count, idx);
+      if (this.breach && !boss) count = Math.min(count, BREACH_CAP);
+      if (this.breach) count = Math.min(count, left);
+      left -= count;
+      if (count <= 0) continue;
+      out.push({
         enemy: g.enemy,
         count,
-        elite: !ENEMIES[g.enemy].boss && idx >= 4 && count >= 4,
-      };
-    });
+        elite: !boss && idx >= 4 && count >= 4,
+      });
+    }
+    return out;
   }
 
   placeOnPad(pad: number) {
@@ -829,7 +871,7 @@ export class GameEngine {
     if (this.hero.swing > 0) this.hero.swing = Math.max(0, this.hero.swing - dt);
     if (this.phase === "build") {
       this.buildClock += dt;
-      if (this.autoWave && this.wave > 0 && this.wave < this.map.waves.length) {
+      if (this.autoWave && this.wave > 0 && (this.breach || this.wave < this.map.waves.length)) {
         this.autoT += dt;
         if (this.autoT >= AUTO_WAVE_DELAY) this.startWave();
       }
@@ -1984,7 +2026,7 @@ export class GameEngine {
     }
     this.holdActive = false;
     this.pendingHold = clean;
-    if (this.wave >= this.map.waves.length) {
+    if (!this.breach && this.wave >= this.map.waves.length) {
       this.intactPurse = this.lives * 5;
       this.gold += this.intactPurse;
       this.goldEarned += this.intactPurse;
@@ -1999,9 +2041,14 @@ export class GameEngine {
     this.buildClock = 0;
     this.autoT = 0;
     this.hudDirty = true;
-    this.lastEvent = clean
-      ? `Incursion ${this.wave} clear · +${purse} clean`
-      : `Incursion ${this.wave} clear · core bled`;
+    const breachN = this.wave - this.map.waves.length;
+    this.lastEvent = this.breach
+      ? clean
+        ? `Breach ${breachN} clear · +${purse} clean`
+        : `Breach ${breachN} clear · core bled`
+      : clean
+        ? `Incursion ${this.wave} clear · +${purse} clean`
+        : `Incursion ${this.wave} clear · core bled`;
   }
 
   threatLine(): string | null {
@@ -2015,7 +2062,7 @@ export class GameEngine {
       return null;
     }
     if (this.phase !== "build") return null;
-    const def = this.map.waves[this.wave];
+    const def = this.waveDef(this.wave);
     if (!def) return null;
     const boss = def.groups.find((g) => ENEMIES[g.enemy].boss);
     if (boss) return `${ENEMIES[boss.enemy].name} inbound`;

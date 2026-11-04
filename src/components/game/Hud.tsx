@@ -77,10 +77,12 @@ export function Hud() {
 
   if (screen !== "playing") return null;
   const selected = engine.getSelected();
-  const canWave = hud.phase === "build" && hud.wave < hud.waveTotal;
+  const canWave = hud.phase === "build" && (hud.breach || hud.wave < hud.waveTotal);
   const corePct = hud.maxLives ? hud.lives / hud.maxLives : 1;
   const preview = engine.nextWaveGroups();
-  const waveN = Math.min(hud.wave + (hud.phase === "build" ? 1 : 0), hud.waveTotal);
+  const waveN = hud.breach
+    ? hud.wave + (hud.phase === "build" ? 1 : 0)
+    : Math.min(hud.wave + (hud.phase === "build" ? 1 : 0), hud.waveTotal);
   const wavePct = hud.phase === "combat" && hud.waveSize > 0 ? 1 - hud.remaining / hud.waveSize : 0;
   const critical = corePct <= 0.25;
   const theme = PLANET_THEME[engine.map.id];
@@ -128,7 +130,11 @@ export function Hud() {
               </p>
               <p className="font-display text-sm tabular-nums leading-none tracking-display text-fg">
                 {waveN}
-                <span className="text-muted"> / {hud.waveTotal}</span>
+                {hud.breach ? (
+                  <span className="text-accent"> breach</span>
+                ) : (
+                  <span className="text-muted"> / {hud.waveTotal}</span>
+                )}
               </p>
             </div>
             {engine.activePathCount() > 1 ? (
@@ -139,7 +145,16 @@ export function Hud() {
             <span className="mx-auto mt-2 block h-1 w-full max-w-32 overflow-hidden rounded-full bg-surface-2">
               <span
                 className="block h-full rounded-full bg-accent transition-[width] duration-[var(--motion-fast)] ease-[var(--ease-smooth-out)]"
-                style={{ width: `${Math.max(4, (hud.phase === "combat" ? wavePct : hud.wave / Math.max(1, hud.waveTotal)) * 100)}%` }}
+                style={{
+                  width: `${Math.max(
+                    4,
+                    (hud.phase === "combat"
+                      ? wavePct
+                      : hud.breach
+                        ? ((((waveN - hud.waveTotal - 1) % 4) + 4) % 4 + 1) / 4
+                        : hud.wave / Math.max(1, hud.waveTotal)) * 100,
+                  )}%`,
+                }}
               />
             </span>
           </div>
@@ -270,7 +285,9 @@ export function Hud() {
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-fg pl-3.5 pr-2.5 font-display text-sm text-bg transition-transform duration-[var(--motion-quick)] ease-[var(--ease-smooth-out)] active:scale-[0.96]"
               >
                 <Play className="size-4 translate-x-px" />
-                <span className="hidden sm:inline">{hud.wave === 0 ? "Deploy" : "Deploy wave"}</span>
+                <span className="hidden sm:inline">
+                  {hud.breach ? "Deploy breach" : hud.wave === 0 ? "Deploy" : "Deploy wave"}
+                </span>
                 {hud.bonus > 0 ? (
                   <span className="rounded-md bg-bg/12 px-1.5 py-0.5 font-mono text-2xs tabular-nums">
                     +<TickNum value={hud.bonus} />
@@ -582,7 +599,7 @@ function WaveChips({
 }) {
   if (!groups.length) return null;
   return (
-    <div className="flex max-w-[min(100%,28rem)] items-center gap-1 overflow-x-auto">
+    <div className="flex max-w-[min(100%,42rem)] flex-wrap items-center justify-center gap-1">
       {groups.map((g, i) => {
         const d = ENEMIES[g.enemy];
         const tag = enemyTraitTag(d);

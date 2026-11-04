@@ -1,4 +1,4 @@
-import type { Cell, MapDef, MapId } from "./types";
+import type { Cell, EnemyId, MapDef, MapId, WaveDef, WaveGroup } from "./types";
 import { CELL } from "./config";
 
 function stitch(points: [number, number][]): Cell[] {
@@ -644,6 +644,114 @@ export const MAPS: Record<MapId, MapDef> = {
 };
 
 export const MAP_ORDER: MapId[] = ["mycelion", "forge", "aegis"];
+
+/** Non-boss hosts in a breach wave, after the usual late-wave inflation. */
+export const BREACH_CAP = 12;
+/** Hard stop so called mites and split children still fit in the pool. */
+export const BREACH_BUDGET = 56;
+
+const BREACH_BOSS: Record<MapId, EnemyId> = {
+  mycelion: "colossus",
+  forge: "leviathan",
+  aegis: "sovereign",
+};
+
+/**
+ * Rotating packs for the endless hold. Counts stay small; inflation and the
+ * four-wave boss beat supply the pressure. Each world keeps its own language.
+ */
+export const BREACH: Record<MapId, WaveGroup[][]> = {
+  mycelion: [
+    [
+      { enemy: "shade", count: 3, interval: 0.7, delay: 0.4 },
+      { enemy: "bloom", count: 4, interval: 0.46, delay: 0 },
+      { enemy: "mite", count: 4, interval: 0.34, delay: 0.8 },
+    ],
+    [
+      { enemy: "marrow", count: 2, interval: 1.2, delay: 0.3 },
+      { enemy: "husk", count: 3, interval: 0.9, delay: 0.6 },
+      { enemy: "brood", count: 4, interval: 0.4, delay: 0 },
+    ],
+    [
+      { enemy: "nidus", count: 2, interval: 1.4, delay: 0.5 },
+      { enemy: "thorn", count: 3, interval: 0.85, delay: 0.2 },
+      { enemy: "myrmidon", count: 3, interval: 0.7, delay: 1 },
+    ],
+    [
+      { enemy: "spore", count: 4, interval: 0.42, delay: 0 },
+      { enemy: "shade", count: 2, interval: 0.75, delay: 0.5 },
+      { enemy: "bloom", count: 3, interval: 0.48, delay: 0.9 },
+    ],
+  ],
+  forge: [
+    [
+      { enemy: "howler", count: 3, interval: 0.8, delay: 0.3 },
+      { enemy: "drone", count: 4, interval: 0.36, delay: 0 },
+      { enemy: "walker", count: 3, interval: 0.55, delay: 0.7 },
+    ],
+    [
+      { enemy: "cinder", count: 3, interval: 0.65, delay: 0.2 },
+      { enemy: "razor", count: 3, interval: 0.42, delay: 0.5 },
+      { enemy: "gunship", count: 3, interval: 0.48, delay: 0 },
+    ],
+    [
+      { enemy: "skiff", count: 3, interval: 0.6, delay: 0 },
+      { enemy: "siege", count: 2, interval: 1.1, delay: 0.6 },
+      { enemy: "walker", count: 3, interval: 0.5, delay: 1 },
+    ],
+    [
+      { enemy: "sentry", count: 2, interval: 1, delay: 0.4 },
+      { enemy: "bulwark", count: 2, interval: 0.9, delay: 0.8 },
+      { enemy: "howler", count: 2, interval: 0.75, delay: 0 },
+    ],
+  ],
+  aegis: [
+    [
+      { enemy: "gnaw", count: 3, interval: 0.7, delay: 0.2 },
+      { enemy: "chimera", count: 4, interval: 0.45, delay: 0 },
+      { enemy: "wraith", count: 3, interval: 0.42, delay: 0.6 },
+    ],
+    [
+      { enemy: "herald", count: 2, interval: 1.1, delay: 0.3 },
+      { enemy: "amalgam", count: 4, interval: 0.5, delay: 0 },
+      { enemy: "relic", count: 2, interval: 0.85, delay: 0.8 },
+    ],
+    [
+      { enemy: "specter", count: 3, interval: 0.4, delay: 0 },
+      { enemy: "bastion", count: 2, interval: 1.3, delay: 0.6 },
+      { enemy: "nidus", count: 2, interval: 1.2, delay: 1 },
+    ],
+    [
+      { enemy: "gnaw", count: 2, interval: 0.7, delay: 0.2 },
+      { enemy: "herald", count: 2, interval: 1, delay: 0.5 },
+      { enemy: "wraith", count: 3, interval: 0.4, delay: 0 },
+    ],
+  ],
+};
+
+/** The wave that follows the scripted line. Depth 0 is the first breach incursion. */
+export function breachWave(mapId: MapId, waveIndex: number): WaveDef {
+  const scripted = MAPS[mapId].waves.length;
+  const depth = Math.max(0, waveIndex - scripted);
+  const steps = BREACH[mapId];
+  const step = steps[depth % steps.length];
+  const loop = Math.floor(depth / steps.length);
+  const groups: WaveGroup[] = step.map((g) => ({
+    enemy: g.enemy,
+    interval: g.interval,
+    delay: g.delay,
+    count: Math.min(8, g.count + loop),
+  }));
+  if (depth % 4 === 3) {
+    groups.unshift({
+      enemy: BREACH_BOSS[mapId],
+      count: 1,
+      interval: 1.2,
+      delay: 0,
+    });
+  }
+  return { groups };
+}
 
 export function mapWorldSize(map: MapDef) {
   return {

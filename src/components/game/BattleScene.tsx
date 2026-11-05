@@ -22,6 +22,9 @@ import {
   MAX_DECALS,
   MAX_FLOATERS,
   ENEMIES,
+  SKILL_TINT,
+  SKILL_WIND,
+  telegraphLeft,
 } from "@/game/config";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
@@ -152,6 +155,7 @@ export function BattleScene() {
       <TowersLayer />
       <SynergyLinks />
       <EnemyLayer />
+      <SkillTelegraph />
       <BoltLayer />
       <BeamLayer />
       <ArcLayer />
@@ -618,6 +622,40 @@ function TowersLayer() {
             <RangeRing radius={towerStats(TOWERS[t.type], t.level).range} color={TOWERS[t.type].color} />
           ) : null}
         </group>
+      ))}
+    </group>
+  );
+}
+
+function SkillTelegraph() {
+  const refs = useRef<(Mesh | null)[]>(Array(MAX_ENEMIES).fill(null));
+  useFrame(() => {
+    for (let i = 0; i < MAX_ENEMIES; i++) {
+      const mesh = refs.current[i];
+      const e = engine.enemies[i];
+      if (!mesh) continue;
+      const skill = e?.alive ? ENEMIES[e.type].skill : undefined;
+      const left = e?.alive ? telegraphLeft(skill, e.flying, e.skillT) : null;
+      if (left == null) {
+        mesh.visible = false;
+        continue;
+      }
+      const k = 1 - left / SKILL_WIND;
+      mesh.visible = true;
+      mesh.position.set(e.x, 0.07, e.z);
+      mesh.scale.setScalar(0.45 + k * 0.9);
+      const mat = mesh.material as MeshBasicMaterial;
+      mat.color.set(skill ? SKILL_TINT[skill] : "#ffffff");
+      mat.opacity = 0.28 + k * 0.62;
+    }
+  });
+  return (
+    <group>
+      {Array.from({ length: MAX_ENEMIES }, (_, i) => (
+        <mesh key={i} ref={(el) => { refs.current[i] = el; }} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+          <ringGeometry args={[0.62, 0.78, 28]} />
+          <meshBasicMaterial color="#c4b5fd" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} />
+        </mesh>
       ))}
     </group>
   );

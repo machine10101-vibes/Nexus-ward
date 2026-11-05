@@ -217,6 +217,58 @@ export const SKILL_COPY: Record<EnemySkill, string> = {
   spite: "curses a battery on death",
 };
 
+/** Seconds between skill pulses. Blink is shorter in the air. */
+export const SKILL_PERIOD: Record<EnemySkill, number> = {
+  regen: 2.4,
+  sprint: 3.1,
+  split: 0,
+  shield: 6.8,
+  harden: 0,
+  call: 5.4,
+  blink: 4.8,
+  anchor: 2.2,
+  veil: 4.4,
+  rally: 4,
+  jam: 3.6,
+  graft: 3.8,
+  sap: 4.2,
+  spite: 4.6,
+};
+
+export const SKILL_WIND = 0.8;
+
+const TELEGRAPH = new Set<EnemySkill>(["call", "blink", "anchor", "veil", "rally", "jam", "graft", "sap"]);
+
+export const SKILL_TINT: Record<EnemySkill, string> = {
+  regen: "#7dffa8",
+  sprint: "#d5dee6",
+  split: "#e7c27a",
+  shield: "#7ee0e0",
+  harden: "#f2f2f2",
+  call: "#7dffa8",
+  blink: "#d0ecff",
+  anchor: "#9ec8c0",
+  veil: "#c4b5fd",
+  rally: "#e7d39a",
+  jam: "#e7c27a",
+  graft: "#7dffa8",
+  sap: "#c084fc",
+  spite: "#e07a5a",
+};
+
+export function skillPeriod(skill: EnemySkill, flying: boolean) {
+  if (skill === "blink" && flying) return 3.2;
+  return SKILL_PERIOD[skill];
+}
+
+/** Seconds left before an actionable skill fires, once it is inside the windup. */
+export function telegraphLeft(skill: EnemySkill | undefined, flying: boolean, skillT: number) {
+  if (!skill || !TELEGRAPH.has(skill)) return null;
+  const left = skillPeriod(skill, flying) - skillT;
+  if (left <= 0 || left > SKILL_WIND) return null;
+  return left;
+}
+
 export const KIND_SHORT: Record<DamageKind, string> = {
   bolt: "pulse",
   shell: "frost",

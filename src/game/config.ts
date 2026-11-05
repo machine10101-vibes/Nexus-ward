@@ -12,6 +12,13 @@ export const SURGE_CD = 22;
 export const OVERCLOCK_CD = 20;
 export const OVERCLOCK_DUR = 6.5;
 export const SYN_RANGE = 3.45;
+/** Extra damage for 0, 1, 2, or 3+ same-type neighbors. One link stays +15%. */
+export const LINK_BONUS = [0, 0.15, 0.27, 0.36] as const;
+
+export function linkMultiplier(count: number) {
+  const i = Math.max(0, Math.min(LINK_BONUS.length - 1, Math.floor(count)));
+  return 1 + LINK_BONUS[i];
+}
 export const AUTO_WAVE_DELAY = 2.8;
 export const SALVAGE_RATE = 0.6;
 export const SPEED_STEPS = [1, 2, 3] as const;

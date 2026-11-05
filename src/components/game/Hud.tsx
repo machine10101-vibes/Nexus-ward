@@ -26,6 +26,7 @@ import {
   TOWERS,
   TOWER_ORDER,
   coverageLabel,
+  linkMultiplier,
   towerStats,
   upgradeCost,
 } from "@/game/config";
@@ -647,8 +648,9 @@ function TowerCard() {
   const stats = towerStats(def, t.level);
   const up = t.level < 3 ? upgradeCost(def.cost, t.level) : null;
   const refund = engine.refundFor(t);
-  const syn = engine.synergy(t);
-  const dps = stats.damage * stats.fireRate * (syn ? 1.15 : 1) * (t.level >= 3 ? 1.12 : 1);
+  const links = engine.linkCount(t);
+  const syn = linkMultiplier(links);
+  const dps = stats.damage * stats.fireRate * syn * (t.level >= 3 ? 1.12 : 1);
   const short = up != null ? Math.max(0, up - gold) : 0;
   return (
     <div className="hud-panel p-3">
@@ -663,7 +665,12 @@ function TowerCard() {
       </div>
       <p className="mt-1.5 font-mono text-2xs tabular-nums text-muted">
         {Math.round(dps)} dps · {stats.range.toFixed(1)} rng · {t.kills} kills
-        {syn ? <span className="text-accent"> · linked +15%</span> : null}
+        {links > 0 ? (
+          <span className="text-accent">
+            {" "}
+            · {links} {links === 1 ? "link" : "links"} +{Math.round((syn - 1) * 100)}%
+          </span>
+        ) : null}
       </p>
 
       <div className="mt-2 flex items-center gap-2">

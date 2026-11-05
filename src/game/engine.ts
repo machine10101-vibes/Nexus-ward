@@ -3,6 +3,7 @@ import {
   CELL,
   ENEMIES,
   inflateSpawnCount,
+  linkMultiplier,
   SKILL_COPY,
   MAX_BEAMS,
   MAX_BOLTS,
@@ -577,13 +578,18 @@ export class GameEngine {
     return true;
   }
 
-  synergy(t: Tower) {
+  linkCount(t: Tower) {
     const r2 = SYN_RANGE * SYN_RANGE;
+    let n = 0;
     for (const o of this.towers) {
       if (o.id === t.id || o.type !== t.type) continue;
-      if (dist2(t.x, t.z, o.x, o.z) <= r2) return true;
+      if (dist2(t.x, t.z, o.x, o.z) <= r2) n += 1;
     }
-    return false;
+    return n;
+  }
+
+  synergy(t: Tower) {
+    return this.linkCount(t) > 0;
   }
 
   nextWaveGroups() {
@@ -1674,7 +1680,7 @@ export class GameEngine {
     const muzzleY = 0.85 + (t.level - 1) * 0.08;
     this.lastShooter = t;
     this.fireGen += 1;
-    const syn = this.synergy(t) ? 1.15 : 1;
+    const syn = linkMultiplier(this.linkCount(t));
     const rank = t.level >= 3 ? 1.12 : 1;
     const sap = this.time < t.sapUntil ? 0.62 : 1;
     const dmg = stats.damage * syn * rank * sap;

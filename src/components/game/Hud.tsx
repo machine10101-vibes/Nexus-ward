@@ -7,6 +7,8 @@ import {
   Pause,
   Play,
   Radio,
+  CircleDot,
+  Bomb,
   Shield,
   Snowflake,
   Sparkles,
@@ -23,6 +25,7 @@ import {
   SURGE_CD,
   TOWERS,
   TOWER_ORDER,
+  coverageLabel,
   towerStats,
   upgradeCost,
 } from "@/game/config";
@@ -40,6 +43,8 @@ const ICONS: Record<TowerId, typeof Zap> = {
   frost: Snowflake,
   tesla: Radio,
   rail: Minus,
+  flak: Bomb,
+  bore: CircleDot,
 };
 
 const TARGET_SHORT: Record<Targeting, string> = {
@@ -653,7 +658,7 @@ function TowerCard() {
           <p className="font-display text-sm text-fg">{def.name}</p>
         </div>
         <p className="hud-label">
-          {def.hitsFlying ? "Ground + air" : "Ground only"}
+          {coverageLabel(def)}
         </p>
       </div>
       <p className="mt-1.5 font-mono text-2xs tabular-nums text-muted">

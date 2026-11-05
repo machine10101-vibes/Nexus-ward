@@ -87,7 +87,7 @@ export function NexusWardApp() {
         engine.toggleAutoWave();
         s.syncHud();
       }
-      const num = e.code.match(/^Digit([1-5])$/);
+      const num = e.code.match(/^Digit([1-7])$/);
       if (num) {
         const id = TOWER_ORDER[Number(num[1]) - 1];
         const next = engine.buildType === id ? null : id;

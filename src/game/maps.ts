@@ -265,6 +265,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "myrmidon", count: 10, interval: 0.72, delay: 0 },
           { enemy: "thorn", count: 8, interval: 0.72, delay: 1.1 },
+          { enemy: "shade", count: 2, interval: 0.75, delay: 0.5 },
           { enemy: "spore", count: 10, interval: 0.4, delay: 0.8 },
           { enemy: "bloom", count: 8, interval: 0.42, delay: 1.2 },
           { enemy: "husk", count: 6, interval: 0.9, delay: 1.5 },
@@ -274,6 +275,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "bloom", count: 12, interval: 0.38, delay: 0 },
           { enemy: "brood", count: 14, interval: 0.32, delay: 0.6 },
+          { enemy: "marrow", count: 2, interval: 1.2, delay: 0.4 },
           { enemy: "myrmidon", count: 10, interval: 0.68, delay: 0.9 },
           { enemy: "husk", count: 4, interval: 0.9, delay: 1.3 },
         ],
@@ -383,6 +385,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "bulwark", count: 5, interval: 1.1, delay: 0 },
           { enemy: "sentry", count: 4, interval: 1.15, delay: 0.6 },
+          { enemy: "howler", count: 2, interval: 0.85, delay: 0.5 },
           { enemy: "drone", count: 12, interval: 0.32, delay: 0.4 },
           { enemy: "walker", count: 6, interval: 0.5, delay: 1.2 },
         ],
@@ -407,6 +410,7 @@ export const MAPS: Record<MapId, MapDef> = {
       {
         groups: [
           { enemy: "razor", count: 10, interval: 0.42, delay: 0 },
+          { enemy: "skiff", count: 2, interval: 0.65, delay: 0.3 },
           { enemy: "siege", count: 5, interval: 1.05, delay: 1 },
           { enemy: "walker", count: 6, interval: 0.45, delay: 1.3 },
           { enemy: "bulwark", count: 8, interval: 0.85, delay: 1.5 },
@@ -569,6 +573,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "specter", count: 16, interval: 0.42, delay: 0 },
           { enemy: "wraith", count: 6, interval: 0.42, delay: 0.4 },
+          { enemy: "gnaw", count: 2, interval: 0.8, delay: 0.5 },
           { enemy: "chimera", count: 10, interval: 0.4, delay: 0.7 },
           { enemy: "amalgam", count: 26, interval: 0.55, delay: 1.1 },
         ],
@@ -577,6 +582,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "amalgam", count: 21, interval: 0.6, delay: 0 },
           { enemy: "relic", count: 8, interval: 0.65, delay: 0.5 },
+          { enemy: "herald", count: 2, interval: 1.1, delay: 0.6 },
           { enemy: "siege", count: 4, interval: 1.05, delay: 0.7 },
           { enemy: "husk", count: 4, interval: 1.05, delay: 1 },
         ],

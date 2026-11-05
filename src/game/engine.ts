@@ -5,6 +5,7 @@ import {
   inflateSpawnCount,
   linkMultiplier,
   SKILL_COPY,
+  skillPeriod,
   MAX_BEAMS,
   MAX_BOLTS,
   MAX_BURSTS,
@@ -1024,26 +1025,26 @@ export class GameEngine {
     if (skill === "regen") {
       const rate = e.boss ? 16 : def.flying ? 3.2 : 5.5;
       if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + rate * dt);
-      if (e.skillT >= 2.4 && e.hp < e.maxHp) {
+      if (e.skillT >= skillPeriod("regen", e.flying) && e.hp < e.maxHp) {
         e.skillT = 0;
         this.spawnBurst(e.x, e.y + 0.35, e.z, 0.22, "#7dffa8");
       }
       return;
     }
     if (skill === "sprint") {
-      if (e.skillT >= 3.1) {
+      if (e.skillT >= skillPeriod("sprint", e.flying)) {
         e.skillT = 0;
         e.sprintUntil = this.time + 0.85;
         this.spawnBurst(e.x, e.y + 0.15, e.z, 0.28, "#d5dee6");
       }
       return;
     }
-    if (skill === "shield" && e.skillT >= 6.8) {
+    if (skill === "shield" && e.skillT >= skillPeriod("shield", e.flying)) {
       e.skillT = 0;
       e.shieldHp = e.boss ? 90 : 32;
       return;
     }
-    if (skill === "call" && e.skillT >= 5.4) {
+    if (skill === "call" && e.skillT >= skillPeriod("call", e.flying)) {
       e.skillT = 0;
       let alive = 0;
       for (const o of this.enemies) if (o.alive) alive += 1;
@@ -1063,7 +1064,7 @@ export class GameEngine {
       this.spawnBurst(e.x, e.y + 0.45, e.z, 0.4, "#7dffa8");
       return;
     }
-    if (skill === "blink" && e.skillT >= (e.flying ? 3.2 : 4.8)) {
+    if (skill === "blink" && e.skillT >= skillPeriod("blink", e.flying)) {
       e.skillT = 0;
       this.spawnBurst(e.x, e.y + 0.2, e.z, 0.35, "#d0ecff");
       const wps = this.paths[e.pathId] ?? this.waypoints;
@@ -1089,7 +1090,7 @@ export class GameEngine {
       this.spawnBurst(e.x, e.y + 0.25, e.z, 0.5, "#d0ecff");
       return;
     }
-    if (skill === "anchor" && e.skillT >= 2.2) {
+    if (skill === "anchor" && e.skillT >= skillPeriod("anchor", e.flying)) {
       e.skillT = 0;
       const reach = 1.85 * 1.85;
       for (const o of this.enemies) {
@@ -1103,13 +1104,13 @@ export class GameEngine {
       this.spawnBurst(e.x, 0.45, e.z, 0.7, "#9ec8c0");
       return;
     }
-    if (skill === "veil" && e.skillT >= 4.4) {
+    if (skill === "veil" && e.skillT >= skillPeriod("veil", e.flying)) {
       e.skillT = 0;
       e.phaseUntil = this.time + 1.15;
       this.spawnBurst(e.x, e.y + 0.3, e.z, 0.4, "#c4b5fd");
       return;
     }
-    if (skill === "rally" && e.skillT >= 4) {
+    if (skill === "rally" && e.skillT >= skillPeriod("rally", e.flying)) {
       e.skillT = 0;
       const reach = 2.15 * 2.15;
       for (const o of this.enemies) {
@@ -1120,7 +1121,7 @@ export class GameEngine {
       this.spawnBurst(e.x, e.y + 0.55, e.z, 0.85, "#e7d39a");
       return;
     }
-    if (skill === "jam" && e.skillT >= 3.6) {
+    if (skill === "jam" && e.skillT >= skillPeriod("jam", e.flying)) {
       e.skillT = 0;
       let best: Tower | null = null;
       let bestD = 6.2 * 6.2;
@@ -1137,7 +1138,7 @@ export class GameEngine {
       this.spawnBurst(best.x, 0.9, best.z, 0.45, "#e7c27a");
       return;
     }
-    if (skill === "graft" && e.skillT >= 3.8) {
+    if (skill === "graft" && e.skillT >= skillPeriod("graft", e.flying)) {
       e.skillT = 0;
       let best: Enemy | null = null;
       let bestRatio = 0.98;
@@ -1159,7 +1160,7 @@ export class GameEngine {
       this.spawnBurst(best.x, best.y + 0.35, best.z, 0.42, "#7dffa8");
       return;
     }
-    if (skill === "sap" && e.skillT >= 4.2) {
+    if (skill === "sap" && e.skillT >= skillPeriod("sap", e.flying)) {
       e.skillT = 0;
       let best: Tower | null = null;
       let bestD = 6.5 * 6.5;
@@ -1176,7 +1177,7 @@ export class GameEngine {
       this.spawnBurst(best.x, 0.85, best.z, 0.5, "#c084fc");
       return;
     }
-    if (skill === "spite" && e.skillT >= 4.6) {
+    if (skill === "spite" && e.skillT >= skillPeriod("spite", e.flying)) {
       e.skillT = 0;
       this.spawnBurst(e.x, e.y + 0.35, e.z, 0.28, "#e07a5a");
     }

@@ -631,8 +631,9 @@ function Help() {
           some regenerate, sprint, split, or shrug frost.
         </li>
         <li>
-          <span className="text-fg">5. Linked batteries</span> of the same type within range deal 15% more damage. Each
-          rank changes that battery's silhouette. Rank 3 unlocks a unique overdrive.
+          <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage. One neighbor is
+          +15%. A second is +27%. Three or more cap at +36%. The lattice draws between them. Each rank changes that
+          battery's silhouette. Rank 3 unlocks a unique overdrive.
         </li>
         <li>
           <span className="text-fg">6. Surge (Q)</span> slams every host on the grid.{" "}

@@ -13,6 +13,7 @@ import {
   SYN_RANGE,
   TOWERS,
   coverageLabel,
+  linkMultiplier,
   towerStats,
   MAX_ENEMIES,
   MAX_BOLTS,
@@ -430,6 +431,18 @@ function Pads() {
 function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
   const def = TOWERS[type];
   const short = def.cost - gold;
+  const pad = engine.hoverPad != null ? engine.padWorld[engine.hoverPad] : null;
+  let links = 0;
+  if (pad) {
+    const r2 = SYN_RANGE * SYN_RANGE;
+    for (const t of engine.towers) {
+      if (t.type !== type) continue;
+      const dx = t.x - pad.x;
+      const dz = t.z - pad.z;
+      if (dx * dx + dz * dz <= r2) links += 1;
+    }
+  }
+  const bonus = links > 0 ? Math.round((linkMultiplier(links) - 1) * 100) : 0;
   return (
     <Html position={[0, 1.95, 0]} center sprite pointerEvents="none" zIndexRange={[9, 9]} style={{ pointerEvents: "none" }}>
       <div className="ghost-tag">
@@ -437,6 +450,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
           {def.short} · {def.cost} cr
         </span>
         <span>{coverageLabel(def)}</span>
+        {bonus > 0 ? <span>+{bonus}% link</span> : null}
         {short > 0 ? (
           <span className="ghost-tag-short">need {short} more</span>
         ) : (
@@ -613,7 +627,7 @@ function SynergyLinks() {
   const n = useGameStore((s) => s.hud.towers);
   const selected = useGameStore((s) => s.hud.selectedId);
   const mats = useRef<(MeshBasicMaterial | null)[]>([]);
-  const links: { key: string; ax: number; az: number; bx: number; bz: number; color: string; own: boolean }[] = [];
+  const links: { key: string; ax: number; az: number; bx: number; bz: number; color: string; own: boolean; hot: boolean }[] = [];
   const r2 = SYN_RANGE * SYN_RANGE;
   for (let i = 0; i < engine.towers.length; i++) {
     for (let j = i + 1; j < engine.towers.length; j++) {
@@ -631,6 +645,7 @@ function SynergyLinks() {
         bz: b.z,
         color: TOWERS[a.type].color,
         own: selected === a.id || selected === b.id,
+        hot: engine.linkCount(a) >= 2 || engine.linkCount(b) >= 2,
       });
     }
   }
@@ -640,7 +655,8 @@ function SynergyLinks() {
     for (let i = 0; i < links.length; i++) {
       const m = mats.current[i];
       if (!m) continue;
-      m.opacity = owned ? (links[i].own ? pulse + 0.34 : pulse * 0.3) : pulse;
+      const base = links[i].hot ? pulse + 0.22 : pulse;
+      m.opacity = owned ? (links[i].own ? base + 0.28 : base * 0.35) : base;
     }
   });
   void n;

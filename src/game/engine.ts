@@ -273,6 +273,7 @@ export class GameEngine {
       color: "#fff",
       fromHero: false,
       brand: false,
+      airOnly: false,
     };
   }
 
@@ -1207,7 +1208,7 @@ export class GameEngine {
       const def = TOWERS[t.type];
       const stats = towerStats(def, t.level);
       const haste = this.time < this.overclockUntil ? 1.55 : 1;
-      const target = this.pickTarget(t, stats.range, def.hitsFlying);
+      const target = this.pickTarget(t, stats.range, def.hitsFlying, !!def.airOnly);
       t.aiming = !!target;
       if (!target) continue;
       const dx = target.x - t.x;
@@ -1428,6 +1429,7 @@ export class GameEngine {
       bolt.color = stats.color;
       bolt.fromHero = true;
       bolt.brand = mark;
+      bolt.airOnly = false;
       this.spawnBurst(h.x + Math.sin(h.yaw) * 0.5, 1.22, h.z + Math.cos(h.yaw) * 0.5, 0.22, stats.color);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.58, 0.95);
       if (hot && h.lastArt === 2) {
@@ -1638,14 +1640,15 @@ export class GameEngine {
     return true;
   }
 
-  pickTarget(t: Tower, range: number, flying: boolean): Enemy | null {
+  pickTarget(t: Tower, range: number, flying: boolean, airOnly = false): Enemy | null {
     const r2 = range * range;
     let best: Enemy | null = null;
     let bestScore = -Infinity;
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (this.time < e.phaseUntil) continue;
-      if (e.flying && !flying) continue;
+      if (airOnly && !e.flying) continue;
+      if (!airOnly && e.flying && !flying) continue;
       const d2 = dist2(t.x, t.z, e.x, e.z);
       if (d2 > r2) continue;
       let score = 0;
@@ -1700,14 +1703,17 @@ export class GameEngine {
         bolt.vz = (dz / len) * speed;
         bolt.speed = speed;
         bolt.damage = dmg;
-        bolt.splash = stats.splash * (t.level >= 3 && t.type === "frost" ? 1.2 : 1);
-        bolt.slow = t.level >= 3 && t.type === "frost" ? Math.min(0.32, def.slow) : def.slow;
+        const deepFrost = t.level >= 3 && t.type === "frost";
+        const deepFlak = t.level >= 3 && t.type === "flak";
+        bolt.splash = stats.splash * (deepFrost || deepFlak ? 1.2 : 1);
+        bolt.slow = deepFrost ? Math.min(0.32, def.slow) : deepFlak ? Math.min(0.36, def.slow) : def.slow;
         bolt.slowTime = def.slowTime + (t.level >= 3 ? 0.6 : 0);
         bolt.targetSlot = target.slot;
         bolt.ttl = 2.4;
         bolt.color = def.color;
         bolt.fromHero = false;
         bolt.brand = false;
+        bolt.airOnly = !!def.airOnly;
       }
     } else if (def.kind === "beam") {
       const wide = t.level >= 3;
@@ -1839,10 +1845,12 @@ export class GameEngine {
     this.spawnBurst(x, y, z, b.splash * 0.7, b.color);
     if (b.slow > 0) this.spawnDecal(x, z, b.splash, b.color, "frost");
     this.addTrauma(0.16);
+    const kind = b.airOnly ? "flak" : "shell";
     for (const e of this.enemies) {
-      if (!e.alive || e.flying) continue;
+      if (!e.alive) continue;
+      if (b.airOnly ? !e.flying : e.flying) continue;
       if (dist2(x, z, e.x, e.z) <= r2) {
-        this.hurt(e, b.damage, "shell");
+        this.hurt(e, b.damage, kind);
         if (b.slow > 0) this.applySlow(e, b.slow, b.slowTime);
       }
     }

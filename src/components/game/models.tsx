@@ -149,7 +149,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
   const yaw = useRef<Group>(null);
   const dish = useRef<Group>(null);
   useFrame((s, dt) => {
-    if (type === "tesla" && yaw.current) yaw.current.rotation.y += dt * 0.8;
+    if ((type === "tesla" || type === "flak") && yaw.current) yaw.current.rotation.y += dt * (type === "flak" ? 0.45 : 0.8);
     if (type === "frost" && dish.current) dish.current.rotation.z = Math.sin(s.clock.elapsedTime * 0.7) * 0.06;
   });
 
@@ -562,6 +562,101 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             </>
           ) : null}
         </group>
+      </group>
+    );
+  }
+
+  // Flak — four canted tubes on a low drum. Reads as a cluster from above.
+  if (type === "flak") {
+    return (
+      <group>
+        <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.5, 0.58, 0.14, 6]} />
+          <Mat color="#3a342c" metalness={0.62} roughness={0.34} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]} castShadow>
+          <cylinderGeometry args={[0.28, 0.34, 0.16, 8]} />
+          <Mat color="#4a4338" metalness={0.58} roughness={0.3} />
+        </mesh>
+        <group ref={yaw} position={[0, 0.28, 0]}>
+          {[0, 1, 2, 3].map((i) => {
+            const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            const x = Math.cos(a) * 0.22;
+            const z = Math.sin(a) * 0.22;
+            return (
+              <group key={i} position={[x, 0.16, z]} rotation={[0.55, a, 0]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[0.055, 0.07, 0.42, 8]} />
+                  <Mat color="#6a6256" metalness={0.7} roughness={0.24} />
+                </mesh>
+                <mesh position={[0, 0.24, 0]}>
+                  <cylinderGeometry args={[0.04, 0.05, 0.08, 8]} />
+                  <Mat color={def.color} eInt={0.8 + level * 0.15} />
+                </mesh>
+              </group>
+            );
+          })}
+          {level >= 2 ? (
+            <mesh position={[0, 0.42, 0]}>
+              <cylinderGeometry args={[0.06, 0.08, 0.28, 8]} />
+              <Mat color={def.color} eInt={0.7} />
+            </mesh>
+          ) : null}
+          {level >= 3 ? (
+            <mesh position={[0, 0.08, 0]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.4, 0.02, 6, 20]} />
+              <Mat color={def.color} eInt={0.65} />
+            </mesh>
+          ) : null}
+        </group>
+        <PulseLight position={[0, 0.95, 0]} r={0.08} color={def.color} base={1.1 + level * 0.2} amp={0.4} />
+      </group>
+    );
+  }
+
+  // Bore — a short fat barrel on a sled. Reads as a stub, not the long rail.
+  if (type === "bore") {
+    return (
+      <group>
+        <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.7, 0.12, 0.48]} />
+          <Mat color="#3a2c28" metalness={0.72} roughness={0.32} />
+        </mesh>
+        <mesh position={[0, 0.22, -0.08]} castShadow>
+          <boxGeometry args={[0.36, 0.2, 0.28]} />
+          <Mat color="#4e3a34" metalness={0.66} roughness={0.3} />
+        </mesh>
+        <group position={[0, 0.4, 0.16]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.16, 0.18, 0.72, 10]} />
+            <Mat color="#6a5048" metalness={0.74} roughness={0.22} />
+          </mesh>
+          <mesh position={[0, 0, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.2, 0.028, 6, 16]} />
+            <Mat color={def.color} eInt={0.55 + level * 0.12} />
+          </mesh>
+          <mesh position={[0, 0, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.19, 0.02, 6, 16]} />
+            <Mat color={def.color} eInt={0.35} />
+          </mesh>
+          <mesh position={[0, 0, 0.4]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.1, 0.14, 0.1, 8]} />
+            <Mat color="#2a201c" metalness={0.7} roughness={0.28} />
+          </mesh>
+          {level >= 2 ? (
+            <mesh position={[0, 0.16, -0.05]} castShadow>
+              <boxGeometry args={[0.46, 0.06, 0.16]} />
+              <Mat color="#3a2c28" metalness={0.6} roughness={0.34} />
+            </mesh>
+          ) : null}
+          {level >= 3 ? (
+            <mesh position={[0, 0, 0.46]} rotation={[Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.16, 0.03, 6, 14]} />
+              <Mat color={def.color} eInt={0.9} />
+            </mesh>
+          ) : null}
+        </group>
+        <PulseLight position={[0, 0.4, 0.62]} r={0.06} color={def.color} base={1.2 + level * 0.15} amp={0.25} />
       </group>
     );
   }

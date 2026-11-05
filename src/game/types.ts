@@ -1,6 +1,6 @@
 export type Faction = "organic" | "mech" | "hybrid";
 export type MapId = "mycelion" | "forge" | "aegis";
-export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla";
+export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore";
 export type EnemyId =
   | "mite"
   | "brood"
@@ -53,7 +53,7 @@ export type ItemId =
   | "star-silk";
 export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
-export type DamageKind = ProjectileKind | "surge";
+export type DamageKind = ProjectileKind | "surge" | "flak";
 export type EnemySkill =
   | "regen"
   | "sprint"
@@ -101,6 +101,8 @@ export type TowerDef = {
   slowTime: number;
   chain: number;
   pierce: boolean;
+  /** Shells from this battery burst on flyers and ignore the ground. */
+  airOnly?: boolean;
   color: string;
   desc: string;
 };
@@ -227,6 +229,8 @@ export type Bolt = {
   fromHero: boolean;
   /** Hero bolts with this set build the warden brand. Arts leave it off. */
   brand: boolean;
+  /** Airburst shells damage flyers and leave ground hosts alone. */
+  airOnly: boolean;
 };
 
 export type BeamStyle = "lance" | "chain" | "rail";

@@ -107,9 +107,52 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     color: "#8eb8a8",
     desc: "Arcing current. Jumps between nearby targets.",
   },
+  flak: {
+    id: "flak",
+    name: "Flak Battery",
+    short: "Flak",
+    cost: 155,
+    range: 6.4,
+    fireRate: 0.62,
+    damage: 15,
+    kind: "shell",
+    hitsFlying: true,
+    splash: 1.9,
+    slow: 0.58,
+    slowTime: 1.7,
+    chain: 0,
+    pierce: false,
+    airOnly: true,
+    color: "#d4b483",
+    desc: "Airburst shells. Slows a flock. Ignores the ground.",
+  },
+  bore: {
+    id: "bore",
+    name: "Bore Cannon",
+    short: "Bore",
+    cost: 125,
+    range: 5.2,
+    fireRate: 0.48,
+    damage: 46,
+    kind: "rail",
+    hitsFlying: false,
+    splash: 0,
+    slow: 0,
+    slowTime: 0,
+    chain: 0,
+    pierce: true,
+    color: "#c47a62",
+    desc: "Short gauss bore. Cracks ground armor. Ignores the sky.",
+  },
 };
 
-export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail"];
+export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore"];
+
+export function coverageLabel(def: TowerDef) {
+  if (def.airOnly) return "Air only";
+  if (def.hitsFlying) return "Ground + air";
+  return "Ground only";
+}
 
 /** Copy for the inspector: what the next rank buys, and the name of the rank 3 overdrive. */
 export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: string }> = {
@@ -138,6 +181,16 @@ export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: st
     overdrive: "Heavy Line",
     r3: "Pierce corridor widens to catch packs.",
   },
+  flak: {
+    r2: "Heavier burst, faster cycle, wider reach.",
+    overdrive: "Wide Burst",
+    r3: "Bigger airburst and a deeper slow.",
+  },
+  bore: {
+    r2: "Heavier slug, faster cycle, longer bore.",
+    overdrive: "Split Bore",
+    r3: "The ground corridor widens.",
+  },
 };
 
 export const SKILL_COPY: Record<EnemySkill, string> = {
@@ -164,6 +217,7 @@ export const KIND_SHORT: Record<DamageKind, string> = {
   rail: "rail",
   chain: "tesla",
   surge: "surge",
+  flak: "flak",
 };
 
 export const ENEMIES: Record<EnemyId, EnemyDef> = {
@@ -221,7 +275,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 0.82,
     leak: 1,
     skill: "regen",
-    resist: { chain: 0.65, beam: 1.5 },
+    resist: { chain: 0.65, beam: 1.5, flak: 1.4 },
   },
   titan: {
     id: "titan",
@@ -264,7 +318,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 0.98,
     leak: 1,
     skill: "sprint",
-    resist: { rail: 0.7, beam: 1.55 },
+    resist: { rail: 0.7, beam: 1.55, flak: 0.72 },
   },
   colossus: {
     id: "colossus",
@@ -352,7 +406,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 0.92,
     leak: 1,
     skill: "shield",
-    resist: { rail: 0.7, chain: 1.5 },
+    resist: { rail: 0.7, chain: 1.5, flak: 0.75 },
   },
   dread: {
     id: "dread",
@@ -395,7 +449,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 1.02,
     leak: 1,
     skill: "sprint",
-    resist: { beam: 0.7, chain: 1.5 },
+    resist: { beam: 0.7, chain: 1.5, flak: 1.3 },
   },
   leviathan: {
     id: "leviathan",
@@ -454,7 +508,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 0.88,
     leak: 1,
     skill: "sprint",
-    resist: { rail: 0.65, beam: 1.5 },
+    resist: { rail: 0.65, beam: 1.5, flak: 1.35 },
   },
   overlord: {
     id: "overlord",
@@ -497,7 +551,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 1.02,
     leak: 1,
     skill: "sprint",
-    resist: { rail: 0.6, beam: 1.55 },
+    resist: { rail: 0.6, beam: 1.55, flak: 0.7 },
   },
   sovereign: {
     id: "sovereign",
@@ -555,7 +609,7 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     scale: 0.94,
     leak: 1,
     skill: "blink",
-    resist: { beam: 0.75, chain: 1.45 },
+    resist: { beam: 0.75, chain: 1.45, flak: 1.3 },
   },
   bastion: {
     id: "bastion",

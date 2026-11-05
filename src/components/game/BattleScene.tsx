@@ -12,6 +12,7 @@ import {
   PLANET_THEME,
   SYN_RANGE,
   TOWERS,
+  coverageLabel,
   towerStats,
   MAX_ENEMIES,
   MAX_BOLTS,
@@ -435,7 +436,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
         <span className="ghost-tag-cost">
           {def.short} · {def.cost} cr
         </span>
-        <span>{def.hitsFlying ? "ground + air" : "ground only"}</span>
+        <span>{coverageLabel(def)}</span>
         {short > 0 ? (
           <span className="ghost-tag-short">need {short} more</span>
         ) : (

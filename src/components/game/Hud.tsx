@@ -690,6 +690,7 @@ function TowerCard() {
             · +{Math.round((reachMul - 1) * 100)}% reach
           </span>
         ) : null}
+        {engine.laneHot(t) ? <span className="text-accent"> · lane +12%</span> : null}
       </p>
 
       <div className="mt-2 flex items-center gap-2">

@@ -814,16 +814,26 @@ export class GameEngine {
   cycleTargeting() {
     const t = this.getSelected();
     if (!t) return;
-    const order: Targeting[] = ["first", "last", "closest", "strongest", "weakest"];
-    t.targeting = order[(order.indexOf(t.targeting) + 1) % order.length];
+    const order = this.targetOrder(t.type);
+    const i = order.indexOf(t.targeting);
+    t.targeting = order[(i + 1) % order.length];
     this.hudDirty = true;
   }
 
   setTargeting(policy: Targeting) {
     const t = this.getSelected();
     if (!t) return;
+    if (!this.targetOrder(t.type).includes(policy)) return;
     t.targeting = policy;
     this.hudDirty = true;
+  }
+
+  /** Air and ground priority exist only on batteries that can hit both lanes. */
+  targetOrder(type: TowerId): Targeting[] {
+    const order: Targeting[] = ["first", "last", "closest", "strongest", "weakest"];
+    const def = TOWERS[type];
+    if (def.hitsFlying && !def.airOnly) order.push("air", "ground");
+    return order;
   }
 
   addTrauma(v: number) {
@@ -1649,8 +1659,11 @@ export class GameEngine {
 
   pickTarget(t: Tower, range: number, flying: boolean, airOnly = false): Enemy | null {
     const r2 = range * range;
+    const lane = t.targeting === "air" ? true : t.targeting === "ground" ? false : null;
     let best: Enemy | null = null;
     let bestScore = -Infinity;
+    let fallback: Enemy | null = null;
+    let fallbackScore = -Infinity;
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (this.time < e.phaseUntil) continue;
@@ -1659,17 +1672,23 @@ export class GameEngine {
       const d2 = dist2(t.x, t.z, e.x, e.z);
       if (d2 > r2) continue;
       let score = 0;
-      if (t.targeting === "first") score = e.progress;
-      else if (t.targeting === "last") score = -e.progress;
+      if (t.targeting === "last") score = -e.progress;
       else if (t.targeting === "closest") score = -d2;
       else if (t.targeting === "strongest") score = e.hp;
-      else score = -e.hp;
-      if (score > bestScore) {
-        bestScore = score;
-        best = e;
+      else if (t.targeting === "weakest") score = -e.hp;
+      else score = e.progress;
+      const preferred = lane == null || e.flying === lane;
+      if (preferred) {
+        if (score > bestScore) {
+          bestScore = score;
+          best = e;
+        }
+      } else if (score > fallbackScore) {
+        fallbackScore = score;
+        fallback = e;
       }
     }
-    return best;
+    return best ?? fallback;
   }
 
   fire(

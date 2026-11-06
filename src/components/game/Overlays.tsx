@@ -627,7 +627,8 @@ function Help() {
         <li>
           <span className="text-fg">4. Air units</span> ignore pulse, frost, bore, and lash. Lance, tesla, rail, and flak cover the sky.
           Flak bursts a flock and slows it, and it never touches the ground. Bore is a short ground rail that cracks
-          armor and ignores the air. Lash is a fast ground snare for sprinters and ignores the sky. Each host also has
+          armor and ignores the air. Lash is a fast ground snare for sprinters and ignores the sky. Lance, Tesla, and
+          Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. Each host also has
           its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split, or shrug frost. A
           ring tightens on the ground just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
         </li>

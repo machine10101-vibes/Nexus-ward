@@ -56,6 +56,8 @@ const TARGET_SHORT: Record<Targeting, string> = {
   closest: "Near",
   strongest: "Max",
   weakest: "Min",
+  air: "Air",
+  ground: "Gnd",
 };
 
 /** The platform hint is a one-shot teach, not a recurring nag. */
@@ -709,7 +711,7 @@ function TowerCard() {
       )}
 
       <div className="mt-2 flex flex-wrap gap-1">
-        {(Object.keys(TARGET_SHORT) as Targeting[]).map((p) => (
+        {engine.targetOrder(t.type).map((p) => (
           <button
             key={p}
             type="button"

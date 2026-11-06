@@ -631,7 +631,7 @@ function Help() {
           ground host standing in its field and never touches the sky. Lance, Tesla, and
           Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. Each host also has
           its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split, or shrug frost. A
-          ring tightens on the ground just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
+          ring tightens on the ground, and a column rises, just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
         </li>
         <li>
           <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage. One neighbor is

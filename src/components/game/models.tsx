@@ -700,6 +700,48 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     );
   }
 
+  // Ward Pylon — three short posts around a ground disc. The field sits on the pad, not a barrel.
+  if (type === "pylon") {
+    return (
+      <group>
+        <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.5, 0.58, 0.1, 6]} />
+          <Mat color="#2e2a36" metalness={0.62} roughness={0.36} />
+        </mesh>
+        <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.28, 0.46, 24]} />
+          <Mat color={def.color} eInt={0.45 + level * 0.12} />
+        </mesh>
+        {[0, 1, 2].map((i) => {
+          const a = (i / 3) * Math.PI * 2;
+          return (
+            <mesh key={i} position={[Math.cos(a) * 0.28, 0.28, Math.sin(a) * 0.28]} castShadow>
+              <cylinderGeometry args={[0.045, 0.06, 0.42, 6]} />
+              <Mat color="#4a4454" metalness={0.58} roughness={0.32} />
+            </mesh>
+          );
+        })}
+        <mesh position={[0, 0.22, 0]}>
+          <sphereGeometry args={[0.1, 12, 10]} />
+          <Mat color={def.color} eInt={0.8 + level * 0.15} />
+        </mesh>
+        {level >= 2 ? (
+          <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.5, 0.58, 24]} />
+            <Mat color={def.color} eInt={0.55} />
+          </mesh>
+        ) : null}
+        {level >= 3 ? (
+          <mesh position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.62, 0.7, 28]} />
+            <Mat color={def.color} eInt={0.7} />
+          </mesh>
+        ) : null}
+        <PulseLight position={[0, 0.36, 0]} r={0.05} color={def.color} base={1.1 + level * 0.15} amp={0.35} />
+      </group>
+    );
+  }
+
   // Tesla Spire — stacked toroids on a mast. Reads as concentric rings from above.
   return (
     <group>

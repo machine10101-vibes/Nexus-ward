@@ -10,6 +10,7 @@ import {
   CircleDot,
   Bomb,
   Spline,
+  Radar,
   Shield,
   Snowflake,
   Sparkles,
@@ -48,6 +49,7 @@ const ICONS: Record<TowerId, typeof Zap> = {
   flak: Bomb,
   bore: CircleDot,
   lash: Spline,
+  pylon: Radar,
 };
 
 const TARGET_SHORT: Record<Targeting, string> = {

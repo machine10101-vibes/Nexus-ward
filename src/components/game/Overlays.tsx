@@ -629,7 +629,7 @@ function Help() {
           Flak bursts a flock and slows it, and it never touches the ground. Bore is a short ground rail that cracks
           armor and ignores the air. Lash is a fast ground snare for sprinters and ignores the sky. A pylon slows every
           ground host standing in its field and never touches the sky. Mark (0) throws a ground dart that paints a
-          host, and every battery then hits that host harder. It never touches the sky. Lance, Tesla, and
+          host, and every battery then hits that host harder. The HUD reads Painted while that paint is up. It never touches the sky. Lance, Tesla, and
           Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. A battery
           committed to one lane hits 12% harder while the other lane is also inside its reach. Air or Ground on a mixed
           battery is that commitment. Each host also has

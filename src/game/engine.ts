@@ -1737,6 +1737,14 @@ export class GameEngine {
     return 1 + LANE_PRESS;
   }
 
+  paintedCount() {
+    let n = 0;
+    for (const e of this.enemies) {
+      if (e.alive && this.time < e.markUntil) n += 1;
+    }
+    return n;
+  }
+
   laneHot(t: Tower) {
     const def = TOWERS[t.type];
     if (this.laneCommit(t, def) == null) return false;

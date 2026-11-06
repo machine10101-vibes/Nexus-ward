@@ -212,6 +212,7 @@ export function Hud() {
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
           {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
+          {hud.painted > 0 ? <StatusChip>Painted {hud.painted}</StatusChip> : null}
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
           {hud.heroKills > 0 ? <StatusChip>{HEROES[hud.heroId ?? "fighter"].name} · {hud.heroKills}</StatusChip> : null}
           {hud.heroChain > 0 ? <StatusChip>Chain {hud.heroChain}</StatusChip> : null}

@@ -207,6 +207,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const art = useWorldArt(mapId);
   const lives = useGameStore((s) => s.hud.lives);
   const leaked = useGameStore((s) => s.hud.leaked);
+  const coreHot = useGameStore((s) => s.hud.coreHot);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const phase = useGameStore((s) => s.hud.phase);
   const wave = useGameStore((s) => s.hud.wave);
@@ -291,7 +292,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         />
       ))}
       <group position={[end.x, 0, end.z]}>
-        <NexusCore color={theme.core} health={health} hitGen={leaked} />
+        <NexusCore color={theme.core} health={health} hitGen={leaked} approach={coreHot} />
       </group>
       {activePaths.map((pts, i) => {
         const gate = pts[0];

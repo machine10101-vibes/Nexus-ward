@@ -203,6 +203,7 @@ export function Hud() {
       <div className="mt-2 flex flex-col items-center gap-2">
         <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
         <div className="flex flex-wrap items-center justify-center gap-1.5">
+          {hud.coreHot ? <StatusChip alert>Core contact</StatusChip> : null}
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
@@ -488,12 +489,13 @@ function CoreRing({ pct, lives, leak }: { pct: number; lives: number; leak: bool
   );
 }
 
-function StatusChip({ children, muted }: { children: ReactNode; muted?: boolean }) {
+function StatusChip({ children, muted, alert }: { children: ReactNode; muted?: boolean; alert?: boolean }) {
   return (
     <span
       className={cn(
-        "rounded-full border border-border bg-surface/90 px-2.5 py-0.5 font-display text-2xs uppercase tracking-label tabular-nums",
-        muted ? "text-muted" : "text-accent",
+        "rounded-full border bg-surface/90 px-2.5 py-0.5 font-display text-2xs uppercase tracking-label tabular-nums",
+        alert ? "border-[#c45c5c]/70 text-[#e7b2b2]" : "border-border",
+        muted ? "text-muted" : alert ? "" : "text-accent",
       )}
     >
       {children}

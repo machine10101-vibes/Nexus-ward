@@ -2089,6 +2089,17 @@ export class GameEngine {
         : `Incursion ${this.wave} clear · core bled`;
   }
 
+  /** A host is close enough that the next few steps can touch the core. */
+  coreContact(): boolean {
+    if (this.phase !== "combat") return false;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const wps = this.paths[e.pathId] ?? this.waypoints;
+      if (wps.length > 0 && wps.length - e.wp <= 4) return true;
+    }
+    return false;
+  }
+
   threatLine(): string | null {
     if (this.phase === "combat") {
       for (const e of this.enemies) {

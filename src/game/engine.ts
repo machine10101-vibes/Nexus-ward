@@ -10,6 +10,7 @@ import {
   MARK_TIME,
   ENEMIES,
   inflateSpawnCount,
+  linkCycle,
   linkMultiplier,
   mixRangeMultiplier,
   SKILL_COPY,
@@ -1261,7 +1262,10 @@ export class GameEngine {
       t.cooldown = Math.max(0, t.cooldown - dt);
       const def = TOWERS[t.type];
       const stats = towerStats(def, t.level);
-      const haste = (this.time < this.overclockUntil ? 1.55 : 1) * (this.time < this.lineUntil ? LINE_HASTE : 1);
+      const haste =
+        (this.time < this.overclockUntil ? 1.55 : 1) *
+        (this.time < this.lineUntil ? LINE_HASTE : 1) *
+        linkCycle(this.linkCount(t));
       const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
       if (def.field) {
         t.aiming = false;

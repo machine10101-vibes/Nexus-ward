@@ -638,8 +638,9 @@ function Help() {
           ring tightens on the ground, and a column rises, just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
         </li>
         <li>
-          <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage. One neighbor is
-          +15%. A second is +27%. Three or more cap at +36%. A different battery in that same reach adds range instead:
+          <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage and cycle faster.
+          One neighbor is +15% damage and +6% cycle. A second is +27% and +10%. Three or more cap at +36% and +14%. A
+          different battery in that same reach adds range instead:
           +6%, +10%, or +14%. The lattice draws between same-type batteries. Each rank changes that
           battery's silhouette. Rank 3 unlocks a unique overdrive.
         </li>

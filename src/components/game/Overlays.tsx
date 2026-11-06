@@ -631,7 +631,8 @@ function Help() {
           ground host standing in its field and never touches the sky. Mark (0) throws a ground dart that paints a
           host, and every battery then hits that host harder. The HUD reads Painted while that paint is up. It never touches the sky. Lance, Tesla, and
           Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. A battery
-          committed to one lane hits 12% harder while the other lane is also inside its reach. Air or Ground on a mixed
+          committed to one lane hits 12% harder while the other lane is also inside its reach. A neighbor in link range
+          that covers the other lane adds another 6%. Air or Ground on a mixed
           battery is that commitment. Each host also has
           its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split, or shrug frost. A
           ring tightens on the ground, and a column rises, just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.

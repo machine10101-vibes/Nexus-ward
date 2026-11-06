@@ -694,6 +694,7 @@ function TowerCard() {
           </span>
         ) : null}
         {engine.laneHot(t) ? <span className="text-accent"> · lane +12%</span> : null}
+        {engine.crossCover(t) ? <span className="text-accent"> · cross +6%</span> : null}
       </p>
 
       <div className="mt-2 flex items-center gap-2">

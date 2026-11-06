@@ -30,6 +30,8 @@ export function mixRangeMultiplier(count: number) {
 
 /** Extra damage when a committed lane fires while the other lane is also inside reach. */
 export const LANE_PRESS = 0.12;
+/** Extra damage when a neighbor inside link range is committed to the other lane. */
+export const CROSS_COVER = 0.06;
 /** A marked host takes this much extra damage. Rank 3 holds the mark longer. */
 export const MARK_TAKEN = 0.1;
 export const MARK_TIME = 2.4;

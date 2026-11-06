@@ -1,6 +1,9 @@
 import {
   AUTO_WAVE_DELAY,
   CELL,
+  EARLY_WINDOW,
+  LINE_HASTE,
+  LINE_READY,
   ENEMIES,
   inflateSpawnCount,
   linkMultiplier,
@@ -156,6 +159,8 @@ export class GameEngine {
   surgeCd = 0;
   overclockCd = 0;
   overclockUntil = 0;
+  /** While this is in the future, an early deploy is still haste-firing the line. */
+  lineUntil = 0;
   lastBonus = 0;
   lastShooter: Tower | null = null;
   fireGen = 0;
@@ -368,6 +373,7 @@ export class GameEngine {
     this.surgeCd = 0;
     this.overclockCd = 0;
     this.overclockUntil = 0;
+    this.lineUntil = 0;
     this.lastBonus = 0;
     this.denyGen = 0;
     this.denyType = null;
@@ -474,8 +480,10 @@ export class GameEngine {
       this.gold += bonus;
       this.goldEarned += bonus;
       this.lastBonus = bonus;
+      this.lineUntil = this.time + LINE_READY;
     } else {
       this.lastBonus = 0;
+      this.lineUntil = 0;
     }
     const waveIndex = this.wave;
     const def = this.waveDef(waveIndex);
@@ -527,8 +535,18 @@ export class GameEngine {
   earlyBonus() {
     if (this.wave === 0) return 0;
     const max = 10 + this.wave * 3;
-    const t = Math.min(1, this.buildClock / 16);
+    const t = Math.min(1, this.buildClock / EARLY_WINDOW);
     return Math.round(max * (1 - t));
+  }
+
+  /** Seconds left in the early-deploy window. Zero on the opening deploy and once the window closes. */
+  earlyLeft() {
+    if (this.phase !== "build" || this.wave === 0) return 0;
+    return Math.max(0, EARLY_WINDOW - this.buildClock);
+  }
+
+  lineReady() {
+    return this.time < this.lineUntil;
   }
 
   cycleSpeed() {
@@ -1235,7 +1253,7 @@ export class GameEngine {
       t.cooldown = Math.max(0, t.cooldown - dt);
       const def = TOWERS[t.type];
       const stats = towerStats(def, t.level);
-      const haste = this.time < this.overclockUntil ? 1.55 : 1;
+      const haste = (this.time < this.overclockUntil ? 1.55 : 1) * (this.time < this.lineUntil ? LINE_HASTE : 1);
       const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
       if (def.field) {
         t.aiming = false;

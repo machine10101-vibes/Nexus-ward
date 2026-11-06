@@ -621,8 +621,8 @@ function Help() {
           battery stays armed, so you can lay a whole line without re-picking it.
         </li>
         <li>
-          <span className="text-fg">3. Deploy the wave</span> when your line is ready. Deploying early pays a credit bonus
-          that shrinks the longer you build.
+          <span className="text-fg">3. Deploy the wave</span> when your line is ready. Deploying inside the 16 second
+          window pays a credit bonus that shrinks as the window closes, and the planted line fires faster for 3 seconds.
         </li>
         <li>
           <span className="text-fg">4. Air units</span> ignore pulse, frost, bore, lash, and pylon. Lance, tesla, rail, and flak cover the sky.

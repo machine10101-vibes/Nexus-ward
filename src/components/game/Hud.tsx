@@ -214,6 +214,7 @@ export function Hud() {
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
           {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
           {hud.painted > 0 ? <StatusChip>Painted {hud.painted}</StatusChip> : null}
+          {hud.skyHeld ? <StatusChip>Sky held</StatusChip> : null}
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
           {hud.heroKills > 0 ? <StatusChip>{HEROES[hud.heroId ?? "fighter"].name} · {hud.heroKills}</StatusChip> : null}
           {hud.heroChain > 0 ? <StatusChip>Chain {hud.heroChain}</StatusChip> : null}
@@ -614,7 +615,7 @@ function WaveChips({
   combat,
   remaining,
 }: {
-  groups: { enemy: import("@/game/types").EnemyId; count: number; elite?: boolean }[];
+  groups: { enemy: import("@/game/types").EnemyId; count: number; elite?: boolean; held?: boolean }[];
   combat: boolean;
   remaining: number;
 }) {
@@ -640,6 +641,7 @@ function WaveChips({
             />
             {d.name} {g.count}
             {d.flying ? <span className="text-subtle">air</span> : null}
+            {g.held ? <span className="text-accent">held</span> : null}
             {tag ? <span className="text-subtle">{tag}</span> : null}
             {g.elite ? <span className="text-accent">elite</span> : null}
           </span>

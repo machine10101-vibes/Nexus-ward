@@ -630,12 +630,27 @@ export class GameEngine {
     return this.linkCount(t) > 0;
   }
 
+  /** Last spawn time of the ground groups on a wave. Flying groups are ignored. */
+  groundLineEnd(idx: number) {
+    const def = this.waveDef(idx);
+    if (!def) return -1;
+    let last = -1;
+    for (const g of def.groups) {
+      if (ENEMIES[g.enemy].flying) continue;
+      const count = inflateSpawnCount(g.enemy, g.count, idx);
+      if (count <= 0) continue;
+      last = Math.max(last, g.delay + (count - 1) * g.interval);
+    }
+    return last;
+  }
+
   nextWaveGroups() {
     const idx = this.phase === "combat" ? this.wave - 1 : this.wave;
     const def = this.waveDef(idx);
-    if (!def) return [] as { enemy: EnemyId; count: number }[];
+    if (!def) return [] as { enemy: EnemyId; count: number; held: boolean }[];
+    const groundEnd = this.groundLineEnd(idx);
     let left = this.breach ? BREACH_BUDGET : Number.POSITIVE_INFINITY;
-    const out: { enemy: EnemyId; count: number; elite: boolean }[] = [];
+    const out: { enemy: EnemyId; count: number; elite: boolean; held: boolean }[] = [];
     for (const g of def.groups) {
       const boss = !!ENEMIES[g.enemy].boss;
       let count = inflateSpawnCount(g.enemy, g.count, idx);
@@ -643,13 +658,31 @@ export class GameEngine {
       if (this.breach) count = Math.min(count, left);
       left -= count;
       if (count <= 0) continue;
+      const flying = !!ENEMIES[g.enemy].flying;
       out.push({
         enemy: g.enemy,
         count,
         elite: !boss && idx >= 4 && count >= 4,
+        held: flying && groundEnd >= 0 && g.delay > groundEnd,
       });
     }
     return out;
+  }
+
+  /** True in combat while a held sky pack has not started spawning. */
+  skyHeld() {
+    if (this.phase !== "combat") return false;
+    const idx = this.wave - 1;
+    const def = this.waveDef(idx);
+    if (!def) return false;
+    const groundEnd = this.groundLineEnd(idx);
+    if (groundEnd < 0) return false;
+    let airFirst = Infinity;
+    for (const g of def.groups) {
+      if (!ENEMIES[g.enemy].flying) continue;
+      airFirst = Math.min(airFirst, g.delay);
+    }
+    return airFirst > groundEnd && this.spawnT < airFirst;
   }
 
   placeOnPad(pad: number) {

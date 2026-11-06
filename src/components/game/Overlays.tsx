@@ -633,7 +633,7 @@ function Help() {
           Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. A battery
           committed to one lane hits 12% harder while the other lane is also inside its reach. A neighbor in link range
           that covers the other lane adds another 6%. Air or Ground on a mixed
-          battery is that commitment. Each host also has
+          battery is that commitment. When a wave holds its sky until the ground line is out, the chips mark that pack held and the HUD reads Sky held until it starts. Each host also has
           its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split, or shrug frost. A
           ring tightens on the ground, and a column rises, just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
         </li>

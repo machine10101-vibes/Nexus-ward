@@ -31,6 +31,7 @@ export type HudSnap = {
   earlyLeft: number;
   lineOn: boolean;
   painted: number;
+  skyHeld: boolean;
   leaked: number;
   autoIn: number;
   denyGen: number;
@@ -124,6 +125,7 @@ const emptyHud: HudSnap = {
   earlyLeft: 0,
   lineOn: false,
   painted: 0,
+  skyHeld: false,
   leaked: 0,
   autoIn: -1,
   denyGen: 0,
@@ -302,6 +304,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       Math.ceil(next.earlyLeft) === Math.ceil(cur.earlyLeft) &&
       next.lineOn === cur.lineOn &&
       next.painted === cur.painted &&
+      next.skyHeld === cur.skyHeld &&
       next.leaked === cur.leaked &&
       next.denyGen === cur.denyGen &&
       next.rankGen === cur.rankGen &&
@@ -375,6 +378,7 @@ function snapHud(): HudSnap {
     earlyLeft: engine.earlyLeft(),
     lineOn: engine.lineReady(),
     painted: engine.paintedCount(),
+    skyHeld: engine.skyHeld(),
     leaked: engine.leaked,
     autoIn:
       engine.autoWave &&

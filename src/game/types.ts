@@ -51,7 +51,7 @@ export type ItemId =
   | "nova-crozier"
   | "veil-mantle"
   | "star-silk";
-export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest";
+export type Targeting = "first" | "last" | "closest" | "strongest" | "weakest" | "air" | "ground";
 export type ProjectileKind = "bolt" | "shell" | "beam" | "rail" | "chain";
 export type DamageKind = ProjectileKind | "surge" | "flak";
 export type EnemySkill =

@@ -661,6 +661,45 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     );
   }
 
+  // Lash — a low whip cradle. Reads as an arc on the ground, not the tall lance.
+  if (type === "lash") {
+    return (
+      <group>
+        <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.46, 0.54, 0.12, 6]} />
+          <Mat color="#3a342c" metalness={0.66} roughness={0.34} />
+        </mesh>
+        {([-0.16, 0.16] as const).map((x) => (
+          <mesh key={x} position={[x, 0.22, -0.02]} castShadow>
+            <boxGeometry args={[0.06, 0.28, 0.06]} />
+            <Mat color="#5a5044" metalness={0.6} roughness={0.3} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.34, 0.12]} rotation={[0.4, 0, 0]}>
+          <torusGeometry args={[0.34, 0.028, 8, 18, Math.PI * 1.15]} />
+          <Mat color="#6a5e50" metalness={0.62} roughness={0.28} />
+        </mesh>
+        <mesh position={[0, 0.38, 0.16]} rotation={[0.4, 0, 0]}>
+          <torusGeometry args={[0.28, 0.012, 6, 16, Math.PI]} />
+          <Mat color={def.color} eInt={0.55 + level * 0.15} />
+        </mesh>
+        <PulseLight position={[0.26, 0.22, 0.34]} r={0.05} color={def.color} base={1.15 + level * 0.2} amp={0.4} />
+        {level >= 2 ? (
+          <mesh position={[0, 0.48, 0.02]} rotation={[0.55, 0, 0]}>
+            <torusGeometry args={[0.2, 0.014, 6, 14, Math.PI * 0.9]} />
+            <Mat color={def.color} eInt={0.7} />
+          </mesh>
+        ) : null}
+        {level >= 3 ? (
+          <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.4, 0.016, 6, 20]} />
+            <Mat color={def.color} eInt={0.65} />
+          </mesh>
+        ) : null}
+      </group>
+    );
+  }
+
   // Tesla Spire — stacked toroids on a mast. Reads as concentric rings from above.
   return (
     <group>

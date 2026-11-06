@@ -597,7 +597,7 @@ function Result({ won }: { won: boolean }) {
 }
 
 const KEYS: [string, string][] = [
-  ["1 – 7", "Select battery"],
+  ["1 – 8", "Select battery"],
   ["Space", "Deploy wave"],
   ["Q / E", "Surge / Overclock"],
   ["R / T / Y", "Warden arts (rebind in Settings)"],
@@ -625,11 +625,11 @@ function Help() {
           that shrinks the longer you build.
         </li>
         <li>
-          <span className="text-fg">4. Air units</span> ignore pulse, frost, and bore. Lance, tesla, rail, and flak cover the sky.
+          <span className="text-fg">4. Air units</span> ignore pulse, frost, bore, and lash. Lance, tesla, rail, and flak cover the sky.
           Flak bursts a flock and slows it, and it never touches the ground. Bore is a short ground rail that cracks
-          armor and ignores the air. Each host also has its own plate — some resist a battery, some fold to it, and
-          some regenerate, sprint, split, or shrug frost. A ring tightens on the ground just before a host calls, blinks,
-          veils, rallies, jams, grafts, saps, or anchors.
+          armor and ignores the air. Lash is a fast ground snare for sprinters and ignores the sky. Each host also has
+          its own plate — some resist a battery, some fold to it, and some regenerate, sprint, split, or shrug frost. A
+          ring tightens on the ground just before a host calls, blinks, veils, rallies, jams, grafts, saps, or anchors.
         </li>
         <li>
           <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage. One neighbor is

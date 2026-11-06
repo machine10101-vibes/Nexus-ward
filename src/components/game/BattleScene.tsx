@@ -14,6 +14,7 @@ import {
   TOWERS,
   coverageLabel,
   linkMultiplier,
+  mixRangeMultiplier,
   towerStats,
   MAX_ENEMIES,
   MAX_BOLTS,
@@ -421,7 +422,10 @@ function Pads() {
                 <group position={[0, 0.02, 0]} scale={1.2}>
                   <TowerModel type={buildType} level={1} ghost />
                 </group>
-                <RangeRing radius={towerStats(TOWERS[buildType], 1).range} color={TOWERS[buildType].color} />
+                <RangeRing
+                  radius={towerStats(TOWERS[buildType], 1).range * mixRangeMultiplier(mixNear(p.x, p.z, buildType))}
+                  color={TOWERS[buildType].color}
+                />
                 <GhostTag type={buildType} gold={gold} />
               </>
             ) : null}
@@ -431,6 +435,18 @@ function Pads() {
       <SynergyPreview />
     </group>
   );
+}
+
+function mixNear(x: number, z: number, type: TowerId) {
+  const r2 = SYN_RANGE * SYN_RANGE;
+  let n = 0;
+  for (const t of engine.towers) {
+    if (t.type === type) continue;
+    const dx = t.x - x;
+    const dz = t.z - z;
+    if (dx * dx + dz * dz <= r2) n += 1;
+  }
+  return n;
 }
 
 function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
@@ -448,6 +464,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
     }
   }
   const bonus = links > 0 ? Math.round((linkMultiplier(links) - 1) * 100) : 0;
+  const reach = pad ? Math.round((mixRangeMultiplier(mixNear(pad.x, pad.z, type)) - 1) * 100) : 0;
   return (
     <Html position={[0, 1.95, 0]} center sprite pointerEvents="none" zIndexRange={[9, 9]} style={{ pointerEvents: "none" }}>
       <div className="ghost-tag">
@@ -456,6 +473,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
         </span>
         <span>{coverageLabel(def)}</span>
         {bonus > 0 ? <span>+{bonus}% link</span> : null}
+        {reach > 0 ? <span>+{reach}% reach</span> : null}
         {short > 0 ? (
           <span className="ghost-tag-short">need {short} more</span>
         ) : (
@@ -620,7 +638,10 @@ function TowersLayer() {
             </mesh>
           ) : null}
           {selected === t.id ? (
-            <RangeRing radius={towerStats(TOWERS[t.type], t.level).range} color={TOWERS[t.type].color} />
+            <RangeRing
+              radius={towerStats(TOWERS[t.type], t.level).range * mixRangeMultiplier(engine.mixCount(t))}
+              color={TOWERS[t.type].color}
+            />
           ) : null}
         </group>
       ))}

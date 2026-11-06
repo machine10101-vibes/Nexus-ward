@@ -2,6 +2,7 @@ import {
   AUTO_WAVE_DELAY,
   CELL,
   EARLY_WINDOW,
+  LANE_PRESS,
   LINE_HASTE,
   LINE_READY,
   ENEMIES,
@@ -1697,6 +1698,44 @@ export class GameEngine {
     return true;
   }
 
+  laneCommit(t: Tower, def: (typeof TOWERS)[TowerId]): "air" | "ground" | null {
+    if (def.airOnly) return "air";
+    if (!def.hitsFlying) return "ground";
+    if (t.targeting === "air" || t.targeting === "ground") return t.targeting;
+    return null;
+  }
+
+  bothLanes(x: number, z: number, reach: number) {
+    const r2 = reach * reach;
+    let air = false;
+    let ground = false;
+    for (const e of this.enemies) {
+      if (!e.alive || this.time < e.phaseUntil) continue;
+      if (dist2(x, z, e.x, e.z) > r2) continue;
+      if (e.flying) air = true;
+      else ground = true;
+      if (air && ground) return true;
+    }
+    return false;
+  }
+
+  /** 1.12 when this battery is committed to the victim's lane and the other lane is also in reach. */
+  lanePress(t: Tower, def: (typeof TOWERS)[TowerId], flying: boolean, reach: number) {
+    const commit = this.laneCommit(t, def);
+    if (commit == null) return 1;
+    if (commit === "air" && !flying) return 1;
+    if (commit === "ground" && flying) return 1;
+    if (!this.bothLanes(t.x, t.z, reach)) return 1;
+    return 1 + LANE_PRESS;
+  }
+
+  laneHot(t: Tower) {
+    const def = TOWERS[t.type];
+    if (this.laneCommit(t, def) == null) return false;
+    const reach = towerStats(def, t.level).range * mixRangeMultiplier(this.mixCount(t));
+    return this.bothLanes(t.x, t.z, reach);
+  }
+
   pickTarget(t: Tower, range: number, flying: boolean, airOnly = false): Enemy | null {
     const r2 = range * range;
     const lane = t.targeting === "air" ? true : t.targeting === "ground" ? false : null;
@@ -1737,7 +1776,8 @@ export class GameEngine {
     const syn = linkMultiplier(this.linkCount(t));
     const rank = deep ? 1.12 : 1;
     const sap = this.time < t.sapUntil ? 0.62 : 1;
-    const dmg = stats.damage * syn * rank * sap;
+    const press = this.lanePress(t, def, false, reach);
+    const dmg = stats.damage * syn * rank * sap * press;
     const slow = deep ? Math.min(0.52, def.slow) : def.slow;
     const slowTime = def.slowTime + (deep ? 0.45 : 0);
     let n = 0;
@@ -1765,7 +1805,9 @@ export class GameEngine {
     const syn = linkMultiplier(this.linkCount(t));
     const rank = t.level >= 3 ? 1.12 : 1;
     const sap = this.time < t.sapUntil ? 0.62 : 1;
-    const dmg = stats.damage * syn * rank * sap;
+    const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
+    const press = this.lanePress(t, def, target.flying, reach);
+    const dmg = stats.damage * syn * rank * sap * press;
     if (def.kind === "bolt" || def.kind === "shell") {
       const lead = def.kind === "shell" ? 0.35 : 0.12;
       const aimX = target.x + target.vx * lead;

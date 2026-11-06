@@ -27,6 +27,9 @@ export function mixRangeMultiplier(count: number) {
   const i = Math.max(0, Math.min(MIX_RANGE.length - 1, Math.floor(count)));
   return 1 + MIX_RANGE[i];
 }
+
+/** Extra damage when a committed lane fires while the other lane is also inside reach. */
+export const LANE_PRESS = 0.12;
 /** Seconds of build time, after the first wave, over which the early-deploy bonus falls to zero. */
 export const EARLY_WINDOW = 16;
 /** How long a paid early deploy keeps the planted line firing faster. */

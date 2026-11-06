@@ -597,7 +597,7 @@ function Result({ won }: { won: boolean }) {
 }
 
 const KEYS: [string, string][] = [
-  ["1 – 9", "Select battery"],
+  ["1 – 9, 0", "Select battery (0 is Mark)"],
   ["Space", "Deploy wave"],
   ["Q / E", "Surge / Overclock"],
   ["R / T / Y", "Warden arts (rebind in Settings)"],
@@ -628,7 +628,8 @@ function Help() {
           <span className="text-fg">4. Air units</span> ignore pulse, frost, bore, lash, and pylon. Lance, tesla, rail, and flak cover the sky.
           Flak bursts a flock and slows it, and it never touches the ground. Bore is a short ground rail that cracks
           armor and ignores the air. Lash is a fast ground snare for sprinters and ignores the sky. A pylon slows every
-          ground host standing in its field and never touches the sky. Lance, Tesla, and
+          ground host standing in its field and never touches the sky. Mark (0) throws a ground dart that paints a
+          host, and every battery then hits that host harder. It never touches the sky. Lance, Tesla, and
           Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. A battery
           committed to one lane hits 12% harder while the other lane is also inside its reach. Air or Ground on a mixed
           battery is that commitment. Each host also has

@@ -12,6 +12,7 @@ import {
   Spline,
   Radar,
   Shield,
+  Target,
   Snowflake,
   Sparkles,
   Sword,
@@ -51,6 +52,7 @@ const ICONS: Record<TowerId, typeof Zap> = {
   bore: CircleDot,
   lash: Spline,
   pylon: Radar,
+  mark: Target,
 };
 
 const TARGET_SHORT: Record<Targeting, string> = {
@@ -362,7 +364,7 @@ function Tray({ buildType, gold, denyGen }: { buildType: TowerId | null; gold: n
           <button
             key={id}
             type="button"
-            title={`${d.name} — ${d.desc} · key ${i + 1}`}
+            title={`${d.name} — ${d.desc} · key ${id === "mark" ? "0" : i + 1}`}
             onClick={() => {
               const next = on ? null : id;
               engine.setBuildType(next);
@@ -390,7 +392,7 @@ function Tray({ buildType, gold, denyGen }: { buildType: TowerId | null; gold: n
               )}
             >
               {d.cost}
-              <span className={cn("text-subtle", on && "text-accent-fg/70")}>{i + 1}</span>
+              <span className={cn("text-subtle", on && "text-accent-fg/70")}>{id === "mark" ? 0 : i + 1}</span>
             </span>
           </button>
         );

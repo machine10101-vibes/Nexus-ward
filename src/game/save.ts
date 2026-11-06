@@ -40,6 +40,7 @@ export const RESERVED_CODES = new Set([
   "Digit7",
   "Digit8",
   "Digit9",
+  "Digit0",
   "KeyQ",
   "KeyE",
   "KeyL",

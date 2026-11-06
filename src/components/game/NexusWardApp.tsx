@@ -88,9 +88,9 @@ export function NexusWardApp() {
         s.syncHud();
       }
       const num = e.code.match(/^Digit([1-9])$/);
-      if (num) {
-        const id = TOWER_ORDER[Number(num[1]) - 1];
-        const next = engine.buildType === id ? null : id;
+      const pick = num ? TOWER_ORDER[Number(num[1]) - 1] : e.code === "Digit0" ? "mark" : null;
+      if (pick) {
+        const next = engine.buildType === pick ? null : pick;
         engine.setBuildType(next);
         useGameStore.setState({ buildType: next });
         s.syncHud();

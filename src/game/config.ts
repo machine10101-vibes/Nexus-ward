@@ -30,6 +30,9 @@ export function mixRangeMultiplier(count: number) {
 
 /** Extra damage when a committed lane fires while the other lane is also inside reach. */
 export const LANE_PRESS = 0.12;
+/** A marked host takes this much extra damage. Rank 3 holds the mark longer. */
+export const MARK_TAKEN = 0.1;
+export const MARK_TIME = 2.4;
 /** Seconds of build time, after the first wave, over which the early-deploy bonus falls to zero. */
 export const EARLY_WINDOW = 16;
 /** How long a paid early deploy keeps the planted line firing faster. */
@@ -204,9 +207,27 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     color: "#b7a6d4",
     desc: "Ground field. Slows a pack in place. Ignores the sky.",
   },
+  mark: {
+    id: "mark",
+    name: "Mark Battery",
+    short: "Mark",
+    cost: 100,
+    range: 5.1,
+    fireRate: 1.35,
+    damage: 8,
+    kind: "bolt",
+    hitsFlying: false,
+    splash: 0,
+    slow: 0,
+    slowTime: 0,
+    chain: 0,
+    pierce: false,
+    color: "#d4a08a",
+    desc: "Ground dart. Marks a host so the line hits it harder. Ignores the sky.",
+  },
 };
 
-export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore", "lash", "pylon"];
+export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore", "lash", "pylon", "mark"];
 
 export function coverageLabel(def: TowerDef) {
   if (def.airOnly) return "Air only";
@@ -260,6 +281,11 @@ export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: st
     r2: "Wider field and a tighter pulse.",
     overdrive: "Deep Field",
     r3: "The field reaches further and holds a pack harder.",
+  },
+  mark: {
+    r2: "Heavier dart, faster cycle, longer reach.",
+    overdrive: "Deep Mark",
+    r3: "The mark stays on the host longer.",
   },
 };
 

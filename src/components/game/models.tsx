@@ -742,6 +742,39 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     );
   }
 
+  // Mark Battery — a low stake and a clay ring. The dart paints a host; it is not a barrel.
+  if (type === "mark") {
+    return (
+      <group>
+        <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.34, 0.42, 0.12, 6]} />
+          <Mat color="#3a322c" metalness={0.58} roughness={0.38} />
+        </mesh>
+        <mesh position={[0, 0.28, 0]} castShadow>
+          <cylinderGeometry args={[0.05, 0.08, 0.42, 6]} />
+          <Mat color="#6a5648" metalness={0.5} roughness={0.32} />
+        </mesh>
+        <mesh position={[0, 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.12, 0.2, 16]} />
+          <Mat color={def.color} eInt={0.7 + level * 0.15} />
+        </mesh>
+        {level >= 2 ? (
+          <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.4, 0.48, 20]} />
+            <Mat color={def.color} eInt={0.45} />
+          </mesh>
+        ) : null}
+        {level >= 3 ? (
+          <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.5, 0.58, 24]} />
+            <Mat color={def.color} eInt={0.65} />
+          </mesh>
+        ) : null}
+        <PulseLight position={[0, 0.54, 0]} r={0.05} color={def.color} base={1.05 + level * 0.15} amp={0.3} />
+      </group>
+    );
+  }
+
   // Tesla Spire — stacked toroids on a mast. Reads as concentric rings from above.
   return (
     <group>

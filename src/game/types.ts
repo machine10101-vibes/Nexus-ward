@@ -1,6 +1,6 @@
 export type Faction = "organic" | "mech" | "hybrid";
 export type MapId = "mycelion" | "forge" | "aegis";
-export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash" | "pylon";
+export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash" | "pylon" | "mark";
 export type EnemyId =
   | "mite"
   | "brood"
@@ -186,6 +186,8 @@ export type Enemy = {
   sprintUntil: number;
   /** While this is in the future the host slips single-target locks. */
   phaseUntil: number;
+  /** While this is in the future the host takes more from every battery. */
+  markUntil: number;
   /** Bosses set this once, the first time they drop under 42% health. */
   enraged: boolean;
   /** Trailing veteran of a fat wave: more plate, more pay. */
@@ -233,6 +235,9 @@ export type Bolt = {
   brand: boolean;
   /** Airburst shells damage flyers and leave ground hosts alone. */
   airOnly: boolean;
+  /** A Mark dart. On hit the host takes more damage for markTime seconds. */
+  mark: boolean;
+  markTime: number;
 };
 
 export type BeamStyle = "lance" | "chain" | "rail";

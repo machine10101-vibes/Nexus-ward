@@ -981,7 +981,8 @@ function EnemyLayer() {
         const plated = e.shieldHp > 0;
         const sprinting = engine.time < e.sprintUntil;
         const wounded = e.maxHp > 0 && e.hp / e.maxHp <= 0.32;
-        ringMat.opacity = phased ? 0.28 : enraged ? 0.95 : wounded ? 0.9 : e.elite ? 0.95 : plated ? 0.95 : hard ? 0.92 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
+        const marked = engine.time < e.markUntil;
+        ringMat.opacity = phased ? 0.28 : enraged ? 0.95 : marked ? 0.95 : wounded ? 0.9 : e.elite ? 0.95 : plated ? 0.95 : hard ? 0.92 : sprinting ? 0.8 : ENEMIES[e.type].boss ? 0.8 : 0.55;
         ringMat.color.set(
           phased
             ? "#c4b5fd"
@@ -991,7 +992,9 @@ function EnemyLayer() {
                 ? "#e07a5a"
                 : e.elite
                   ? "#e7c27a"
-                  : plated
+                  : marked
+                    ? "#e7b89a"
+                    : plated
                     ? "#9ec8d4"
                     : hard
                       ? "#e7eef4"

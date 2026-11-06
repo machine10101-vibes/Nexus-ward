@@ -5,6 +5,8 @@ import {
   LANE_PRESS,
   LINE_HASTE,
   LINE_READY,
+  MARK_TAKEN,
+  MARK_TIME,
   ENEMIES,
   inflateSpawnCount,
   linkMultiplier,
@@ -256,6 +258,7 @@ export class GameEngine {
       hardenUntil: 0,
       sprintUntil: 0,
       phaseUntil: 0,
+      markUntil: 0,
       enraged: false,
       elite: false,
     };
@@ -283,6 +286,8 @@ export class GameEngine {
       fromHero: false,
       brand: false,
       airOnly: false,
+      mark: false,
+      markTime: 0,
     };
   }
 
@@ -990,6 +995,7 @@ export class GameEngine {
     slot.hardenUntil = 0;
     slot.sprintUntil = 0;
     slot.phaseUntil = 0;
+    slot.markUntil = 0;
     slot.enraged = false;
     slot.elite = false;
     if (elite && !def.boss) {
@@ -1488,6 +1494,8 @@ export class GameEngine {
       bolt.fromHero = true;
       bolt.brand = mark;
       bolt.airOnly = false;
+      bolt.mark = false;
+      bolt.markTime = 0;
       this.spawnBurst(h.x + Math.sin(h.yaw) * 0.5, 1.22, h.z + Math.cos(h.yaw) * 0.5, 0.22, stats.color);
       if (hot && h.lastArt === 1) this.applySlow(target, 0.58, 0.95);
       if (hot && h.lastArt === 2) {
@@ -1844,6 +1852,8 @@ export class GameEngine {
         bolt.fromHero = false;
         bolt.brand = false;
         bolt.airOnly = !!def.airOnly;
+        bolt.mark = t.type === "mark";
+        bolt.markTime = t.type === "mark" ? MARK_TIME + (t.level >= 3 ? 0.9 : 0) : 0;
       }
     } else if (def.kind === "beam") {
       const wide = t.level >= 3;
@@ -1965,6 +1975,7 @@ export class GameEngine {
       } else {
         const t = this.enemies[b.targetSlot];
         if (t?.alive && dist2(b.x, b.z, t.x, t.z) < 0.38 * 0.38 && Math.abs(b.y - t.y) < 0.9) {
+          if (b.mark) t.markUntil = Math.max(t.markUntil, this.time + b.markTime);
           if (b.fromHero) this.heroHurt(t, b.damage, "bolt", b.brand);
           else this.hurt(t, b.damage, "bolt");
           this.spawnBurst(b.x, b.y, b.z, 0.35, b.color);
@@ -1998,6 +2009,7 @@ export class GameEngine {
     if (kind === "rail" || kind === "chain") armor *= 0.35;
     const resist = def.resist?.[kind as DamageKind] ?? 1;
     let dmg = Math.max(1, (raw - armor) * resist);
+    if (this.time < e.markUntil) dmg *= 1 + MARK_TAKEN;
     if (e.shieldHp > 0) {
       const absorb = Math.min(e.shieldHp, dmg);
       e.shieldHp -= absorb;

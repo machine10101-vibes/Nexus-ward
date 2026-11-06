@@ -2,6 +2,7 @@ import {
   AUTO_WAVE_DELAY,
   CELL,
   EARLY_WINDOW,
+  CROSS_COVER,
   LANE_PRESS,
   LINE_HASTE,
   LINE_READY,
@@ -1727,14 +1728,30 @@ export class GameEngine {
     return false;
   }
 
-  /** 1.12 when this battery is committed to the victim's lane and the other lane is also in reach. */
+  /** A neighbor inside link range is committed to the other lane. */
+  crossCover(t: Tower) {
+    const commit = this.laneCommit(t, TOWERS[t.type]);
+    if (commit == null) return false;
+    const want = commit === "air" ? "ground" : "air";
+    const r2 = SYN_RANGE * SYN_RANGE;
+    for (const o of this.towers) {
+      if (o.id === t.id) continue;
+      if (dist2(t.x, t.z, o.x, o.z) > r2) continue;
+      if (this.laneCommit(o, TOWERS[o.type]) === want) return true;
+    }
+    return false;
+  }
+
+  /** Lane pressure, plus cross cover when a neighbor holds the other lane. */
   lanePress(t: Tower, def: (typeof TOWERS)[TowerId], flying: boolean, reach: number) {
     const commit = this.laneCommit(t, def);
     if (commit == null) return 1;
     if (commit === "air" && !flying) return 1;
     if (commit === "ground" && flying) return 1;
-    if (!this.bothLanes(t.x, t.z, reach)) return 1;
-    return 1 + LANE_PRESS;
+    let bonus = 0;
+    if (this.bothLanes(t.x, t.z, reach)) bonus += LANE_PRESS;
+    if (this.crossCover(t)) bonus += CROSS_COVER;
+    return 1 + bonus;
   }
 
   paintedCount() {

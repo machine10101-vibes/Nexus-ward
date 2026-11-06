@@ -1225,6 +1225,16 @@ export class GameEngine {
       const def = TOWERS[t.type];
       const stats = towerStats(def, t.level);
       const haste = this.time < this.overclockUntil ? 1.55 : 1;
+      if (def.field) {
+        t.aiming = false;
+        if (t.cooldown > 0) continue;
+        const n = this.pulseField(t, def, stats);
+        if (n > 0) {
+          t.cooldown = 1 / (stats.fireRate * haste);
+          this.sfx = "shoot";
+        }
+        continue;
+      }
       const target = this.pickTarget(t, stats.range, def.hitsFlying, !!def.airOnly);
       t.aiming = !!target;
       if (!target) continue;
@@ -1689,6 +1699,28 @@ export class GameEngine {
       }
     }
     return best ?? fallback;
+  }
+
+  pulseField(t: Tower, def: (typeof TOWERS)[TowerId], stats: ReturnType<typeof towerStats>) {
+    const r2 = stats.range * stats.range;
+    const deep = t.level >= 3;
+    const syn = linkMultiplier(this.linkCount(t));
+    const rank = deep ? 1.12 : 1;
+    const sap = this.time < t.sapUntil ? 0.62 : 1;
+    const dmg = stats.damage * syn * rank * sap;
+    const slow = deep ? Math.min(0.52, def.slow) : def.slow;
+    const slowTime = def.slowTime + (deep ? 0.45 : 0);
+    let n = 0;
+    for (const e of this.enemies) {
+      if (!e.alive || e.flying) continue;
+      if (this.time < e.phaseUntil) continue;
+      if (dist2(t.x, t.z, e.x, e.z) > r2) continue;
+      if (dmg > 0) this.hurt(e, dmg, "bolt");
+      if (def.slow > 0) this.applySlow(e, slow, slowTime);
+      n += 1;
+    }
+    if (n > 0) this.spawnBurst(t.x, 0.25, t.z, Math.min(1.6, stats.range * 0.28), def.color);
+    return n;
   }
 
   fire(

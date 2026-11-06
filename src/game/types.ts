@@ -1,6 +1,6 @@
 export type Faction = "organic" | "mech" | "hybrid";
 export type MapId = "mycelion" | "forge" | "aegis";
-export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash";
+export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash" | "pylon";
 export type EnemyId =
   | "mite"
   | "brood"
@@ -103,6 +103,8 @@ export type TowerDef = {
   pierce: boolean;
   /** Shells from this battery burst on flyers and ignore the ground. */
   airOnly?: boolean;
+  /** Pulses a ground field. No bolt, and flyers walk through it. */
+  field?: boolean;
   color: string;
   desc: string;
 };

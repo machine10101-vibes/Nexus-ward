@@ -169,9 +169,28 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     color: "#c4a574",
     desc: "Ground lash. Snags a sprinter. Ignores the sky.",
   },
+  pylon: {
+    id: "pylon",
+    name: "Ward Pylon",
+    short: "Pylon",
+    cost: 120,
+    range: 4.6,
+    fireRate: 0.85,
+    damage: 4,
+    kind: "bolt",
+    hitsFlying: false,
+    splash: 0,
+    slow: 0.64,
+    slowTime: 1.2,
+    chain: 0,
+    pierce: false,
+    field: true,
+    color: "#b7a6d4",
+    desc: "Ground field. Slows a pack in place. Ignores the sky.",
+  },
 };
 
-export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore", "lash"];
+export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore", "lash", "pylon"];
 
 export function coverageLabel(def: TowerDef) {
   if (def.airOnly) return "Air only";
@@ -220,6 +239,11 @@ export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: st
     r2: "Tighter cycle and a longer reach.",
     overdrive: "Snap Lash",
     r3: "The lash snaps to a second ground host and holds a little harder.",
+  },
+  pylon: {
+    r2: "Wider field and a tighter pulse.",
+    overdrive: "Deep Field",
+    r3: "The field reaches further and holds a pack harder.",
   },
 };
 

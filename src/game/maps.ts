@@ -154,7 +154,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Organic world",
     faction: "organic",
     lore: "A living planet of fungal canyons and bioluminescent marrow. The swarm is not an invasion so much as the lattice reclaiming a core we planted in its heart.",
-    hint: "Ground packs hit first. Bring a lance before spores take the air. Incursion 4 holds husks until the spores are committed. Incursion 5 holds spores until the ground pack is out. Incursion 8 holds husks until that pack is out. After the Titan, Myrmidons, Thorns, and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons. Flak slows a spore flock. Bore cracks a ground line and ignores the sky. A pylon slows a ground patch.",
+    hint: "Ground packs hit first. Bring a lance before spores take the air. Incursion 4 holds husks until the spores are committed. Incursion 5 holds spores until the ground pack is out. Incursion 8 holds husks until that pack is out. Incursion 9 holds spores until the ground pack is out. After the Titan, Myrmidons, Thorns, and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons. Flak slows a spore flock. Bore cracks a ground line and ignores the sky. A pylon slows a ground patch.",
     cols: COLS,
     rows: ROWS,
     path: mycelionPath,
@@ -212,7 +212,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "husk", count: 8, interval: 0.85, delay: 0 },
           { enemy: "brood", count: 10, interval: 0.38, delay: 1.2 },
-          { enemy: "spore", count: 8, interval: 0.45, delay: 1.8 },
+          { enemy: "spore", count: 8, interval: 0.45, delay: 9 },
         ],
       },
       {
@@ -314,7 +314,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Mechanical world",
     faction: "mech",
     lore: "An industrial planet that smelts warships for the outer fleets. The foundry AIs have recast the nexus as raw stock — and dispatched the line to reclaim it.",
-    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Incursion 4 holds siege armor until the sky is committed. Incursion 5 holds gunships until the ground pack is out. Incursion 8 holds siege armor until that pack is out. Late waves bring Bulwarks, Sentries, and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors. Flak opens Razors and Skiffs. Bore bores Walkers. A pylon slows a ground patch.",
+    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Incursion 4 holds siege armor until the sky is committed. Incursion 5 holds gunships until the ground pack is out. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds gunships until the ground pack is out. Late waves bring Bulwarks, Sentries, and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors. Flak opens Razors and Skiffs. Bore bores Walkers. A pylon slows a ground patch.",
     cols: COLS,
     rows: ROWS,
     path: forgePath,
@@ -375,7 +375,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "siege", count: 6, interval: 0.9, delay: 0 },
           { enemy: "walker", count: 8, interval: 0.42, delay: 1.2 },
-          { enemy: "gunship", count: 8, interval: 0.42, delay: 1.8 },
+          { enemy: "gunship", count: 8, interval: 0.42, delay: 7.7 },
         ],
       },
       {
@@ -476,7 +476,7 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Hybrid world",
     faction: "hybrid",
     lore: "A collision world — living tissue welded to machine along a scar of light. Nothing here agrees what it is. Everything agrees the core must fall.",
-    hint: "Both kingdoms come at once. Mix slow control with air cover. Incursion 3 holds wraiths until the ground pack is out. Incursion 4 holds husks until the sky is committed. Incursion 8 holds siege armor until that pack is out. The second half fuses Amalgams, Relics, and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line. Flak holds Wraiths. Bore answers ground plate. A pylon slows a ground patch.",
+    hint: "Both kingdoms come at once. Mix slow control with air cover. Incursion 3 holds wraiths until the ground pack is out. Incursion 4 holds husks until the sky is committed. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds wraiths until the ground pack is out. The second half fuses Amalgams, Relics, and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line. Flak holds Wraiths. Bore answers ground plate. A pylon slows a ground patch.",
     cols: COLS,
     rows: ROWS,
     path: aegisPath,
@@ -552,7 +552,7 @@ export const MAPS: Record<MapId, MapDef> = {
         groups: [
           { enemy: "siege", count: 4, interval: 0.85, delay: 0 },
           { enemy: "husk", count: 4, interval: 0.85, delay: 0.3 },
-          { enemy: "wraith", count: 8, interval: 0.38, delay: 1.6 },
+          { enemy: "wraith", count: 8, interval: 0.38, delay: 5.9 },
           { enemy: "chimera", count: 8, interval: 0.38, delay: 1 },
         ],
       },

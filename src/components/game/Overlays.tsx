@@ -645,6 +645,8 @@ function Help() {
         </li>
         <li>
           <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.
+          The core flashes and the HUD reads Core contact when a host is four steps from the heart. The leak burst still
+          fires if they touch it.
         </li>
         <li>
           <span className="text-fg">8. Keep holding</span> after the core holds. The same grid stays planted and the breach

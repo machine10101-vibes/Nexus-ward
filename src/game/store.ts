@@ -40,6 +40,7 @@ export type HudSnap = {
   heroChain: number;
   heroBrand: number;
   threat: string | null;
+  coreHot: boolean;
   hold: boolean;
   holdArmed: boolean;
   breach: boolean;
@@ -129,6 +130,7 @@ const emptyHud: HudSnap = {
   heroChain: 0,
   heroBrand: 0,
   threat: null,
+  coreHot: false,
   hold: false,
   holdArmed: false,
   breach: false,
@@ -300,6 +302,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.heroChain === cur.heroChain &&
       next.heroBrand === cur.heroBrand &&
       next.threat === cur.threat &&
+      next.coreHot === cur.coreHot &&
       next.hold === cur.hold &&
       next.holdArmed === cur.holdArmed &&
       next.breach === cur.breach &&
@@ -378,6 +381,7 @@ function snapHud(): HudSnap {
     heroChain: engine.time <= engine.hero.chainUntil ? engine.hero.chain : 0,
     heroBrand: engine.time <= engine.hero.focusUntil ? engine.hero.focusHits : 0,
     threat: engine.threatLine(),
+    coreHot: engine.coreContact(),
     hold: engine.holdActive,
     holdArmed: engine.pendingHold,
     breach: engine.breach,

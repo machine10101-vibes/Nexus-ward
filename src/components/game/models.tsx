@@ -2519,14 +2519,27 @@ export function HexPad({
   );
 }
 
-export function NexusCore({ color, health, hitGen = 0 }: { color: string; health: number; hitGen?: number }) {
+export function NexusCore({
+  color,
+  health,
+  hitGen = 0,
+  approach = false,
+}: {
+  color: string;
+  health: number;
+  hitGen?: number;
+  approach?: boolean;
+}) {
   const ref = useRef<Mesh>(null);
   const inner = useRef<Mesh>(null);
   const shield = useRef<Mesh>(null);
   const ring = useRef<Mesh>(null);
   const ring2 = useRef<Mesh>(null);
+  const warn = useRef<Mesh>(null);
   const seenHit = useRef(hitGen);
   const shock = useRef(0);
+  const approachRef = useRef(approach);
+  approachRef.current = approach;
   useFrame((s, dt) => {
     const t = s.clock.elapsedTime;
     if (hitGen !== seenHit.current) {
@@ -2535,8 +2548,9 @@ export function NexusCore({ color, health, hitGen = 0 }: { color: string; health
     }
     shock.current = Math.max(0, shock.current - dt * 2.6);
     const punch = shock.current * shock.current;
+    const contacting = approachRef.current;
     if (ref.current) {
-      ref.current.rotation.y = t * 0.35;
+      ref.current.rotation.y = t * (contacting ? 0.9 : 0.35);
       ref.current.rotation.x = Math.sin(t * 0.4) * 0.12;
       ref.current.position.y = 1.12 - punch * 0.22;
       ref.current.scale.setScalar(1 - punch * 0.16);
@@ -2544,13 +2558,21 @@ export function NexusCore({ color, health, hitGen = 0 }: { color: string; health
     if (inner.current) inner.current.rotation.y = -t * 0.55;
     if (shield.current) {
       const m = shield.current.material as { opacity: number; emissiveIntensity?: number };
-      m.opacity = 0.08 + health * 0.22 + Math.sin(t * 2) * 0.04 + punch * 0.4;
+      m.opacity = 0.08 + health * 0.22 + Math.sin(t * (contacting ? 6 : 2)) * 0.04 + punch * 0.4;
       shield.current.scale.setScalar(1 + Math.sin(t * 1.4) * 0.03 + punch * 0.22);
     }
-    if (ring.current) ring.current.rotation.z = t * 0.55;
-    if (ring2.current) ring2.current.rotation.z = -t * 0.32;
+    if (ring.current) ring.current.rotation.z = t * (contacting ? 2.2 : 0.55);
+    if (ring2.current) ring2.current.rotation.z = -t * (contacting ? 1.4 : 0.32);
+    if (warn.current) {
+      warn.current.visible = contacting;
+      const k = t % 1;
+      const s = 1 + k * 0.45;
+      warn.current.scale.set(s, s, s);
+      const m = warn.current.material as { opacity: number };
+      m.opacity = contacting ? 0.62 * (1 - k) : 0;
+    }
   });
-  const hot = health < 0.35 ? "#c45c5c" : color;
+  const hot = approach || health < 0.35 ? "#c45c5c" : color;
   return (
     <group>
       <mesh position={[0, 0.05, 0]} receiveShadow>
@@ -2615,6 +2637,10 @@ export function NexusCore({ color, health, hitGen = 0 }: { color: string; health
           roughness={0.08}
           metalness={0.12}
         />
+      </mesh>
+      <mesh ref={warn} position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[1.85, 2.15, 40]} />
+        <meshBasicMaterial color="#c45c5c" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   );

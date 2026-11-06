@@ -209,6 +209,7 @@ export function Hud() {
           {hud.coreHot ? <StatusChip alert>Core contact</StatusChip> : null}
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
+          {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
           {hud.overclockOn ? <StatusChip>Overclock</StatusChip> : null}
           {hud.heroKills > 0 ? <StatusChip>{HEROES[hud.heroId ?? "fighter"].name} · {hud.heroKills}</StatusChip> : null}
           {hud.heroChain > 0 ? <StatusChip>Chain {hud.heroChain}</StatusChip> : null}
@@ -305,6 +306,7 @@ export function Hud() {
                 {hud.bonus > 0 ? (
                   <span className="rounded-md bg-bg/12 px-1.5 py-0.5 font-mono text-2xs tabular-nums">
                     +<TickNum value={hud.bonus} />
+                    {hud.earlyLeft > 0 ? <span> · {Math.ceil(hud.earlyLeft)}s</span> : null}
                   </span>
                 ) : (
                   <span className="sm:hidden">Go</span>

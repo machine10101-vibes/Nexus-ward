@@ -7,7 +7,7 @@ A 3D space tower defense game. Hold planetary cores on Mycelion, Kron Forge, and
 ## How to hold
 
 1. Choose a battery, then tap a hex platform beside the path.
-2. Press **Deploy** when the line is ready. Starting the next wave quickly pays an early-deploy bonus.
+2. Press **Deploy** when the line is ready. Starting the next wave inside the 16 second window pays an early-deploy bonus, and the planted line fires faster for 3 seconds.
 3. Air units ignore Pulse, Frost, Bore, Lash, and Pylon. Lance, Tesla, Rail, and Flak cover the sky. Flak slows a flock and ignores the ground. Bore cracks ground armor and ignores the air. Lash snags one ground sprinter. A pylon slows every ground host in its field. Lance, Tesla, and Rail can prefer the sky or the ground, and they still fire the other lane when that one is empty. A ring and a column tighten under a host just before it calls, blinks, veils, rallies, jams, grafts, saps, or anchors. The core flashes Core contact when a host is four steps from the heart.
 4. Same-type batteries placed close together **link**. One neighbor is +15% damage, a second is +27%, and three or more cap at +36%. A different battery in that same reach adds range instead: +6%, +10%, or +14%. Rank 3 unlocks an overdrive.
 5. **Surge (Q)** marks every hostile. **Overclock (E)** haste-fires the grid.

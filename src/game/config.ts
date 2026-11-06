@@ -27,6 +27,11 @@ export function mixRangeMultiplier(count: number) {
   const i = Math.max(0, Math.min(MIX_RANGE.length - 1, Math.floor(count)));
   return 1 + MIX_RANGE[i];
 }
+/** Seconds of build time, after the first wave, over which the early-deploy bonus falls to zero. */
+export const EARLY_WINDOW = 16;
+/** How long a paid early deploy keeps the planted line firing faster. */
+export const LINE_READY = 3;
+export const LINE_HASTE = 1.12;
 export const AUTO_WAVE_DELAY = 2.8;
 export const SALVAGE_RATE = 0.6;
 export const SPEED_STEPS = [1, 2, 3] as const;

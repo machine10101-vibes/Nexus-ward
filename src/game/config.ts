@@ -19,6 +19,14 @@ export function linkMultiplier(count: number) {
   const i = Math.max(0, Math.min(LINK_BONUS.length - 1, Math.floor(count)));
   return 1 + LINK_BONUS[i];
 }
+
+/** Extra range for 0, 1, 2, or 3+ different-type neighbors. Damage links stay same-type. */
+export const MIX_RANGE = [0, 0.06, 0.1, 0.14] as const;
+
+export function mixRangeMultiplier(count: number) {
+  const i = Math.max(0, Math.min(MIX_RANGE.length - 1, Math.floor(count)));
+  return 1 + MIX_RANGE[i];
+}
 export const AUTO_WAVE_DELAY = 2.8;
 export const SALVAGE_RATE = 0.6;
 export const SPEED_STEPS = [1, 2, 3] as const;

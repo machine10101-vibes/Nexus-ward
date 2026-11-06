@@ -4,6 +4,7 @@ import {
   ENEMIES,
   inflateSpawnCount,
   linkMultiplier,
+  mixRangeMultiplier,
   SKILL_COPY,
   skillPeriod,
   MAX_BEAMS,
@@ -584,6 +585,16 @@ export class GameEngine {
     let n = 0;
     for (const o of this.towers) {
       if (o.id === t.id || o.type !== t.type) continue;
+      if (dist2(t.x, t.z, o.x, o.z) <= r2) n += 1;
+    }
+    return n;
+  }
+
+  mixCount(t: Tower) {
+    const r2 = SYN_RANGE * SYN_RANGE;
+    let n = 0;
+    for (const o of this.towers) {
+      if (o.id === t.id || o.type === t.type) continue;
       if (dist2(t.x, t.z, o.x, o.z) <= r2) n += 1;
     }
     return n;
@@ -1225,17 +1236,18 @@ export class GameEngine {
       const def = TOWERS[t.type];
       const stats = towerStats(def, t.level);
       const haste = this.time < this.overclockUntil ? 1.55 : 1;
+      const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
       if (def.field) {
         t.aiming = false;
         if (t.cooldown > 0) continue;
-        const n = this.pulseField(t, def, stats);
+        const n = this.pulseField(t, def, stats, reach);
         if (n > 0) {
           t.cooldown = 1 / (stats.fireRate * haste);
           this.sfx = "shoot";
         }
         continue;
       }
-      const target = this.pickTarget(t, stats.range, def.hitsFlying, !!def.airOnly);
+      const target = this.pickTarget(t, reach, def.hitsFlying, !!def.airOnly);
       t.aiming = !!target;
       if (!target) continue;
       const dx = target.x - t.x;
@@ -1701,8 +1713,8 @@ export class GameEngine {
     return best ?? fallback;
   }
 
-  pulseField(t: Tower, def: (typeof TOWERS)[TowerId], stats: ReturnType<typeof towerStats>) {
-    const r2 = stats.range * stats.range;
+  pulseField(t: Tower, def: (typeof TOWERS)[TowerId], stats: ReturnType<typeof towerStats>, reach = stats.range) {
+    const r2 = reach * reach;
     const deep = t.level >= 3;
     const syn = linkMultiplier(this.linkCount(t));
     const rank = deep ? 1.12 : 1;

@@ -29,6 +29,7 @@ import {
   TOWER_ORDER,
   coverageLabel,
   linkMultiplier,
+  mixRangeMultiplier,
   towerStats,
   upgradeCost,
 } from "@/game/config";
@@ -658,6 +659,8 @@ function TowerCard() {
   const refund = engine.refundFor(t);
   const links = engine.linkCount(t);
   const syn = linkMultiplier(links);
+  const mix = engine.mixCount(t);
+  const reachMul = mixRangeMultiplier(mix);
   const dps = stats.damage * stats.fireRate * syn * (t.level >= 3 ? 1.12 : 1);
   const short = up != null ? Math.max(0, up - gold) : 0;
   return (
@@ -672,11 +675,17 @@ function TowerCard() {
         </p>
       </div>
       <p className="mt-1.5 font-mono text-2xs tabular-nums text-muted">
-        {Math.round(dps)} dps · {stats.range.toFixed(1)} rng · {t.kills} kills
+        {Math.round(dps)} dps · {(stats.range * reachMul).toFixed(1)} rng · {t.kills} kills
         {links > 0 ? (
           <span className="text-accent">
             {" "}
             · {links} {links === 1 ? "link" : "links"} +{Math.round((syn - 1) * 100)}%
+          </span>
+        ) : null}
+        {mix > 0 ? (
+          <span className="text-accent">
+            {" "}
+            · +{Math.round((reachMul - 1) * 100)}% reach
           </span>
         ) : null}
       </p>

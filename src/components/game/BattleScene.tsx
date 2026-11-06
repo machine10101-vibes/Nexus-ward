@@ -629,34 +629,62 @@ function TowersLayer() {
 }
 
 function SkillTelegraph() {
-  const refs = useRef<(Mesh | null)[]>(Array(MAX_ENEMIES).fill(null));
+  const rings = useRef<(Mesh | null)[]>(Array(MAX_ENEMIES).fill(null));
+  const columns = useRef<(Mesh | null)[]>(Array(MAX_ENEMIES).fill(null));
   useFrame(() => {
     for (let i = 0; i < MAX_ENEMIES; i++) {
-      const mesh = refs.current[i];
+      const ring = rings.current[i];
+      const column = columns.current[i];
+      if (!ring || !column) continue;
       const e = engine.enemies[i];
-      if (!mesh) continue;
       const skill = e?.alive ? ENEMIES[e.type].skill : undefined;
       const left = e?.alive ? telegraphLeft(skill, e.flying, e.skillT) : null;
       if (left == null) {
-        mesh.visible = false;
+        ring.visible = false;
+        column.visible = false;
         continue;
       }
       const k = 1 - left / SKILL_WIND;
-      mesh.visible = true;
-      mesh.position.set(e.x, 0.07, e.z);
-      mesh.scale.setScalar(0.45 + k * 0.9);
-      const mat = mesh.material as MeshBasicMaterial;
-      mat.color.set(skill ? SKILL_TINT[skill] : "#ffffff");
-      mat.opacity = 0.28 + k * 0.62;
+      const color = skill ? SKILL_TINT[skill] : "#ffffff";
+      ring.visible = true;
+      ring.position.set(e.x, 0.09, e.z);
+      ring.scale.setScalar(0.8 + k * 1.25);
+      const mat = ring.material as MeshBasicMaterial;
+      mat.color.set(color);
+      mat.opacity = 0.62 + k * 0.34;
+      column.visible = true;
+      column.position.set(e.x, 0.85, e.z);
+      const width = 0.42 + k * 0.55;
+      column.scale.set(width, 1 + k * 0.35, width);
+      const cmat = column.material as MeshBasicMaterial;
+      cmat.color.set(color);
+      cmat.opacity = 0.42 + k * 0.48;
     }
   });
   return (
     <group>
       {Array.from({ length: MAX_ENEMIES }, (_, i) => (
-        <mesh key={i} ref={(el) => { refs.current[i] = el; }} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
-          <ringGeometry args={[0.62, 0.78, 28]} />
-          <meshBasicMaterial color="#c4b5fd" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} />
-        </mesh>
+        <group key={i}>
+          <mesh
+            ref={(el) => {
+              rings.current[i] = el;
+            }}
+            rotation={[-Math.PI / 2, 0, 0]}
+            visible={false}
+          >
+            <ringGeometry args={[0.48, 0.86, 32]} />
+            <meshBasicMaterial color="#c4b5fd" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} />
+          </mesh>
+          <mesh
+            ref={(el) => {
+              columns.current[i] = el;
+            }}
+            visible={false}
+          >
+            <cylinderGeometry args={[0.08, 0.16, 1.5, 8]} />
+            <meshBasicMaterial color="#c4b5fd" transparent depthWrite={false} toneMapped={false} blending={AdditiveBlending} />
+          </mesh>
+        </group>
       ))}
     </group>
   );

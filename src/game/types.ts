@@ -1,6 +1,6 @@
 export type Faction = "organic" | "mech" | "hybrid";
 export type MapId = "mycelion" | "forge" | "aegis";
-export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore";
+export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash";
 export type EnemyId =
   | "mite"
   | "brood"

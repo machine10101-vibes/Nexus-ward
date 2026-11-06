@@ -1737,6 +1737,10 @@ export class GameEngine {
         "lance",
       );
       this.hurt(target, dmg, "beam");
+      if (def.slow > 0) {
+        const deep = t.level >= 3;
+        this.applySlow(target, deep ? Math.min(0.62, def.slow) : def.slow, def.slowTime + (deep ? 0.35 : 0));
+      }
       if (wide) {
         // Wide Lance: the overcharged beam splits onto one neighbouring host.
         const split = this.nearestEnemy(target.x, target.z, 1.35, new Set([target.slot]), def.hitsFlying);

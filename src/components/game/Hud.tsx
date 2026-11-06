@@ -9,6 +9,7 @@ import {
   Radio,
   CircleDot,
   Bomb,
+  Spline,
   Shield,
   Snowflake,
   Sparkles,
@@ -46,6 +47,7 @@ const ICONS: Record<TowerId, typeof Zap> = {
   rail: Minus,
   flak: Bomb,
   bore: CircleDot,
+  lash: Spline,
 };
 
 const TARGET_SHORT: Record<Targeting, string> = {

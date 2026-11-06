@@ -151,9 +151,27 @@ export const TOWERS: Record<TowerId, TowerDef> = {
     color: "#c47a62",
     desc: "Short gauss bore. Cracks ground armor. Ignores the sky.",
   },
+  lash: {
+    id: "lash",
+    name: "Lash Battery",
+    short: "Lash",
+    cost: 95,
+    range: 5.6,
+    fireRate: 1.6,
+    damage: 7,
+    kind: "beam",
+    hitsFlying: false,
+    splash: 0,
+    slow: 0.72,
+    slowTime: 0.85,
+    chain: 0,
+    pierce: false,
+    color: "#c4a574",
+    desc: "Ground lash. Snags a sprinter. Ignores the sky.",
+  },
 };
 
-export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore"];
+export const TOWER_ORDER: TowerId[] = ["pulse", "arc", "frost", "tesla", "rail", "flak", "bore", "lash"];
 
 export function coverageLabel(def: TowerDef) {
   if (def.airOnly) return "Air only";
@@ -197,6 +215,11 @@ export const RANK_NOTES: Record<TowerId, { r2: string; overdrive: string; r3: st
     r2: "Heavier slug, faster cycle, longer bore.",
     overdrive: "Split Bore",
     r3: "The ground corridor widens.",
+  },
+  lash: {
+    r2: "Tighter cycle and a longer reach.",
+    overdrive: "Snap Lash",
+    r3: "The lash snaps to a second ground host and holds a little harder.",
   },
 };
 

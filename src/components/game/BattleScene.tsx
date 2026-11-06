@@ -13,6 +13,7 @@ import {
   SYN_RANGE,
   TOWERS,
   coverageLabel,
+  linkCycle,
   linkMultiplier,
   mixRangeMultiplier,
   towerStats,
@@ -464,6 +465,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
     }
   }
   const bonus = links > 0 ? Math.round((linkMultiplier(links) - 1) * 100) : 0;
+  const cycle = links > 0 ? Math.round((linkCycle(links) - 1) * 100) : 0;
   const reach = pad ? Math.round((mixRangeMultiplier(mixNear(pad.x, pad.z, type)) - 1) * 100) : 0;
   return (
     <Html position={[0, 1.95, 0]} center sprite pointerEvents="none" zIndexRange={[9, 9]} style={{ pointerEvents: "none" }}>
@@ -473,6 +475,7 @@ function GhostTag({ type, gold }: { type: TowerId; gold: number }) {
         </span>
         <span>{coverageLabel(def)}</span>
         {bonus > 0 ? <span>+{bonus}% link</span> : null}
+        {cycle > 0 ? <span>+{cycle}% cycle</span> : null}
         {reach > 0 ? <span>+{reach}% reach</span> : null}
         {short > 0 ? (
           <span className="ghost-tag-short">need {short} more</span>

@@ -29,6 +29,7 @@ import {
   TOWERS,
   TOWER_ORDER,
   coverageLabel,
+  linkCycle,
   linkMultiplier,
   mixRangeMultiplier,
   towerStats,
@@ -664,9 +665,10 @@ function TowerCard() {
   const refund = engine.refundFor(t);
   const links = engine.linkCount(t);
   const syn = linkMultiplier(links);
+  const cycle = linkCycle(links);
   const mix = engine.mixCount(t);
   const reachMul = mixRangeMultiplier(mix);
-  const dps = stats.damage * stats.fireRate * syn * (t.level >= 3 ? 1.12 : 1);
+  const dps = stats.damage * stats.fireRate * syn * cycle * (t.level >= 3 ? 1.12 : 1);
   const short = up != null ? Math.max(0, up - gold) : 0;
   return (
     <div className="hud-panel p-3">
@@ -684,7 +686,7 @@ function TowerCard() {
         {links > 0 ? (
           <span className="text-accent">
             {" "}
-            · {links} {links === 1 ? "link" : "links"} +{Math.round((syn - 1) * 100)}%
+            · {links} {links === 1 ? "link" : "links"} +{Math.round((syn - 1) * 100)}% · +{Math.round((cycle - 1) * 100)}% cycle
           </span>
         ) : null}
         {mix > 0 ? (

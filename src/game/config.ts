@@ -20,6 +20,14 @@ export function linkMultiplier(count: number) {
   return 1 + LINK_BONUS[i];
 }
 
+/** Faster cycle for 0, 1, 2, or 3+ same-type neighbors. Damage links stay on LINK_BONUS. */
+export const LINK_CYCLE = [0, 0.06, 0.1, 0.14] as const;
+
+export function linkCycle(count: number) {
+  const i = Math.max(0, Math.min(LINK_CYCLE.length - 1, Math.floor(count)));
+  return 1 + LINK_CYCLE[i];
+}
+
 /** Extra range for 0, 1, 2, or 3+ different-type neighbors. Damage links stay same-type. */
 export const MIX_RANGE = [0, 0.06, 0.1, 0.14] as const;
 

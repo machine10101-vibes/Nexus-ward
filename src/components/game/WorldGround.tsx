@@ -141,30 +141,18 @@ function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
     let tint = style === "mycelion" ? [0.72, 1.02, 0.7] : style === "forge" ? [1.12, 0.84, 0.68] : [0.78, 0.9, 1.05];
     let k = clamp(speckle + grain + blotch - rim * 0.16, 0.5, 1.08);
     if (style === "mycelion") {
-      const wave = Math.sin(x * 0.33) * 0.65 + Math.sin(y * 0.27 + 1.7) * 0.4;
-      const marrow = Math.pow(clamp(1 - Math.abs(wave) * 2.8, 0, 1), 1.2);
-      tint = [
-        tint[0] * (1 - marrow) + 0.45 * marrow,
-        tint[1] * (1 - marrow) + 1.45 * marrow,
-        tint[2] * (1 - marrow) + 0.85 * marrow,
-      ];
+      const mott = Math.pow(clamp(Math.sin(x * 0.62) * Math.cos(y * 0.48) * 0.5 + 0.5, 0, 1), 2) * 0.22;
+      tint = [tint[0] * (1 - mott) + 0.55 * mott, tint[1] * (1 - mott) + 1.05 * mott, tint[2] * (1 - mott) + 0.72 * mott];
     } else if (style === "forge") {
-      const fx = Math.abs(x / 3.9 - Math.round(x / 3.9));
-      const fy = Math.abs(y / 3.9 - Math.round(y / 3.9));
-      const seam = clamp((0.08 - Math.min(fx, fy)) * 9, 0, 1);
-      const ember = Math.pow(clamp(Math.sin(x * 1.7) * Math.sin(y * 1.3), 0, 1), 10);
-      k *= 1 - seam * 0.55;
-      tint = [tint[0] + ember * 0.55, tint[1] + ember * 0.22, tint[2]];
+      const fx = Math.abs(x / 4.2 - Math.round(x / 4.2));
+      const fy = Math.abs(y / 4.2 - Math.round(y / 4.2));
+      const seam = clamp((0.06 - Math.min(fx, fy)) * 8, 0, 1);
+      k *= 1 - seam * 0.18;
     } else {
       const signed = scarSigned(x, -y * squash);
-      const band = Math.exp(-signed * signed * 0.55);
       const flesh = signed < 0;
-      const side = flesh ? [0.7, 1.02, 0.68] : [0.68, 0.76, 0.98];
-      tint = [
-        side[0] * (1 - band) + 1.15 * band,
-        side[1] * (1 - band) + 1.28 * band,
-        side[2] * (1 - band) + 1.35 * band,
-      ];
+      const side = flesh ? [0.74, 0.98, 0.72] : [0.7, 0.78, 0.96];
+      tint = side;
     }
     cols[i * 3] = k * tint[0];
     cols[i * 3 + 1] = k * tint[1];

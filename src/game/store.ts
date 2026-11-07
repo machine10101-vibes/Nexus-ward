@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { AUTO_WAVE_DELAY } from "./config";
+import { AUTO_WAVE_DELAY, worldBase } from "./config";
 import { engine } from "./engine";
 import { ITEMS } from "./heroes";
-import { loadSave, recordResult, saveHero, saveSettings, type HeroSave, type Settings } from "./save";
+import { loadSave, recordResult, saveBase, saveHero, saveSettings, type HeroSave, type Settings } from "./save";
 import { audio } from "./audio";
-import type { HeroId, ItemId, ItemSlot, MapId, Screen, TowerId } from "./types";
+import type { BaseAddonId, BaseClass, HeroId, ItemId, ItemSlot, MapId, Screen, TowerId } from "./types";
 
 export type HudSnap = {
   gold: number;
@@ -48,6 +48,10 @@ export type HudSnap = {
   hold: boolean;
   holdArmed: boolean;
   breach: boolean;
+  baseClass: BaseClass;
+  basePlate: boolean;
+  baseSnare: boolean;
+  baseGun: boolean;
 };
 
 type GameStore = {
@@ -67,6 +71,7 @@ type GameStore = {
   studioFit: number;
   settings: Settings;
   completed: MapId[];
+  baseClass: BaseClass | null;
   hud: HudSnap;
   hoverPad: number | null;
   buildType: TowerId | null;
@@ -88,6 +93,8 @@ type GameStore = {
   openLoadout: () => void;
   equipItem: (id: ItemId) => void;
   unequipSlot: (slot: ItemSlot) => void;
+  setBaseClass: (id: BaseClass) => void;
+  buyAddon: (id: BaseAddonId) => void;
   dropIn: () => void;
   abortToSelect: () => void;
   pause: () => void;
@@ -142,6 +149,10 @@ const emptyHud: HudSnap = {
   hold: false,
   holdArmed: false,
   breach: false,
+  baseClass: "organic",
+  basePlate: false,
+  baseSnare: false,
+  baseGun: false,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -161,6 +172,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   studioFit: 0,
   settings: save.settings,
   completed: save.completed,
+  baseClass: save.baseClass,
   hud: emptyHud,
   hoverPad: null,
   buildType: "pulse",
@@ -245,11 +257,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (engine.hero.id === who) engine.applyHeroGear(nextLoad);
     audio.ui();
   },
+  setBaseClass: (baseClass) => {
+    saveBase(baseClass);
+    set({ baseClass });
+    audio.ui();
+  },
+  buyAddon: (id) => {
+    const ok = engine.buyBaseAddon(id);
+    if (ok) audio.ui();
+    else audio.deny();
+    get().syncHud();
+  },
   dropIn: () => {
     const id = get().mapId;
     const heroId = get().heroId ?? get().heroSave.last;
     if (!id) return;
-    engine.load(id, heroId, get().heroSave.loadouts[heroId]);
+    const base = get().baseClass ?? worldBase(id);
+    engine.load(id, heroId, get().heroSave.loadouts[heroId], base);
     audio.wave();
     set({
       screen: "playing",
@@ -318,6 +342,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.hold === cur.hold &&
       next.holdArmed === cur.holdArmed &&
       next.breach === cur.breach &&
+      next.baseClass === cur.baseClass &&
+      next.basePlate === cur.basePlate &&
+      next.baseSnare === cur.baseSnare &&
+      next.baseGun === cur.baseGun &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -356,7 +384,7 @@ function snapHud(): HudSnap {
   return {
     gold: engine.gold,
     lives: engine.lives,
-    maxLives: engine.map.lives,
+    maxLives: engine.maxLives(),
     wave: engine.wave,
     waveTotal: engine.map.waves.length,
     phase: engine.phase,
@@ -401,6 +429,10 @@ function snapHud(): HudSnap {
     hold: engine.holdActive,
     holdArmed: engine.pendingHold,
     breach: engine.breach,
+    baseClass: engine.baseClass,
+    basePlate: engine.basePlate,
+    baseSnare: engine.baseSnare,
+    baseGun: engine.baseGun,
   };
 }
 

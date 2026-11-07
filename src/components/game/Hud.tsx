@@ -20,6 +20,11 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  BASE_ADDONS,
+  BASE_GUN,
+  BASE_PLATE,
+  BASE_SNARE,
+  BASES,
   ENEMIES,
   enemyTraitTag,
   OVERCLOCK_CD,
@@ -40,7 +45,7 @@ import { formatKey } from "@/game/save";
 import { engine } from "@/game/engine";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
-import type { HeroId, Targeting, TowerId } from "@/game/types";
+import type { BaseAddonId, BaseClass, HeroId, Targeting, TowerId } from "@/game/types";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<TowerId, typeof Zap> = {
@@ -153,6 +158,9 @@ export function Hud() {
                 )}
               </p>
             </div>
+            <p className="mt-1 font-display text-2xs uppercase tracking-label" style={{ color: BASES[hud.baseClass].color }}>
+              {BASES[hud.baseClass].keep}
+            </p>
             {engine.activePathCount() > 1 ? (
               <p className="mt-1 font-display text-2xs uppercase tracking-label text-accent">
                 {engine.activePathCount()} gates
@@ -209,7 +217,10 @@ export function Hud() {
       <div className="mt-2 flex flex-col items-center gap-2">
         <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          {hud.coreHot ? <StatusChip alert>Core contact</StatusChip> : null}
+          {hud.coreHot ? <StatusChip alert>Base contact</StatusChip> : null}
+          {hud.phase !== "build" && hud.basePlate ? <StatusChip>Plate</StatusChip> : null}
+          {hud.phase !== "build" && hud.baseSnare ? <StatusChip>Snare</StatusChip> : null}
+          {hud.phase !== "build" && hud.baseGun ? <StatusChip>Spire</StatusChip> : null}
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
           {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
@@ -227,6 +238,7 @@ export function Hud() {
       </div>
 
       <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:inset-x-5 sm:bottom-5">
+        {hud.phase === "build" ? <BaseAddons /> : null}
         {selected ? (
           <div className="pointer-events-auto ml-auto w-[min(100%,21rem)]">
             <TowerCard />
@@ -493,8 +505,59 @@ function CoreRing({ pct, lives, leak }: { pct: number; lives: number; leak: bool
           value={lives}
           className={cn("font-display text-lg leading-none", critical ? "text-danger" : "text-fg")}
         />
-        <span className="hud-label mt-1.5">core</span>
+        <span className="hud-label mt-1.5">base</span>
       </div>
+    </div>
+  );
+}
+
+function addonNote(id: BaseAddonId, cls: BaseClass) {
+  if (id === "plate") return `+${BASE_PLATE[cls]} integrity`;
+  if (id === "snare") return `hosts move at ${Math.round(BASE_SNARE[cls] * 100)}% speed`;
+  const gun = BASE_GUN[cls];
+  const bits = [`${gun.damage} damage`];
+  if (gun.slow > 0) bits.push("thorn slow");
+  if (gun.mark) bits.push("paints");
+  return bits.join(" · ");
+}
+
+function BaseAddons() {
+  const hud = useGameStore((s) => s.hud);
+  const cls = hud.baseClass;
+  const owned: Record<BaseAddonId, boolean> = {
+    plate: hud.basePlate,
+    snare: hud.baseSnare,
+    spire: hud.baseGun,
+  };
+  return (
+    <div className="pointer-events-auto mx-auto flex max-w-full flex-wrap items-center justify-center gap-1.5">
+      <span className="font-display text-2xs uppercase tracking-label text-muted">Add-ons</span>
+      {(["plate", "snare", "spire"] as const).map((id) => {
+        const spec = BASE_ADDONS[id];
+        const on = owned[id];
+        const afford = hud.gold >= spec.cost;
+        return (
+          <button
+            key={id}
+            type="button"
+            title={`${spec.blurb} ${addonNote(id, cls)}`}
+            aria-pressed={on}
+            disabled={on}
+            onClick={() => useGameStore.getState().buyAddon(id)}
+            className={cn(
+              "rounded-full border px-3 py-1 font-display text-2xs uppercase tracking-label transition-colors",
+              on
+                ? "border-accent text-accent"
+                : afford
+                  ? "border-border text-fg hover:border-fg/40"
+                  : "border-border text-muted",
+            )}
+          >
+            {spec.name}
+            {on ? " on" : ` · ${spec.cost}`}
+          </button>
+        );
+      })}
     </div>
   );
 }

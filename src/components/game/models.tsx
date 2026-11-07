@@ -1,8 +1,8 @@
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, DoubleSide, InstancedMesh, Object3D, type Group, type Mesh, type Side } from "three";
-import type { EnemyId, MapId, TowerId } from "@/game/types";
-import { TOWERS } from "@/game/config";
+import type { BaseClass, EnemyId, MapId, TowerId } from "@/game/types";
+import { BASES, BASE_GUN_RANGE, BASE_SNARE_RANGE, TOWERS } from "@/game/config";
 import { cellToWorld } from "@/game/maps";
 import { arenaMetrics, terrainElevation } from "./WorldGround";
 
@@ -2590,6 +2590,368 @@ export function HexPad({
           <meshBasicMaterial color={emissive} transparent opacity={0.42} depthWrite={false} toneMapped={false} />
         </mesh>
       ) : null}
+    </group>
+  );
+}
+
+function SpinY({ speed, children }: { speed: number; children: ReactNode }) {
+  const ref = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.y += dt * speed;
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+function PulseScale({ children }: { children: ReactNode }) {
+  const ref = useRef<Group>(null);
+  useFrame((s) => {
+    if (!ref.current) return;
+    const k = 1 + Math.sin(s.clock.elapsedTime * 2.1) * 0.05;
+    ref.current.scale.setScalar(k);
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+function BaseVitals({
+  color,
+  health,
+  hitGen,
+  approach,
+}: {
+  color: string;
+  health: number;
+  hitGen: number;
+  approach: boolean;
+}) {
+  const shield = useRef<Mesh>(null);
+  const warn = useRef<Mesh>(null);
+  const seenHit = useRef(hitGen);
+  const shock = useRef(0);
+  const approachRef = useRef(approach);
+  approachRef.current = approach;
+  useFrame((s, dt) => {
+    const t = s.clock.elapsedTime;
+    if (hitGen !== seenHit.current) {
+      seenHit.current = hitGen;
+      shock.current = 1;
+    }
+    shock.current = Math.max(0, shock.current - dt * 2.6);
+    const punch = shock.current * shock.current;
+    const contacting = approachRef.current;
+    if (shield.current) {
+      const m = shield.current.material as { opacity: number };
+      m.opacity = 0.06 + health * 0.16 + Math.sin(t * (contacting ? 6 : 2)) * 0.03 + punch * 0.35;
+      shield.current.scale.setScalar(1 + punch * 0.12);
+    }
+    if (warn.current) {
+      warn.current.visible = contacting;
+      const k = t % 1;
+      const scale = 1 + k * 0.35;
+      warn.current.scale.set(scale, scale, scale);
+      const m = warn.current.material as { opacity: number };
+      m.opacity = contacting ? 0.55 * (1 - k) : 0;
+    }
+  });
+  const hot = approach || health < 0.35 ? "#c45c5c" : color;
+  return (
+    <group>
+      <mesh ref={shield} position={[0, 1.02, 0]}>
+        <sphereGeometry args={[0.48, 22, 14]} />
+        <meshStandardMaterial color={hot} emissive={hot} emissiveIntensity={0.35} transparent opacity={0.2} roughness={0.1} metalness={0.08} />
+      </mesh>
+      <mesh ref={warn} position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[1.9, 2.2, 40]} />
+        <meshBasicMaterial color="#c45c5c" transparent opacity={0.5} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function ReachRings({ color, snare, gun }: { color: string; snare: boolean; gun: boolean }) {
+  return (
+    <group>
+      {snare ? (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+          <ringGeometry args={[BASE_SNARE_RANGE - 0.08, BASE_SNARE_RANGE, 48]} />
+          <meshBasicMaterial color={color} transparent opacity={0.32} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ) : null}
+      {gun ? (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <ringGeometry args={[BASE_GUN_RANGE - 0.06, BASE_GUN_RANGE, 64]} />
+          <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ) : null}
+    </group>
+  );
+}
+
+function BioKeep({ plate, snare, gun }: { plate: boolean; snare: boolean; gun: boolean }) {
+  const spec = BASES.organic;
+  return (
+    <group name="keep-organic">
+      <mesh position={[0, 0.28, 0]} scale={[1.72, 0.42, 1.55]} castShadow receiveShadow>
+        <sphereGeometry args={[1, 22, 14]} />
+        <Mat color="#10261e" roughness={0.86} metalness={0.04} />
+      </mesh>
+      <mesh position={[0.35, 0.22, 0.2]} scale={[0.7, 0.28, 0.85]} castShadow>
+        <sphereGeometry args={[1, 16, 12]} />
+        <Mat color={spec.flesh} roughness={0.72} metalness={0.06} />
+      </mesh>
+      {[0, 1, 2, 3, 4].map((i) => {
+        const a = (i / 5) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 1.15, 0.48, Math.sin(a) * 1.02]} rotation={[0.5, -a, 0.4]} castShadow>
+            <boxGeometry args={[0.14, 0.16, 0.85]} />
+            <Mat color="#214838" roughness={0.62} metalness={0.12} emissive={spec.color} eInt={0.12} />
+          </mesh>
+        );
+      })}
+      {plate
+        ? [0, 1, 2].map((i) => {
+            const a = (i / 3) * Math.PI * 2 + 0.4;
+            return (
+              <mesh key={`rib-${i}`} name="base-plate" position={[Math.cos(a) * 0.85, 0.72, Math.sin(a) * 0.75]} rotation={[0.9, -a, 0]} castShadow>
+                <boxGeometry args={[0.22, 0.18, 1.05]} />
+                <Mat color={spec.flesh} roughness={0.55} metalness={0.08} emissive={spec.color} eInt={0.2} />
+              </mesh>
+            );
+          })
+        : null}
+      <PulseScale>
+        <mesh position={[0, 0.95, 0]} castShadow>
+          <sphereGeometry args={[0.42, 20, 16]} />
+          <Mat color="#1d6a4e" emissive={spec.color} eInt={0.85} roughness={0.28} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 0.95, 0]}>
+          <sphereGeometry args={[0.2, 14, 12]} />
+          <Mat color="#d8ffe8" emissive="#d8ffe8" eInt={1.4} roughness={0.12} />
+        </mesh>
+      </PulseScale>
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2 + 0.3;
+        const x = Math.cos(a) * 1.35;
+        const z = Math.sin(a) * 1.2;
+        return (
+          <group key={`tendril-${i}`} position={[x, 0, z]}>
+            <mesh position={[0, 0.55, 0]} rotation={[0.35, 0, a * 0.2]} castShadow>
+              <cylinderGeometry args={[0.05, 0.09, 1.05, 8]} />
+              <Mat color="#245443" roughness={0.6} metalness={0.1} />
+            </mesh>
+            <mesh position={[0, 1.12, 0]} castShadow>
+              <sphereGeometry args={[0.13, 12, 10]} />
+              <Mat color={spec.flesh} emissive={spec.color} eInt={0.35} roughness={0.4} />
+            </mesh>
+          </group>
+        );
+      })}
+      {snare
+        ? [0, 1, 2, 3, 4, 5].map((i) => {
+            const a = (i / 6) * Math.PI * 2;
+            return (
+              <mesh key={`snare-${i}`} name="base-snare" position={[Math.cos(a) * 1.62, 0.22, Math.sin(a) * 1.48]}>
+                <sphereGeometry args={[0.11, 10, 8]} />
+                <Mat color={spec.color} emissive={spec.color} eInt={0.9} roughness={0.3} />
+              </mesh>
+            );
+          })
+        : null}
+      {gun ? (
+        <group name="base-spire" position={[0.15, 1.15, 0.55]}>
+          <mesh rotation={[Math.PI / 2.4, 0, 0]} castShadow>
+            <coneGeometry args={[0.16, 0.72, 8]} />
+            <Mat color="#214838" roughness={0.45} metalness={0.15} emissive={spec.color} eInt={0.25} />
+          </mesh>
+          <PulseLight position={[0, 0.28, 0.22]} r={0.05} color={spec.color} />
+        </group>
+      ) : null}
+    </group>
+  );
+}
+
+function MechKeep({ plate, snare, gun }: { plate: boolean; snare: boolean; gun: boolean }) {
+  const spec = BASES.mech;
+  return (
+    <group name="keep-mech">
+      <mesh position={[0, 0.12, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[1.7, 1.86, 0.22, 8]} />
+        <Mat color="#2a241f" metalness={0.82} roughness={0.32} />
+      </mesh>
+      <mesh position={[0, 0.28, 0]} receiveShadow>
+        <cylinderGeometry args={[1.15, 1.28, 0.12, 8]} />
+        <Mat color="#1a1614" metalness={0.74} roughness={0.36} />
+      </mesh>
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 1.42, 0.72, Math.sin(a) * 1.42]} castShadow>
+            <boxGeometry args={[0.22, 1.15, 0.22]} />
+            <Mat color="#4a4038" metalness={0.78} roughness={0.28} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 0.7, 0]} castShadow>
+        <cylinderGeometry args={[0.46, 0.52, 0.9, 10]} />
+        <Mat color="#3a302a" metalness={0.7} roughness={0.3} emissive={spec.color} eInt={0.15} />
+      </mesh>
+      <SpinY speed={0.7}>
+        <mesh position={[0, 1.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.62, 0.045, 8, 28]} />
+          <Mat color={spec.color} emissive={spec.color} eInt={0.7} metalness={0.4} roughness={0.25} />
+        </mesh>
+      </SpinY>
+      <mesh position={[1.15, 0.95, 0]} castShadow>
+        <boxGeometry args={[1.15, 0.12, 0.16]} />
+        <Mat color="#5a4a3e" metalness={0.8} roughness={0.26} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5].map((i) => {
+        const a = (i / 6) * Math.PI * 2;
+        return (
+          <mesh key={`rivet-${i}`} position={[Math.cos(a) * 1.55, 0.26, Math.sin(a) * 1.55]}>
+            <sphereGeometry args={[0.06, 8, 6]} />
+            <Mat color="#6a5a4c" metalness={0.85} roughness={0.22} />
+          </mesh>
+        );
+      })}
+      {plate ? (
+        <mesh name="base-plate" position={[0, 0.42, 0]} castShadow>
+          <cylinderGeometry args={[1.48, 1.48, 0.16, 8]} />
+          <Mat color="#6a5848" metalness={0.84} roughness={0.24} emissive={spec.color} eInt={0.12} />
+        </mesh>
+      ) : null}
+      {snare ? (
+        <mesh name="base-snare" position={[0, 0.08, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[1.58, 0.035, 8, 36]} />
+          <Mat color={spec.color} emissive={spec.color} eInt={0.95} metalness={0.3} roughness={0.3} />
+        </mesh>
+      ) : null}
+      {gun ? (
+        <group name="base-spire" position={[-0.15, 1.35, 0.15]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.28, 0.28, 0.28]} />
+            <Mat color="#3a322c" metalness={0.8} roughness={0.28} />
+          </mesh>
+          <mesh position={[0, 0.08, 0.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.08, 0.1, 0.7, 8]} />
+            <Mat color="#2a2420" metalness={0.72} roughness={0.3} emissive={spec.color} eInt={0.35} />
+          </mesh>
+          <PulseLight position={[0, 0.08, 0.78]} r={0.05} color={spec.color} />
+        </group>
+      ) : null}
+    </group>
+  );
+}
+
+function HybridKeep({ plate, snare, gun }: { plate: boolean; snare: boolean; gun: boolean }) {
+  const spec = BASES.hybrid;
+  return (
+    <group name="keep-hybrid">
+      <mesh position={[-0.55, 0.16, 0]} receiveShadow castShadow>
+        <boxGeometry args={[1.55, 0.28, 1.7]} />
+        <Mat color={spec.metal} metalness={0.78} roughness={0.3} />
+      </mesh>
+      <mesh position={[0.72, 0.3, 0.1]} scale={[0.85, 0.38, 0.95]} castShadow>
+        <sphereGeometry args={[1, 18, 12]} />
+        <Mat color="#1a2a24" roughness={0.78} metalness={0.08} />
+      </mesh>
+      <mesh position={[-1.05, 0.78, 0.45]} castShadow>
+        <boxGeometry args={[0.18, 1.05, 0.18]} />
+        <Mat color="#5c6570" metalness={0.8} roughness={0.26} />
+      </mesh>
+      <mesh position={[0.95, 0.62, -0.35]} rotation={[0.7, 0.4, 0.2]} castShadow>
+        <boxGeometry args={[0.16, 0.16, 0.95]} />
+        <Mat color={spec.flesh} roughness={0.55} metalness={0.12} emissive={spec.color} eInt={0.15} />
+      </mesh>
+      <mesh position={[0.05, 0.85, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.48, 0.05, 8, 24]} />
+        <Mat color="#8a929c" metalness={0.7} roughness={0.28} />
+      </mesh>
+      <PulseScale>
+        <mesh position={[0.05, 0.85, 0]} castShadow>
+          <sphereGeometry args={[0.28, 16, 12]} />
+          <Mat color="#2f6a52" emissive="#7dffc4" eInt={0.55} roughness={0.32} metalness={0.1} />
+        </mesh>
+      </PulseScale>
+      {plate ? (
+        <group name="base-plate">
+          <mesh position={[0.55, 0.55, 0.15]} rotation={[0, 0.2, 0]} castShadow>
+            <boxGeometry args={[1.25, 0.12, 0.22]} />
+            <Mat color="#6a7078" metalness={0.82} roughness={0.24} />
+          </mesh>
+          {[-0.35, 0.05, 0.4].map((x) => (
+            <mesh key={x} position={[0.55 + x, 0.64, 0.15]}>
+              <cylinderGeometry args={[0.05, 0.05, 0.08, 6]} />
+              <Mat color={spec.color} emissive={spec.color} eInt={0.4} metalness={0.5} roughness={0.3} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+      {snare
+        ? [0, 1, 2, 3, 4, 5].map((i) => {
+            const a = (i / 6) * Math.PI * 2;
+            const x = Math.cos(a) * 1.5;
+            const z = Math.sin(a) * 1.4;
+            return i % 2 === 0 ? (
+              <mesh key={i} name="base-snare" position={[x, 0.2, z]}>
+                <boxGeometry args={[0.14, 0.14, 0.14]} />
+                <Mat color={spec.metal} metalness={0.75} roughness={0.28} emissive={spec.color} eInt={0.7} />
+              </mesh>
+            ) : (
+              <mesh key={i} name="base-snare" position={[x, 0.22, z]}>
+                <sphereGeometry args={[0.1, 10, 8]} />
+                <Mat color={spec.flesh} emissive="#7dffc4" eInt={0.55} roughness={0.4} />
+              </mesh>
+            );
+          })
+        : null}
+      {gun ? (
+        <group name="base-spire" position={[-0.2, 1.2, 0.35]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.24, 0.22, 0.24]} />
+            <Mat color={spec.metal} metalness={0.78} roughness={0.28} />
+          </mesh>
+          <mesh position={[0, 0.05, 0.38]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.07, 0.09, 0.62, 8]} />
+            <Mat color="#2a3036" metalness={0.7} roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.05, 0.28]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.12, 0.03, 6, 12]} />
+            <Mat color={spec.flesh} emissive="#7dffc4" eInt={0.45} roughness={0.4} />
+          </mesh>
+          <PulseLight position={[0, 0.05, 0.7]} r={0.045} color={spec.color} />
+        </group>
+      ) : null}
+    </group>
+  );
+}
+
+export function WardBase({
+  cls,
+  plate = false,
+  snare = false,
+  gun = false,
+  health,
+  hitGen = 0,
+  approach = false,
+  showReach = false,
+}: {
+  cls: BaseClass;
+  plate?: boolean;
+  snare?: boolean;
+  gun?: boolean;
+  health: number;
+  hitGen?: number;
+  approach?: boolean;
+  showReach?: boolean;
+}) {
+  const spec = BASES[cls];
+  return (
+    <group name={`ward-base-${cls}`}>
+      {showReach ? <ReachRings color={spec.color} snare={snare} gun={gun} /> : null}
+      <BaseVitals color={spec.color} health={health} hitGen={hitGen} approach={approach} />
+      {cls === "organic" ? <BioKeep plate={plate} snare={snare} gun={gun} /> : null}
+      {cls === "mech" ? <MechKeep plate={plate} snare={snare} gun={gun} /> : null}
+      {cls === "hybrid" ? <HybridKeep plate={plate} snare={snare} gun={gun} /> : null}
     </group>
   );
 }

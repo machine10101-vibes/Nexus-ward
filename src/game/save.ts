@@ -1,8 +1,8 @@
 import { clearUnlocks, emptyLoadouts, starterOwned, type HeroLoadout } from "./heroes";
-import type { HeroId, ItemId, MapId, Quality } from "./types";
+import type { BaseClass, HeroId, ItemId, MapId, Quality } from "./types";
 
 const KEY = "nexus-ward-save";
-const VERSION = 2;
+const VERSION = 3;
 
 export type ArtBind = "art1" | "art2" | "art3";
 
@@ -80,6 +80,8 @@ export type SaveData = {
   best: Partial<Record<MapId, { wave: number; cores: number }>>;
   settings: Settings;
   hero: HeroSave;
+  /** Null until the player picks a keep. A match then uses the world's own class. */
+  baseClass: BaseClass | null;
 };
 
 const defaults: SaveData = {
@@ -99,6 +101,7 @@ const defaults: SaveData = {
     loadouts: emptyLoadouts(),
     owned: starterOwned(),
   },
+  baseClass: null,
 };
 
 function migrate(raw: SaveData): SaveData {
@@ -117,6 +120,7 @@ function migrate(raw: SaveData): SaveData {
       owned: raw.hero?.owned?.length ? raw.hero.owned : starterOwned(),
     },
   };
+  if (s.baseClass !== "organic" && s.baseClass !== "mech" && s.baseClass !== "hybrid") s.baseClass = null;
   s.version = VERSION;
   return s;
 }
@@ -151,6 +155,13 @@ export function recordResult(map: MapId, wave: number, cores: number, won: boole
     const extra = clearUnlocks().filter((id) => !s.hero.owned.includes(id));
     if (extra.length) s.hero.owned = [...s.hero.owned, ...extra];
   }
+  writeSave(s);
+  return s;
+}
+
+export function saveBase(baseClass: BaseClass) {
+  const s = loadSave();
+  s.baseClass = baseClass;
   writeSave(s);
   return s;
 }

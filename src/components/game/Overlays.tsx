@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Crosshair, Settings2, Sparkles, Sword } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
-import { ENEMIES, inflateSpawnCount, PLANET_THEME } from "@/game/config";
+import { BASES, ENEMIES, inflateSpawnCount, PLANET_THEME, worldBase } from "@/game/config";
 import { HEROES, HERO_ORDER, ITEMS, heroStats, itemsForHero } from "@/game/heroes";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { audio } from "@/game/audio";
 import { DEFAULT_KEYS, RESERVED_CODES, formatKey, loadSave, type ArtBind } from "@/game/save";
-import type { HeroId, ItemSlot, MapId } from "@/game/types";
+import type { BaseClass, HeroId, ItemSlot, MapId } from "@/game/types";
 import { cn } from "@/lib/utils";
 import { asset } from "@/lib/asset";
 import { STUDIO_CATALOG, studioEntry } from "./studioCatalog";
@@ -61,7 +61,7 @@ function Title() {
           Nexus Ward
         </h1>
         <p className="mt-4 max-w-md text-base leading-relaxed text-muted">
-          Hold the planetary cores. Three worlds — living, forged, and fused — want them back. Build the grid. Spend the wreckage. Do not let the lattice in.
+          Hold the base at the end of the path. Three worlds — living, forged, and fused — and three keeps to match. Build the grid. Do not let the lattice in.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
@@ -154,7 +154,7 @@ function Select() {
                 <p className="text-xs uppercase tracking-label text-muted">{m.subtitle}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{m.hint}</p>
                 <p className="mt-3 font-mono text-2xs tabular-nums text-subtle">
-                  {m.lives} core · {m.startGold} cr · {m.waves.length} waves
+                  {m.lives} base · {m.startGold} cr · {m.waves.length} waves
                 </p>
                 {best[id] ? (
                   <p className="mt-1 font-mono text-2xs tabular-nums text-subtle">
@@ -304,8 +304,11 @@ function Briefing() {
   const id = useGameStore((s) => s.mapId) ?? "mycelion";
   const heroId = useGameStore((s) => s.heroId) ?? useGameStore((s) => s.heroSave.last);
   const loadout = useGameStore((s) => s.heroSave.loadouts[heroId]);
+  const picked = useGameStore((s) => s.baseClass);
   const h = HEROES[heroId];
   const m = MAPS[id];
+  const native = worldBase(id);
+  const active = picked ?? native;
   const first = m.waves[0].groups
     .map((g) => `${ENEMIES[g.enemy].name} ×${inflateSpawnCount(g.enemy, g.count, 0)}`)
     .join(", ");
@@ -327,7 +330,7 @@ function Briefing() {
           <p className="font-display text-2xs uppercase tracking-label text-muted">Drop prep</p>
           <p className="mt-1.5 text-sm leading-relaxed text-fg">{m.hint}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-2xs tabular-nums text-subtle">
-            <span>{m.lives} core integrity</span>
+            <span>{m.lives} base integrity</span>
             <span>{m.startGold} opening credits</span>
             <span>{m.waves.length} incursions</span>
             <span>first contact · {first}</span>
@@ -340,6 +343,38 @@ function Briefing() {
             Warden · {h.name} ({h.title}) · {ITEMS[loadout.weapon ?? h.starterWeapon]?.name ?? "unarmed"} /{" "}
             {ITEMS[loadout.armor ?? h.starterArmor]?.name ?? "unarmored"}
           </p>
+          <p className="mt-4 font-display text-2xs uppercase tracking-label text-muted">Base class</p>
+          <p className="mt-1 text-sm text-muted">
+            The path ends at a keep. This world grew {BASES[native].name.toLowerCase()}. You are holding{" "}
+            {BASES[active].keep}.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {(["organic", "mech", "hybrid"] as const satisfies readonly BaseClass[]).map((cls) => {
+              const spec = BASES[cls];
+              const on = active === cls;
+              return (
+                <button
+                  key={cls}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => useGameStore.getState().setBaseClass(cls)}
+                  className={cn(
+                    "rounded-xl border px-3 py-3 text-left transition-colors",
+                    on ? "border-accent bg-surface" : "border-border hover:border-fg/30",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="size-2 rounded-full" style={{ background: spec.color }} />
+                    <span className="font-display text-sm text-fg">{spec.name}</span>
+                    {cls === native ? (
+                      <span className="font-display text-2xs uppercase tracking-label text-accent">Native</span>
+                    ) : null}
+                  </span>
+                  <span className="mt-1.5 block text-xs leading-snug text-muted">{spec.blurb}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="mt-6 flex flex-col gap-2 sm:flex-row">
@@ -547,12 +582,12 @@ function Result({ won }: { won: boolean }) {
   return (
     <Modal>
       <p className="font-display text-2xs uppercase tracking-label text-accent">{m.name}</p>
-      <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The core holds" : "Core collapsed"}</h2>
+      <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The base holds" : "Base collapsed"}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         {won
-          ? `The last incursion broke on the grid. Intact core paid +${engine.intactPurse}. Keep holding and the breach stays open on this same grid.`
+          ? `The last incursion broke on the grid. Intact base paid +${engine.intactPurse}. Keep holding and the breach stays open on this same grid.`
           : engine.breach
-            ? `The breach reached incursion ${engine.wave}. The core gave out ${engine.wave - m.waves.length} waves past the scripted line.`
+            ? `The breach reached incursion ${engine.wave}. The base gave out ${engine.wave - m.waves.length} waves past the scripted line.`
             : "The lattice reached the heart. Salvage what you can and drop in again."}
       </p>
       <dl className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -651,12 +686,14 @@ function Help() {
           <span className="text-fg">G</span> picks the warden up so you can drop them anywhere on the ward. They auto-attack hosts inside the agro ring.
         </li>
         <li>
-          <span className="text-fg">7. Extra gates</span> open every 10 incursions, each with a new path into the core.
-          The core flashes and the HUD reads Core contact when a host is four steps from the heart. The leak burst still
-          fires if they touch it.
+          <span className="text-fg">7. The base</span> sits at the end of the path. Pick Biological, Mechanical, or Hybrid
+          before you drop. During build, Plate adds integrity, Snare slows the last stretch, and Spire fires from the
+          keep. Each class changes those add-ons and how the keep looks. Extra gates open every 10 incursions. The base
+          flashes and the HUD reads Base contact when a host is four steps from the keep. The leak burst still fires if
+          they touch it.
         </li>
         <li>
-          <span className="text-fg">8. Keep holding</span> after the core holds. The same grid stays planted and the breach
+          <span className="text-fg">8. Keep holding</span> after the base holds. The same grid stays planted and the breach
           opens: rotating packs from that world, with the faction boss every fourth wave. It does not end. Leaving or
           losing saves the deepest incursion with the world.
         </li>

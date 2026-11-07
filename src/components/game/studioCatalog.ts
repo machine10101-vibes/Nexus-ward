@@ -148,10 +148,10 @@ export const STUDIO_CATALOG: StudioEntry[] = [
   },
   {
     id: "core",
-    name: "Nexus core",
+    name: "Ward bases",
     group: "Worlds",
     kind: "world",
-    blurb: "The heart the lattice wants.",
+    blurb: "Biological, mechanical, and hybrid keeps.",
     world: "core",
   },
   {

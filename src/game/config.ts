@@ -1,4 +1,4 @@
-import type { DamageKind, EnemyDef, EnemyId, EnemySkill, TowerDef, TowerId } from "./types";
+import type { BaseAddonId, BaseClass, DamageKind, EnemyDef, EnemyId, EnemySkill, MapId, TowerDef, TowerId } from "./types";
 
 export const CELL = 1.7;
 export const STEP = 1 / 60;
@@ -43,6 +43,65 @@ export const CROSS_COVER = 0.06;
 /** A marked host takes this much extra damage. Rank 3 holds the mark longer. */
 export const MARK_TAKEN = 0.1;
 export const MARK_TIME = 2.4;
+
+/** How far a keep's snare and spire reach from the end of the path. */
+export const BASE_SNARE_RANGE = 3.6;
+export const BASE_GUN_RANGE = 5.4;
+
+export const BASES: Record<
+  BaseClass,
+  { name: string; keep: string; blurb: string; color: string; metal: string; flesh: string }
+> = {
+  organic: {
+    name: "Biological",
+    keep: "Bloom keep",
+    blurb: "Snare grips harder. The spire spits a slowing thorn.",
+    color: "#35c894",
+    metal: "#16352c",
+    flesh: "#6d9a62",
+  },
+  mech: {
+    name: "Mechanical",
+    keep: "Forge keep",
+    blurb: "The spire hits harder.",
+    color: "#f09a52",
+    metal: "#3a322c",
+    flesh: "#8a7568",
+  },
+  hybrid: {
+    name: "Hybrid",
+    keep: "Scar keep",
+    blurb: "Plate holds one more point. The spire paints.",
+    color: "#c4b0d4",
+    metal: "#3a4048",
+    flesh: "#6d8a72",
+  },
+};
+
+export const BASE_ADDONS: Record<BaseAddonId, { name: string; cost: number; blurb: string }> = {
+  plate: { name: "Plate", cost: 75, blurb: "Adds integrity to the keep." },
+  snare: { name: "Snare", cost: 110, blurb: "Slows hosts inside the keep." },
+  spire: { name: "Spire", cost: 140, blurb: "The keep fires down the last stretch." },
+};
+
+/** Integrity a plate adds. Hybrid holds one more point. */
+export const BASE_PLATE: Record<BaseClass, number> = { organic: 2, mech: 2, hybrid: 3 };
+/** Speed factor while the snare holds. Lower is slower. Biological grips hardest. */
+export const BASE_SNARE: Record<BaseClass, number> = { organic: 0.52, mech: 0.74, hybrid: 0.62 };
+export const BASE_GUN: Record<
+  BaseClass,
+  { damage: number; rate: number; slow: number; slowTime: number; mark: boolean }
+> = {
+  organic: { damage: 7, rate: 0.8, slow: 0.68, slowTime: 1, mark: false },
+  mech: { damage: 12, rate: 1.05, slow: 0, slowTime: 0, mark: false },
+  hybrid: { damage: 8, rate: 0.9, slow: 0, slowTime: 0, mark: true },
+};
+
+export function worldBase(id: MapId): BaseClass {
+  if (id === "forge") return "mech";
+  if (id === "aegis") return "hybrid";
+  return "organic";
+}
 /** Seconds of build time, after the first wave, over which the early-deploy bonus falls to zero. */
 export const EARLY_WINDOW = 16;
 /** How long a paid early deploy keeps the planted line firing faster. */

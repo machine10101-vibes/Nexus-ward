@@ -8,6 +8,14 @@ import {
   LINE_READY,
   MARK_TAKEN,
   MARK_TIME,
+  BASES,
+  BASE_ADDONS,
+  BASE_GUN,
+  BASE_GUN_RANGE,
+  BASE_PLATE,
+  BASE_SNARE,
+  BASE_SNARE_RANGE,
+  worldBase,
   ENEMIES,
   inflateSpawnCount,
   linkCycle,
@@ -34,6 +42,8 @@ import {
 import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld } from "./maps";
 import type {
+  BaseAddonId,
+  BaseClass,
   Beam,
   BeamStyle,
   Bolt,
@@ -183,6 +193,13 @@ export class GameEngine {
   intactPurse = 0;
   /** Set when the player keeps holding after the scripted line breaks. */
   breach = false;
+  baseClass: BaseClass = "organic";
+  basePlate = false;
+  baseSnare = false;
+  baseGun = false;
+  bonusLives = 0;
+  baseGunCd = 0;
+  baseSnareAcc = 0;
   carryingHero = false;
   heroGhost: { x: number; z: number } | null = null;
   hero: HeroState = {
@@ -334,7 +351,12 @@ export class GameEngine {
     return { slot, alive: false, kind: "frost", x: 0, z: 0, ttl: 0, maxTtl: 1, size: 1, color: "#fff" };
   }
 
-  load(id: MapId, heroId: HeroId = "fighter", loadout: HeroLoadout = emptyLoadouts()[heroId]) {
+  load(
+    id: MapId,
+    heroId: HeroId = "fighter",
+    loadout: HeroLoadout = emptyLoadouts()[heroId],
+    baseClass?: BaseClass,
+  ) {
     const map = MAPS[id];
     this.map = map;
     this.phase = "build";
@@ -367,8 +389,15 @@ export class GameEngine {
     );
     this.waypoints = this.paths[0] ?? [];
     this.padWorld = map.pads.map((p) => cellToWorld(p.c, p.r, map.cols, map.rows));
+    this.baseClass = baseClass ?? worldBase(id);
+    this.basePlate = false;
+    this.baseSnare = false;
+    this.baseGun = false;
+    this.bonusLives = 0;
+    this.baseGunCd = 0;
+    this.baseSnareAcc = 0;
     this.hudDirty = true;
-    this.lastEvent = `${map.name} · core online`;
+    this.lastEvent = `${map.name} · ${BASES[this.baseClass].keep}`;
     this.spawnGen = 0;
     this.sfx = null;
     this.speed = 1;
@@ -969,6 +998,7 @@ export class GameEngine {
     if (this.phase === "combat") this.spawnStep(dt);
     this.moveEnemies(dt);
     this.tickTowers(dt);
+    this.tickBase(dt);
     this.tickHero(dt);
     this.tickHeroField(dt);
     this.moveBolts(dt);
@@ -1277,7 +1307,7 @@ export class GameEngine {
     this.waveLeaks += 1;
     this.leakGen += 1;
     this.hudDirty = true;
-    this.lastEvent = `Core breached · −${e.leak}`;
+    this.lastEvent = `Base breached · −${e.leak}`;
     this.addTrauma(0.55);
     this.sfx = "leak";
     this.spawnBurst(e.x, e.y + 0.4, e.z, 1.2, "#c45c5c");
@@ -2249,7 +2279,7 @@ export class GameEngine {
       this.phase = "won";
       this.hudDirty = true;
       this.lastEvent =
-        this.intactPurse > 0 ? `Core holds · +${this.intactPurse} intact` : "Core holds";
+        this.intactPurse > 0 ? `Base holds · +${this.intactPurse} intact` : "Base holds";
       this.addTrauma(0.3);
       return;
     }
@@ -2332,6 +2362,93 @@ export class GameEngine {
   endWorld() {
     const last = this.waypoints[this.waypoints.length - 1];
     return last ?? { x: 0, y: 0, z: 0 };
+  }
+
+  maxLives() {
+    return this.map.lives + this.bonusLives;
+  }
+
+  buyBaseAddon(id: BaseAddonId) {
+    const spec = BASE_ADDONS[id];
+    const owned = id === "plate" ? this.basePlate : id === "snare" ? this.baseSnare : this.baseGun;
+    if (this.phase !== "build" || owned) {
+      this.lastEvent = owned ? `${spec.name} already mounted` : "Add-ons fit between incursions";
+      this.sfx = "deny";
+      this.denyGen += 1;
+      this.hudDirty = true;
+      return false;
+    }
+    if (this.gold < spec.cost) {
+      this.lastEvent = `Need ${spec.cost} credits`;
+      this.sfx = "deny";
+      this.denyGen += 1;
+      this.denyShort = spec.cost - this.gold;
+      this.hudDirty = true;
+      return false;
+    }
+    this.gold -= spec.cost;
+    if (id === "plate") {
+      const n = BASE_PLATE[this.baseClass];
+      this.basePlate = true;
+      this.bonusLives += n;
+      this.lives += n;
+      this.lastEvent = `${BASES[this.baseClass].keep} · plate +${n}`;
+    } else if (id === "snare") {
+      this.baseSnare = true;
+      this.lastEvent = `${BASES[this.baseClass].keep} · snare`;
+    } else {
+      this.baseGun = true;
+      this.baseGunCd = 0.35;
+      this.lastEvent = `${BASES[this.baseClass].keep} · spire`;
+    }
+    this.sfx = "ui";
+    this.hudDirty = true;
+    return true;
+  }
+
+  tickBase(dt: number) {
+    if (this.phase !== "combat" || (!this.baseSnare && !this.baseGun)) return;
+    const end = this.endWorld();
+    const color = BASES[this.baseClass].color;
+    if (this.baseSnare) {
+      const slow = BASE_SNARE[this.baseClass];
+      const r2 = BASE_SNARE_RANGE * BASE_SNARE_RANGE;
+      for (const e of this.enemies) {
+        if (!e.alive || this.time < e.phaseUntil) continue;
+        if (dist2(end.x, end.z, e.x, e.z) > r2) continue;
+        if (this.time < e.slowUntil && e.slowFactor <= slow) continue;
+        this.applySlow(e, slow, 0.45);
+      }
+      this.baseSnareAcc += dt;
+      if (this.baseSnareAcc >= 0.7) {
+        this.baseSnareAcc = 0;
+        this.spawnDecal(end.x, end.z, BASE_SNARE_RANGE * 0.55, color, "frost");
+      }
+    }
+    if (!this.baseGun) return;
+    this.baseGunCd = Math.max(0, this.baseGunCd - dt);
+    if (this.baseGunCd > 0) return;
+    const gun = BASE_GUN[this.baseClass];
+    const r2 = BASE_GUN_RANGE * BASE_GUN_RANGE;
+    let best: Enemy | null = null;
+    let bestP = -Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive || this.time < e.phaseUntil) continue;
+      if (dist2(end.x, end.z, e.x, e.z) > r2) continue;
+      if (e.progress >= bestP) {
+        bestP = e.progress;
+        best = e;
+      }
+    }
+    if (!best) return;
+    this.baseGunCd = 1 / gun.rate;
+    this.spawnBeam(end.x, 1.45, end.z, best.x, best.y + 0.3, best.z, color, 0.14, 0.05, "lance");
+    this.spawnBurst(end.x, 1.5, end.z, 0.28, color);
+    this.hurt(best, gun.damage, "bolt");
+    if (gun.slow > 0 && !(this.time < best.slowUntil && best.slowFactor <= gun.slow)) {
+      this.applySlow(best, gun.slow, gun.slowTime);
+    }
+    if (gun.mark) best.markUntil = Math.max(best.markUntil, this.time + MARK_TIME);
   }
 
   startWorld() {

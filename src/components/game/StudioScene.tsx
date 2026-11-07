@@ -3,7 +3,7 @@ import { OrbitControls, Stars } from "@react-three/drei";
 import { useGameStore } from "@/game/store";
 import { ENEMIES, PLANET_THEME } from "@/game/config";
 import { PlanetGlobe } from "./Planet";
-import { EnemyModel, HexPad, NexusCore, SpawnGate, TowerModel } from "./models";
+import { EnemyModel, HexPad, SpawnGate, TowerModel, WardBase } from "./models";
 import { HeroModel } from "./HeroModel";
 import { HEROES } from "@/game/heroes";
 import { studioEntry } from "./studioCatalog";
@@ -24,8 +24,13 @@ export function StudioScene() {
   useLayoutEffect(() => {
     const c = controls.current;
     if (!c) return;
-    c.target.set(0, 0.72, 0);
-    c.object.position.set(3.1, 2.15, 4.05);
+    if (id === "core") {
+      c.target.set(0, 0.55, 0);
+      c.object.position.set(0.2, 3.6, 9.4);
+    } else {
+      c.target.set(0, 0.72, 0);
+      c.object.position.set(3.1, 2.15, 4.05);
+    }
     c.update();
   }, [fit, id]);
 
@@ -122,7 +127,19 @@ function StudioSubject({ id, variant }: { id: string; variant: number }) {
     );
   }
   if (entry.world === "core") {
-    return <NexusCore color={PLANET_THEME.mycelion.core} health={1} />;
+    return (
+      <group>
+        <group position={[-2.55, 0, 0]} scale={0.58}>
+          <WardBase cls="organic" health={1} plate snare gun />
+        </group>
+        <group position={[0, 0, 0]} scale={0.58}>
+          <WardBase cls="mech" health={1} plate snare gun />
+        </group>
+        <group position={[2.55, 0, 0]} scale={0.58}>
+          <WardBase cls="hybrid" health={1} plate snare gun />
+        </group>
+      </group>
+    );
   }
   if (entry.world === "gate") {
     return <SpawnGate color={PLANET_THEME.mycelion.pathEmissive} />;

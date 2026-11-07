@@ -9,6 +9,7 @@ import {
 } from "three";
 import { engine } from "@/game/engine";
 import {
+  BASES,
   PLANET_THEME,
   SYN_RANGE,
   TOWERS,
@@ -40,7 +41,7 @@ import {
   HexPad,
   Motes,
   type FieldSpot,
-  NexusCore,
+  WardBase,
   RangeRing,
   SpawnGate,
   TowerModel,
@@ -208,8 +209,13 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const map = engine.map;
   const art = useWorldArt(mapId);
   const lives = useGameStore((s) => s.hud.lives);
+  const maxLives = useGameStore((s) => s.hud.maxLives);
   const leaked = useGameStore((s) => s.hud.leaked);
   const coreHot = useGameStore((s) => s.hud.coreHot);
+  const baseClass = useGameStore((s) => s.hud.baseClass);
+  const basePlate = useGameStore((s) => s.hud.basePlate);
+  const baseSnare = useGameStore((s) => s.hud.baseSnare);
+  const baseGun = useGameStore((s) => s.hud.baseGun);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const phase = useGameStore((s) => s.hud.phase);
   const wave = useGameStore((s) => s.hud.wave);
@@ -219,7 +225,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
     return new Set(cells.map((p) => `${p.c},${p.r}`));
   }, [map]);
   const end = engine.endWorld();
-  const health = map.lives ? lives / map.lives : 1;
+  const health = maxLives ? Math.min(1, lives / maxLives) : 1;
+  const baseColor = BASES[baseClass].color;
   const fieldProps = useMemo(() => freeCellProps(map), [map]);
   const pathCount = useMemo(() => engine.activePathCount(), [wave, phase]);
   const activePaths = engine.paths.slice(0, pathCount);
@@ -247,7 +254,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       />
       <directionalLight position={[-10, 5, -8]} intensity={tune.fill} color={theme.hemiSky} />
       <pointLight position={[0, 3.4, -12]} intensity={tune.rimIntensity} distance={30} color={tune.rimLight} />
-      <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={theme.core} />
+      <pointLight position={[end.x, 2.6, end.z]} intensity={42} distance={15} color={baseColor} />
       {activePaths.map((pts, i) => {
         const gate = pts[0];
         if (!gate) return null;
@@ -294,7 +301,16 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         />
       ))}
       <group position={[end.x, 0, end.z]}>
-        <NexusCore color={theme.core} health={health} hitGen={leaked} approach={coreHot} />
+        <WardBase
+          cls={baseClass}
+          plate={basePlate}
+          snare={baseSnare}
+          gun={baseGun}
+          health={health}
+          hitGen={leaked}
+          approach={coreHot}
+          showReach
+        />
       </group>
       {activePaths.map((pts, i) => {
         const gate = pts[0];

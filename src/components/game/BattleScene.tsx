@@ -3,9 +3,14 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import {
   AdditiveBlending,
+  Color,
   type Group,
+  InstancedMesh,
   type Mesh,
   type MeshBasicMaterial,
+  Object3D,
+  type Sprite,
+  type SpriteMaterial,
 } from "three";
 import { engine } from "@/game/engine";
 import {
@@ -166,6 +171,7 @@ export function BattleScene() {
       <BoltLayer />
       <BeamLayer />
       <ArcLayer />
+      <HostTrailLayer />
       <BurstLayer />
       <DecalLayer />
       <FloaterLayer />
@@ -1291,6 +1297,7 @@ function HpPip({ slot }: { slot: number }) {
 }
 
 function BoltLayer() {
+  const boltGlow = useMemo(() => softGlowTexture(), []);
   const refs = useRef<(Group | null)[]>(Array(MAX_BOLTS).fill(null));
   const shown = useRef<string[]>(Array(MAX_BOLTS).fill(""));
   useFrame(() => {
@@ -1307,6 +1314,8 @@ function BoltLayer() {
         const core = (g.children[0] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
         const trail = (g.children[1] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
         const wash = (g.children[2] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
+        const halo = (g.children[3] as Sprite | undefined)?.material as SpriteMaterial | undefined;
+        halo?.color.set(b.color);
         core?.color.set(b.color);
         trail?.color.set(b.color);
         wash?.color.set(b.color);
@@ -1349,6 +1358,9 @@ function BoltLayer() {
               toneMapped={false}
             />
           </mesh>
+          <sprite scale={[0.75, 0.75, 1]}>
+            <spriteMaterial map={boltGlow} color={b.color} transparent opacity={0.55} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </sprite>
         </group>
       ))}
     </group>
@@ -1519,9 +1531,141 @@ function wiggle(seed: number, t: number) {
   return Math.sin(seed * 12.9898 + t * 28) * 0.5 + Math.sin(seed * 78.233 + t * 41) * 0.5;
 }
 
+const TRAIL_POOL = 420;
+const TRAIL_TINT = { organic: "#7dffb8", mech: "#ff9a50", hybrid: "#9fe4ee" } as const;
+
+type Mote = { x: number; y: number; z: number; vx: number; vy: number; vz: number; ttl: number; max: number; size: number; boost: number; hue: string };
+
+/** Faction-flavoured particles shed by moving hosts: spores, exhaust, wisps. */
+function HostTrailLayer() {
+  const mesh = useRef<InstancedMesh>(null);
+  const glow = useMemo(() => softGlowTexture(), []);
+  const dummy = useMemo(() => new Object3D(), []);
+  const tint = useMemo(() => new Color(), []);
+  const pool = useMemo<Mote[]>(
+    () => Array.from({ length: TRAIL_POOL }, () => ({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, ttl: 0, max: 1, size: 0.1, boost: 1, hue: "#ffffff" })),
+    [],
+  );
+  const head = useRef(0);
+  const last = useRef(new Float32Array(MAX_ENEMIES * 3));
+  const timers = useRef(new Float32Array(MAX_ENEMIES));
+  useFrame(({ camera }, dt) => {
+    const inst = mesh.current;
+    if (!inst) return;
+    const d = Math.min(dt, 0.06) * engine.speed;
+    const lastPos = last.current;
+    for (let i = 0; i < MAX_ENEMIES; i++) {
+      const e = engine.enemies[i];
+      if (!e.alive) continue;
+      const moved = Math.abs(e.x - lastPos[i * 3]) + Math.abs(e.z - lastPos[i * 3 + 2]) > 0.0008;
+      lastPos[i * 3] = e.x;
+      lastPos[i * 3 + 2] = e.z;
+      if (!moved) continue;
+      const def = ENEMIES[e.type];
+      const flying = e.flying;
+      const gap = def.faction === "mech" ? (flying ? 0.05 : 0.16) : def.faction === "organic" ? 0.15 : 0.1;
+      timers.current[i] += d;
+      if (timers.current[i] < gap) continue;
+      timers.current[i] = 0;
+      const m = pool[head.current];
+      head.current = (head.current + 1) % TRAIL_POOL;
+      const fx = Math.sin(e.yaw);
+      const fz = Math.cos(e.yaw);
+      const big = def.boss ? 1.9 : Math.max(0.7, def.scale);
+      const jitter = () => (Math.random() - 0.5) * 0.3 * big;
+      if (def.faction === "mech") {
+        if (flying) {
+          m.x = e.x - fx * 0.3 * big + jitter() * 0.3;
+          m.y = e.y + 0.02;
+          m.z = e.z - fz * 0.3 * big + jitter() * 0.3;
+          m.vx = -fx * 0.5;
+          m.vy = 0.05;
+          m.vz = -fz * 0.5;
+          m.ttl = m.max = 0.34;
+          m.size = 0.32 * big;
+          m.boost = 1.9;
+        } else {
+          m.x = e.x + jitter();
+          m.y = 0.07;
+          m.z = e.z + jitter();
+          m.vx = jitter() * 0.5;
+          m.vy = 0.22;
+          m.vz = jitter() * 0.5;
+          m.ttl = m.max = 0.7;
+          m.size = 0.3 * big;
+          m.boost = 0.5;
+        }
+      } else if (def.faction === "organic") {
+        m.x = e.x + jitter();
+        m.y = e.y + 0.2 * big + Math.random() * 0.2;
+        m.z = e.z + jitter();
+        m.vx = jitter() * 0.4;
+        m.vy = 0.28 + Math.random() * 0.2;
+        m.vz = jitter() * 0.4;
+        m.ttl = m.max = 0.95;
+        m.size = 0.22 * big;
+        m.boost = 1.5;
+      } else {
+        m.x = e.x + jitter();
+        m.y = e.y + 0.3 * big;
+        m.z = e.z + jitter();
+        m.vx = jitter() * 0.3;
+        m.vy = 0.16;
+        m.vz = jitter() * 0.3;
+        m.ttl = m.max = 0.75;
+        m.size = 0.26 * big;
+        m.boost = 1.4;
+      }
+      m.size *= e.elite ? 1.3 : 1;
+      m.hue = TRAIL_TINT[def.faction];
+    }
+    let n = 0;
+    for (const m of pool) {
+      if (m.ttl <= 0) continue;
+      m.ttl -= d;
+      if (m.ttl <= 0) continue;
+      const k = m.ttl / m.max;
+      m.x += m.vx * d;
+      m.y += m.vy * d;
+      m.z += m.vz * d;
+      dummy.position.set(m.x, m.y, m.z);
+      dummy.quaternion.copy(camera.quaternion);
+      dummy.scale.setScalar(m.size * (0.5 + k * 0.8));
+      dummy.updateMatrix();
+      inst.setMatrixAt(n, dummy.matrix);
+      tint.set(m.hue).multiplyScalar(k * k * m.boost);
+      inst.setColorAt(n, tint);
+      n++;
+    }
+    inst.count = n;
+    inst.instanceMatrix.needsUpdate = true;
+    if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, TRAIL_POOL]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial map={glow} transparent blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+    </instancedMesh>
+  );
+}
+
+function burstSeed(x: number, z: number, j: number) {
+  const v = Math.sin(x * 12.9898 + z * 78.233 + j * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+const WHITE = new Color("#ffffff");
+const SPARKS_PER_BURST = 7;
+
 function BurstLayer() {
   const refs = useRef<(Group | null)[]>(Array(MAX_BURSTS).fill(null));
+  const glow = useMemo(() => softGlowTexture(), []);
+  const sparks = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
+  const tint = useMemo(() => new Color(), []);
   useFrame(() => {
+    let n = 0;
+    const inst = sparks.current;
     for (let i = 0; i < MAX_BURSTS; i++) {
       const b = engine.bursts[i];
       const g = refs.current[i];
@@ -1529,16 +1673,48 @@ function BurstLayer() {
       g.visible = b.alive;
       if (!b.alive) continue;
       const k = 1 - b.ttl / b.maxTtl;
-      const s = b.size * (0.3 + k * 1.55);
-      g.position.set(b.x, b.y, b.z);
-      g.scale.setScalar(s);
       const fade = Math.max(0, 1 - k);
-      const sph = (g.children[0] as Mesh).material as MeshBasicMaterial;
-      const ring = (g.children[1] as Mesh).material as MeshBasicMaterial;
-      sph.opacity = fade * 0.7;
-      ring.opacity = fade * 0.85;
-      sph.color.set(b.color);
-      ring.color.set(b.color);
+      g.position.set(b.x, b.y, b.z);
+      g.scale.setScalar(b.size * (0.3 + k * 1.2));
+      const flash = (g.children[0] as Sprite).material as SpriteMaterial;
+      const core = (g.children[1] as Mesh).material as MeshBasicMaterial;
+      const ring = g.children[2] as Mesh;
+      const rm = ring.material as MeshBasicMaterial;
+      flash.opacity = fade * fade * 0.95;
+      flash.color.set(b.color);
+      core.opacity = Math.max(0, 1 - k * 2.6);
+      ring.scale.setScalar(0.35 + k * 1.5);
+      rm.opacity = fade * 0.55;
+      rm.color.set(b.color);
+      if (!inst || b.size < 0.3) continue;
+      tint.set(b.color).lerp(WHITE, 0.35);
+      const reach = Math.min(1.9, 0.5 + b.size * 0.8);
+      for (let j = 0; j < SPARKS_PER_BURST && n < MAX_BURSTS * SPARKS_PER_BURST; j++) {
+        const a = burstSeed(b.x, b.z, j) * Math.PI * 2;
+        const up = 0.25 + burstSeed(b.z, b.x, j + 9) * 0.9;
+        const sp = (0.55 + burstSeed(b.x + 3, b.z, j + 4) * 0.8) * reach;
+        const t = k * b.maxTtl;
+        const vx = Math.cos(a) * sp;
+        const vz = Math.sin(a) * sp;
+        const vy = up * sp * 1.1;
+        const px = b.x + vx * t * 2.4;
+        const pz = b.z + vz * t * 2.4;
+        const py = Math.max(0.03, b.y + vy * t * 2.4 - 9 * t * t);
+        const vyNow = vy * 2.4 - 18 * t;
+        dummy.position.set(px, py, pz);
+        dummy.lookAt(px + vx, py + vyNow * 0.35, pz + vz);
+        const len = (0.05 + 0.2 * fade) * (0.7 + b.size * 0.5);
+        dummy.scale.set(0.022 * (0.6 + fade), 0.022 * (0.6 + fade), len);
+        dummy.updateMatrix();
+        inst.setMatrixAt(n, dummy.matrix);
+        inst.setColorAt(n, tint);
+        n++;
+      }
+    }
+    if (inst) {
+      inst.count = n;
+      inst.instanceMatrix.needsUpdate = true;
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     }
   });
   return (
@@ -1551,16 +1727,23 @@ function BurstLayer() {
           }}
           visible={false}
         >
+          <sprite scale={[3.2, 3.2, 1]}>
+            <spriteMaterial map={glow} color={b.color} transparent opacity={0.9} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </sprite>
           <mesh>
-            <sphereGeometry args={[0.5, 10, 8]} />
-            <meshBasicMaterial color={b.color} transparent opacity={0.7} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+            <sphereGeometry args={[0.16, 8, 6]} />
+            <meshBasicMaterial color="#ffffff" transparent opacity={1} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.55, 0.98, 28]} />
-            <meshBasicMaterial color={b.color} transparent opacity={0.85} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+            <ringGeometry args={[0.9, 1, 32]} />
+            <meshBasicMaterial color={b.color} transparent opacity={0.8} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       ))}
+      <instancedMesh ref={sparks} args={[undefined, undefined, MAX_BURSTS * SPARKS_PER_BURST]} frustumCulled={false}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial blending={AdditiveBlending} transparent depthWrite={false} toneMapped={false} />
+      </instancedMesh>
     </group>
   );
 }

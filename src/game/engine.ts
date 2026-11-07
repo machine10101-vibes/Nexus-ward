@@ -11,10 +11,13 @@ import {
   BASES,
   BASE_ADDONS,
   BASE_GUN,
-  BASE_GUN_RANGE,
+  BASE_GUN_REACH,
+  BASE_MANTLE,
   BASE_PLATE,
+  BASE_RANK_MAX,
   BASE_SNARE,
-  BASE_SNARE_RANGE,
+  BASE_SNARE_CHIP,
+  BASE_SNARE_REACH,
   worldBase,
   ENEMIES,
   inflateSpawnCount,
@@ -194,9 +197,13 @@ export class GameEngine {
   /** Set when the player keeps holding after the scripted line breaks. */
   breach = false;
   baseClass: BaseClass = "organic";
-  basePlate = false;
-  baseSnare = false;
-  baseGun = false;
+  /** 0–3. Each purchase raises one rank. */
+  basePlate = 0;
+  baseSnare = 0;
+  baseGun = 0;
+  baseMantle = 0;
+  /** Armed at the start of a wave. The first breach spends it. */
+  mantleReady = false;
   bonusLives = 0;
   baseGunCd = 0;
   baseSnareAcc = 0;
@@ -390,9 +397,11 @@ export class GameEngine {
     this.waypoints = this.paths[0] ?? [];
     this.padWorld = map.pads.map((p) => cellToWorld(p.c, p.r, map.cols, map.rows));
     this.baseClass = baseClass ?? worldBase(id);
-    this.basePlate = false;
-    this.baseSnare = false;
-    this.baseGun = false;
+    this.basePlate = 0;
+    this.baseSnare = 0;
+    this.baseGun = 0;
+    this.baseMantle = 0;
+    this.mantleReady = false;
     this.bonusLives = 0;
     this.baseGunCd = 0;
     this.baseSnareAcc = 0;
@@ -512,6 +521,7 @@ export class GameEngine {
     this.holdActive = this.pendingHold;
     this.pendingHold = false;
     this.waveLeaks = 0;
+    this.mantleReady = this.baseMantle > 0;
     const bonus = this.earlyBonus();
     if (bonus > 0) {
       this.gold += bonus;
@@ -1302,12 +1312,24 @@ export class GameEngine {
 
   leak(e: Enemy) {
     e.alive = false;
-    this.lives = Math.max(0, this.lives - e.leak);
+    let loss = e.leak;
+    let caught = 0;
+    if (this.baseMantle > 0 && this.mantleReady && loss > 0) {
+      caught = Math.min(loss, BASE_MANTLE[this.baseMantle - 1]);
+      loss -= caught;
+      this.mantleReady = false;
+    }
+    this.lives = Math.max(0, this.lives - loss);
     this.leaked += 1;
     this.waveLeaks += 1;
     this.leakGen += 1;
     this.hudDirty = true;
-    this.lastEvent = `Base breached · −${e.leak}`;
+    this.lastEvent =
+      caught > 0 && loss === 0
+        ? `Mantle caught ${caught}`
+        : caught > 0
+          ? `Mantle caught ${caught} · −${loss}`
+          : `Base breached · −${loss}`;
     this.addTrauma(0.55);
     this.sfx = "leak";
     this.spawnBurst(e.x, e.y + 0.4, e.z, 1.2, "#c45c5c");
@@ -2291,10 +2313,10 @@ export class GameEngine {
     this.lastEvent = this.breach
       ? clean
         ? `Breach ${breachN} clear · +${purse} clean`
-        : `Breach ${breachN} clear · core bled`
+        : `Breach ${breachN} clear · base bled`
       : clean
         ? `Incursion ${this.wave} clear · +${purse} clean`
-        : `Incursion ${this.wave} clear · core bled`;
+        : `Incursion ${this.wave} clear · base bled`;
   }
 
   /** A host is close enough that the next few steps can touch the core. */
@@ -2368,38 +2390,51 @@ export class GameEngine {
     return this.map.lives + this.bonusLives;
   }
 
+  baseRank(id: BaseAddonId) {
+    if (id === "plate") return this.basePlate;
+    if (id === "snare") return this.baseSnare;
+    if (id === "spire") return this.baseGun;
+    return this.baseMantle;
+  }
+
   buyBaseAddon(id: BaseAddonId) {
     const spec = BASE_ADDONS[id];
-    const owned = id === "plate" ? this.basePlate : id === "snare" ? this.baseSnare : this.baseGun;
-    if (this.phase !== "build" || owned) {
-      this.lastEvent = owned ? `${spec.name} already mounted` : "Add-ons fit between incursions";
+    const rank = this.baseRank(id);
+    if (this.phase !== "build" || rank >= BASE_RANK_MAX) {
+      this.lastEvent = rank >= BASE_RANK_MAX ? `${spec.name} is at full rank` : "Add-ons fit between incursions";
       this.sfx = "deny";
       this.denyGen += 1;
       this.hudDirty = true;
       return false;
     }
-    if (this.gold < spec.cost) {
-      this.lastEvent = `Need ${spec.cost} credits`;
+    const cost = spec.costs[rank];
+    if (this.gold < cost) {
+      this.lastEvent = `Need ${cost} credits`;
       this.sfx = "deny";
       this.denyGen += 1;
-      this.denyShort = spec.cost - this.gold;
+      this.denyShort = cost - this.gold;
       this.hudDirty = true;
       return false;
     }
-    this.gold -= spec.cost;
+    this.gold -= cost;
+    const next = rank + 1;
     if (id === "plate") {
-      const n = BASE_PLATE[this.baseClass];
-      this.basePlate = true;
+      const n = BASE_PLATE[this.baseClass][rank];
+      this.basePlate = next;
       this.bonusLives += n;
       this.lives += n;
-      this.lastEvent = `${BASES[this.baseClass].keep} · plate +${n}`;
+      this.lastEvent = `${BASES[this.baseClass].keep} · plate ${next} +${n}`;
     } else if (id === "snare") {
-      this.baseSnare = true;
-      this.lastEvent = `${BASES[this.baseClass].keep} · snare`;
-    } else {
-      this.baseGun = true;
+      this.baseSnare = next;
+      this.lastEvent = `${BASES[this.baseClass].keep} · snare ${next}`;
+    } else if (id === "spire") {
+      this.baseGun = next;
       this.baseGunCd = 0.35;
-      this.lastEvent = `${BASES[this.baseClass].keep} · spire`;
+      this.lastEvent = `${BASES[this.baseClass].keep} · spire ${next}`;
+    } else {
+      this.baseMantle = next;
+      this.mantleReady = true;
+      this.lastEvent = `${BASES[this.baseClass].keep} · mantle ${next}`;
     }
     this.sfx = "ui";
     this.hudDirty = true;
@@ -2407,29 +2442,33 @@ export class GameEngine {
   }
 
   tickBase(dt: number) {
-    if (this.phase !== "combat" || (!this.baseSnare && !this.baseGun)) return;
+    if (this.phase !== "combat" || (this.baseSnare <= 0 && this.baseGun <= 0)) return;
     const end = this.endWorld();
     const color = BASES[this.baseClass].color;
-    if (this.baseSnare) {
-      const slow = BASE_SNARE[this.baseClass];
-      const r2 = BASE_SNARE_RANGE * BASE_SNARE_RANGE;
+    if (this.baseSnare > 0) {
+      const slow = BASE_SNARE[this.baseClass][this.baseSnare - 1];
+      const reach = BASE_SNARE_REACH[this.baseSnare - 1];
+      const r2 = reach * reach;
+      this.baseSnareAcc += dt;
+      const pulse = this.baseSnareAcc >= 0.7;
+      if (pulse) {
+        this.baseSnareAcc = 0;
+        this.spawnDecal(end.x, end.z, reach * 0.55, color, "frost");
+      }
+      const chip = pulse && this.baseSnare >= 3 ? BASE_SNARE_CHIP[this.baseClass] : 0;
       for (const e of this.enemies) {
         if (!e.alive || this.time < e.phaseUntil) continue;
         if (dist2(end.x, end.z, e.x, e.z) > r2) continue;
-        if (this.time < e.slowUntil && e.slowFactor <= slow) continue;
-        this.applySlow(e, slow, 0.45);
-      }
-      this.baseSnareAcc += dt;
-      if (this.baseSnareAcc >= 0.7) {
-        this.baseSnareAcc = 0;
-        this.spawnDecal(end.x, end.z, BASE_SNARE_RANGE * 0.55, color, "frost");
+        if (!(this.time < e.slowUntil && e.slowFactor <= slow)) this.applySlow(e, slow, 0.45);
+        if (chip > 0) this.hurt(e, chip, "bolt");
       }
     }
-    if (!this.baseGun) return;
+    if (this.baseGun <= 0) return;
     this.baseGunCd = Math.max(0, this.baseGunCd - dt);
     if (this.baseGunCd > 0) return;
-    const gun = BASE_GUN[this.baseClass];
-    const r2 = BASE_GUN_RANGE * BASE_GUN_RANGE;
+    const gun = BASE_GUN[this.baseClass][this.baseGun - 1];
+    const reach = BASE_GUN_REACH[this.baseGun - 1];
+    const r2 = reach * reach;
     let best: Enemy | null = null;
     let bestP = -Infinity;
     for (const e of this.enemies) {
@@ -2442,13 +2481,23 @@ export class GameEngine {
     }
     if (!best) return;
     this.baseGunCd = 1 / gun.rate;
-    this.spawnBeam(end.x, 1.45, end.z, best.x, best.y + 0.3, best.z, color, 0.14, 0.05, "lance");
-    this.spawnBurst(end.x, 1.5, end.z, 0.28, color);
+    this.spawnBeam(end.x, 1.55, end.z, best.x, best.y + 0.3, best.z, color, 0.14, 0.05, "lance");
+    this.spawnBurst(end.x, 1.6, end.z, 0.28, color);
     this.hurt(best, gun.damage, "bolt");
     if (gun.slow > 0 && !(this.time < best.slowUntil && best.slowFactor <= gun.slow)) {
       this.applySlow(best, gun.slow, gun.slowTime);
     }
-    if (gun.mark) best.markUntil = Math.max(best.markUntil, this.time + MARK_TIME);
+    if (gun.mark) best.markUntil = Math.max(best.markUntil, this.time + gun.markTime);
+    if (this.baseClass === "mech" && this.baseGun >= 3) {
+      let n = 0;
+      for (const o of this.enemies) {
+        if (!o.alive || o.slot === best.slot) continue;
+        if (dist2(best.x, best.z, o.x, o.z) > 1.15 * 1.15) continue;
+        this.hurt(o, gun.damage * 0.4, "bolt");
+        n += 1;
+        if (n >= 3) break;
+      }
+    }
   }
 
   startWorld() {

@@ -49,9 +49,11 @@ export type HudSnap = {
   holdArmed: boolean;
   breach: boolean;
   baseClass: BaseClass;
-  basePlate: boolean;
-  baseSnare: boolean;
-  baseGun: boolean;
+  basePlate: number;
+  baseSnare: number;
+  baseGun: number;
+  baseMantle: number;
+  mantleReady: boolean;
 };
 
 type GameStore = {
@@ -150,9 +152,11 @@ const emptyHud: HudSnap = {
   holdArmed: false,
   breach: false,
   baseClass: "organic",
-  basePlate: false,
-  baseSnare: false,
-  baseGun: false,
+  basePlate: 0,
+  baseSnare: 0,
+  baseGun: 0,
+  baseMantle: 0,
+  mantleReady: false,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -346,6 +350,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.basePlate === cur.basePlate &&
       next.baseSnare === cur.baseSnare &&
       next.baseGun === cur.baseGun &&
+      next.baseMantle === cur.baseMantle &&
+      next.mantleReady === cur.mantleReady &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -433,6 +439,8 @@ function snapHud(): HudSnap {
     basePlate: engine.basePlate,
     baseSnare: engine.baseSnare,
     baseGun: engine.baseGun,
+    baseMantle: engine.baseMantle,
+    mantleReady: engine.mantleReady,
   };
 }
 

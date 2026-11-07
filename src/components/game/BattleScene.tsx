@@ -216,6 +216,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const basePlate = useGameStore((s) => s.hud.basePlate);
   const baseSnare = useGameStore((s) => s.hud.baseSnare);
   const baseGun = useGameStore((s) => s.hud.baseGun);
+  const baseMantle = useGameStore((s) => s.hud.baseMantle);
+  const mantleReady = useGameStore((s) => s.hud.mantleReady);
   const overclock = useGameStore((s) => s.hud.overclockOn);
   const phase = useGameStore((s) => s.hud.phase);
   const wave = useGameStore((s) => s.hud.wave);
@@ -306,6 +308,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
           plate={basePlate}
           snare={baseSnare}
           gun={baseGun}
+          mantle={baseMantle}
+          mantleReady={mantleReady}
           health={health}
           hitGen={leaked}
           approach={coreHot}

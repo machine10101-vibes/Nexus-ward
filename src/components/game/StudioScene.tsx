@@ -127,16 +127,17 @@ function StudioSubject({ id, variant }: { id: string; variant: number }) {
     );
   }
   if (entry.world === "core") {
+    const rank = variant >= 3 ? 3 : variant === 2 ? 1 : 0;
     return (
       <group>
         <group position={[-2.55, 0, 0]} scale={0.58}>
-          <WardBase cls="organic" health={1} plate snare gun />
+          <WardBase cls="organic" health={1} plate={rank} snare={rank} gun={rank} mantle={rank} mantleReady />
         </group>
         <group position={[0, 0, 0]} scale={0.58}>
-          <WardBase cls="mech" health={1} plate snare gun />
+          <WardBase cls="mech" health={1} plate={rank} snare={rank} gun={rank} mantle={rank} mantleReady />
         </group>
         <group position={[2.55, 0, 0]} scale={0.58}>
-          <WardBase cls="hybrid" health={1} plate snare gun />
+          <WardBase cls="hybrid" health={1} plate={rank} snare={rank} gun={rank} mantle={rank} mantleReady />
         </group>
       </group>
     );

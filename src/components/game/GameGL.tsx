@@ -1,12 +1,13 @@
 import { Canvas } from "@react-three/fiber";
 import { AdaptiveDpr, AdaptiveEvents } from "@react-three/drei";
-import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, BrightnessContrast, HueSaturation, Vignette } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping, PCFShadowMap, SRGBColorSpace } from "three";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
 import { MenuScene } from "./MenuScene";
 import { BattleScene } from "./BattleScene";
 import { StudioScene } from "./StudioScene";
+import { SurfaceClock } from "./surface";
 
 export function GameGL() {
   const screen = useGameStore((s) => s.screen);
@@ -51,6 +52,7 @@ export function GameGL() {
         useGameStore.getState().syncHud();
       }}
     >
+      <SurfaceClock />
       {inStudio ? <StudioScene /> : inBattle ? <BattleScene /> : <MenuScene />}
       {quality === "high" ? (
         <EffectComposer enableNormalPass={false}>
@@ -59,6 +61,8 @@ export function GameGL() {
             luminanceThreshold={0.62}
             mipmapBlur
           />
+          <HueSaturation saturation={inBattle ? 0.14 : 0.08} />
+          <BrightnessContrast brightness={0.01} contrast={inBattle ? 0.14 : 0.08} />
           <Vignette eskil={false} offset={0.16} darkness={0.68} />
         </EffectComposer>
       ) : null}

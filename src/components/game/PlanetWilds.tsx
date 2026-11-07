@@ -1,8 +1,11 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Object3D, type InstancedMesh } from "three";
+import { AdditiveBlending, NormalBlending, Object3D, type InstancedMesh, type Mesh, type MeshBasicMaterial } from "three";
+import { softGlowTexture } from "./fx";
 import type { MapId } from "@/game/types";
 import { scarSigned } from "./PlanetCrust";
+import { BevelBox } from "./bevel";
+import { SURFACE_KEY, SURFACE_PATCH } from "./surface";
 import { terrainElevation } from "./terrain";
 
 type Clear = { x: number; z: number };
@@ -29,12 +32,28 @@ function blocked(x: number, z: number, keep: Clear[], clear: number, center: num
 
 function Flesh({ color, rough = 0.7, glow = 0 }: { color: string; rough?: number; glow?: number }) {
   return (
-    <meshStandardMaterial color={color} roughness={rough} metalness={0.05} emissive={glow ? "#1f6a48" : "#000"} emissiveIntensity={glow} />
+    <meshStandardMaterial
+      color={color}
+      roughness={rough}
+      metalness={0.05}
+      emissive={glow ? "#1f6a48" : "#000"}
+      emissiveIntensity={glow}
+      onBeforeCompile={SURFACE_PATCH.organic}
+      customProgramCacheKey={SURFACE_KEY.organic}
+    />
   );
 }
 
 function Steel({ color, rough = 0.38 }: { color: string; rough?: number }) {
-  return <meshStandardMaterial color={color} roughness={rough} metalness={0.8} />;
+  return (
+    <meshStandardMaterial
+      color={color}
+      roughness={rough}
+      metalness={0.8}
+      onBeforeCompile={SURFACE_PATCH.metal}
+      customProgramCacheKey={SURFACE_KEY.metal}
+    />
+  );
 }
 
 function hillSpots(mapId: MapId, arenaR: number, squash: number, count: number): Spot[] {
@@ -102,7 +121,7 @@ function TerraceBlock({ spot }: { spot: Spot }) {
     <group position={[spot.x, spot.y, spot.z]} rotation={[0, spot.a, 0]} scale={1.05 + spot.k * 0.35}>
       {[0, 1, 2].map((n) => (
         <mesh key={n} position={[n * 0.08, 0.16 + n * 0.28, n * 0.05]} castShadow receiveShadow>
-          <boxGeometry args={[1.6 - n * 0.28, 0.28, 1.05 - n * 0.16]} />
+          <BevelBox args={[1.6 - n * 0.28, 0.28, 1.05 - n * 0.16]} />
           <Steel color={n === 1 ? "#3a322c" : "#2a2e32"} rough={0.42} />
         </mesh>
       ))}
@@ -119,7 +138,7 @@ function SlopeStack({ spot }: { spot: Spot }) {
   return (
     <group position={[spot.x, spot.y, spot.z]} rotation={[0, spot.a, 0]}>
       <mesh position={[0, 0.08, 0]} castShadow>
-        <boxGeometry args={[0.9, 0.16, 0.9]} />
+        <BevelBox args={[0.9, 0.16, 0.9]} />
         <Steel color="#2c3136" />
       </mesh>
       <mesh position={[0, h / 2, 0]} castShadow>
@@ -157,11 +176,11 @@ function SteelRib({ spot }: { spot: Spot }) {
   return (
     <group position={[spot.x, spot.y, spot.z]} rotation={[0.2, spot.a, 0.25]}>
       <mesh position={[0, 0.7, 0]} castShadow>
-        <boxGeometry args={[0.22, 1.5, 0.48]} />
+        <BevelBox args={[0.22, 1.5, 0.48]} />
         <Steel color="#3a444c" />
       </mesh>
       <mesh position={[0.25, 1.15, 0]} rotation={[0, 0, 0.8]} castShadow>
-        <boxGeometry args={[0.14, 0.7, 0.36]} />
+        <BevelBox args={[0.14, 0.7, 0.36]} />
         <Steel color="#2a3238" rough={0.5} />
       </mesh>
       <mesh position={[0, 1.35, 0.2]}>
@@ -357,7 +376,7 @@ export function RimBelt({ mapId, arenaR, squash }: { mapId: MapId; arenaR: numbe
           return (
             <group key={p.n} position={[p.x, 0, p.z]} rotation={[0, p.a, 0]}>
               <mesh position={[0, 0.16, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.85, 0.32, 0.38]} />
+                <BevelBox args={[0.85, 0.32, 0.38]} />
                 <Steel color="#2a2e32" rough={0.4} />
               </mesh>
               {p.n % 4 === 0 ? (
@@ -386,7 +405,7 @@ export function RimBelt({ mapId, arenaR, squash }: { mapId: MapId; arenaR: numbe
               </mesh>
             ) : (
               <mesh position={[0, 0.14, 0]} castShadow>
-                <boxGeometry args={[0.7, 0.26, 0.36]} />
+                <BevelBox args={[0.7, 0.26, 0.36]} />
                 <Steel color="#343c44" />
               </mesh>
             )}
@@ -423,11 +442,11 @@ export function GateMouth({ mapId, yaw }: { mapId: MapId; yaw: number }) {
           ) : mapId === "forge" ? (
             <>
               <mesh position={[0, 0.75, 0]} castShadow>
-                <boxGeometry args={[0.28, 1.5, 0.4]} />
+                <BevelBox args={[0.28, 1.5, 0.4]} />
                 <Steel color="#2a2e32" />
               </mesh>
               <mesh position={[0, 1.55, 0]}>
-                <boxGeometry args={[0.34, 0.1, 0.46]} />
+                <BevelBox args={[0.34, 0.1, 0.46]} />
                 <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.85} />
               </mesh>
             </>
@@ -438,7 +457,7 @@ export function GateMouth({ mapId, yaw }: { mapId: MapId; yaw: number }) {
             </mesh>
           ) : (
             <mesh position={[0, 0.7, 0]} rotation={[0, 0, 0.18]} castShadow>
-              <boxGeometry args={[0.22, 1.4, 0.46]} />
+              <BevelBox args={[0.22, 1.4, 0.46]} />
               <Steel color="#3a444c" />
             </mesh>
           )}
@@ -484,5 +503,74 @@ export function PlanetAir({ mapId, count = 64 }: { mapId: MapId; count?: number 
       <sphereGeometry args={[1, 6, 5]} />
       <meshBasicMaterial color={color} transparent opacity={mapId === "forge" ? 0.82 : 0.58} depthWrite={false} toneMapped={false} />
     </instancedMesh>
+  );
+}
+
+const MIST: Record<MapId, { color: string; add: boolean; opacity: number; rise: number }> = {
+  mycelion: { color: "#6fe8c0", add: true, opacity: 0.1, rise: 0.22 },
+  forge: { color: "#3a2418", add: false, opacity: 0.2, rise: 0.38 },
+  aegis: { color: "#cfe8f2", add: false, opacity: 0.13, rise: 0.12 },
+};
+
+/** Low drifting banks that give the field depth. They sit under the hosts, never over the lanes' read. */
+export function GroundMist({ mapId, arenaR, squash, count = 14 }: { mapId: MapId; arenaR: number; squash: number; count?: number }) {
+  const tex = useMemo(() => softGlowTexture(), []);
+  const banks = useMemo(() => {
+    const rand = rng(mapId === "forge" ? 91 : mapId === "aegis" ? 83 : 71);
+    return Array.from({ length: count }, (_, i) => {
+      const a = rand() * Math.PI * 2;
+      const r = (0.35 + rand() * 0.8) * arenaR;
+      return {
+        x: Math.cos(a) * r,
+        z: Math.sin(a) * r * squash,
+        y: 0.14 + rand() * 0.5,
+        s: 4.5 + rand() * 6,
+        spin: (rand() - 0.5) * 0.06,
+        drift: (rand() - 0.5) * 0.18,
+        phase: rand() * Math.PI * 2,
+        k: i,
+      };
+    });
+  }, [arenaR, count, mapId, squash]);
+  const refs = useRef<(Mesh | null)[]>([]);
+  const cfg = MIST[mapId];
+  useFrame((s, dt) => {
+    for (let i = 0; i < banks.length; i++) {
+      const m = refs.current[i];
+      if (!m) continue;
+      const b = banks[i];
+      m.rotation.z += dt * b.spin;
+      m.position.x = b.x + Math.sin(s.clock.elapsedTime * 0.12 + b.phase) * 1.4 * (b.drift > 0 ? 1 : -1);
+      const mat = m.material as MeshBasicMaterial;
+      mat.opacity = cfg.opacity * (0.72 + Math.sin(s.clock.elapsedTime * 0.3 + b.phase) * 0.28);
+    }
+  });
+  if (!tex) return null;
+  return (
+    <group name="ground-mist">
+      {banks.map((b, i) => (
+        <mesh
+          key={b.k}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          rotation={[-Math.PI / 2, 0, b.phase]}
+          position={[b.x, b.y, b.z]}
+          scale={[b.s, b.s * 0.7, 1]}
+          renderOrder={2}
+        >
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial
+            map={tex}
+            color={cfg.color}
+            transparent
+            opacity={cfg.opacity}
+            depthWrite={false}
+            blending={cfg.add ? AdditiveBlending : NormalBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 }

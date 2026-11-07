@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   BufferAttribute,
   BufferGeometry,
+  CapsuleGeometry,
   CatmullRomCurve3,
   Color,
   InstancedMesh,
@@ -11,6 +12,7 @@ import {
   type Texture,
 } from "three";
 import type { MapId } from "@/game/types";
+import { SURFACE_KEY, SURFACE_PATCH } from "./surface";
 
 const HALF = 0.7;
 const LANE_Y = 0.01;
@@ -27,6 +29,51 @@ const DOT_COLOR: Record<MapId, string> = {
   aegis: "#c5d4da",
 };
 
+const EDGE_COLOR: Record<MapId, string> = {
+  mycelion: "#5ee8b4",
+  forge: "#ff8a3c",
+  aegis: "#9fe4ee",
+};
+
+const PLATE_COLOR: Record<MapId, string> = {
+  mycelion: "#1f4a38",
+  forge: "#3a342e",
+  aegis: "#3a4650",
+};
+
+function LanePlates({ plates, mapId }: { plates: { p: Vector3; yaw: number }[]; mapId: MapId }) {
+  const mesh = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = mesh.current;
+    if (!m) return;
+    const dummy = new Object3D();
+    for (let i = 0; i < plates.length; i++) {
+      dummy.position.copy(plates[i].p);
+      dummy.rotation.set(0, plates[i].yaw, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.count = plates.length;
+    m.instanceMatrix.needsUpdate = true;
+  }, [plates]);
+  const rib = useMemo(() => new CapsuleGeometry(0.05, HALF * 1.9, 4, 8).rotateZ(Math.PI / 2), []);
+  if (!plates.length) return null;
+  const organic = mapId === "mycelion";
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, plates.length]} castShadow receiveShadow>
+      {organic ? <primitive object={rib} attach="geometry" /> : <boxGeometry args={[HALF * 2.05, 0.05, 0.14]} />}
+      <meshStandardMaterial
+        color={PLATE_COLOR[mapId]}
+        roughness={organic ? 0.6 : 0.34}
+        metalness={organic ? 0.06 : 0.78}
+        onBeforeCompile={organic ? SURFACE_PATCH.organic : SURFACE_PATCH.metal}
+        customProgramCacheKey={organic ? SURFACE_KEY.organic : SURFACE_KEY.metal}
+      />
+    </instancedMesh>
+  );
+}
+
 /** Packed trail on the play plane, marked by a dotted centerline. */
 export function PathLane({
   points,
@@ -41,7 +88,7 @@ export function PathLane({
   metalness: number;
   roughness: number;
 }) {
-  const { lane, dots, shoulders } = useMemo(() => buildLane(points, mapId), [points, mapId]);
+  const { lane, dots, shoulders, edges, plates } = useMemo(() => buildLane(points, mapId), [points, mapId]);
   const laneMap = useMemo(() => {
     const tex = ground.clone();
     tex.wrapS = RepeatWrapping;
@@ -65,6 +112,12 @@ export function PathLane({
           emissiveIntensity={0.45}
         />
       </mesh>
+      {edges.map((g, i) => (
+        <mesh key={i} geometry={g}>
+          <meshBasicMaterial color={EDGE_COLOR[mapId]} transparent opacity={0.62} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
+      <LanePlates plates={plates} mapId={mapId} />
       <PathDots points={dots} color={DOT_COLOR[mapId]} />
       <PathShoulders points={shoulders} mapId={mapId} />
     </group>
@@ -97,7 +150,14 @@ function PathDots({ points, color }: { points: Vector3[]; color: string }) {
 }
 
 function buildLane(points: Waypoint[], mapId: MapId) {
-  if (points.length < 2) return { lane: null as BufferGeometry | null, dots: [] as Vector3[], shoulders: [] as Vector3[] };
+  if (points.length < 2)
+    return {
+      lane: null as BufferGeometry | null,
+      dots: [] as Vector3[],
+      shoulders: [] as Vector3[],
+      edges: [] as BufferGeometry[],
+      plates: [] as { p: Vector3; yaw: number }[],
+    };
   const pts = points.map((w) => new Vector3(w.x, 0, w.z));
   const curve = new CatmullRomCurve3(pts, false, "catmullrom", 0.15);
   const frames = sampleFrames(curve);
@@ -116,7 +176,18 @@ function buildLane(points: Waypoint[], mapId: MapId) {
     shoulders.push(new Vector3(f.p.x + f.side.x * (HALF + 0.12), 0.03, f.p.z + f.side.z * (HALF + 0.12)));
     shoulders.push(new Vector3(f.p.x - f.side.x * (HALF + 0.12), 0.03, f.p.z - f.side.z * (HALF + 0.12)));
   }
+  const plates: { p: Vector3; yaw: number }[] = [];
+  const plateStep = Math.max(3, Math.floor(frames.length / Math.max(6, Math.floor(len / 1.7))));
+  for (let i = 3; i < frames.length - 3; i += plateStep) {
+    const f = frames[i];
+    plates.push({ p: new Vector3(f.p.x, 0.03, f.p.z), yaw: Math.atan2(-f.side.z, f.side.x) });
+  }
+  const edges = [-1, 1].map((sgn) =>
+    strip(frames, [sgn * (HALF - 0.1), sgn * (HALF - 0.04)], LANE_Y + 0.012, (u, v) => ({ u, v, r: 1, g: 1, b: 1 })),
+  );
   return {
+    edges,
+    plates,
     lane: strip(frames, [-HALF, -HALF * 0.42, 0, HALF * 0.42, HALF], LANE_Y, (u, v) => {
       const rut = (v > 0.2 && v < 0.38) || (v > 0.62 && v < 0.8);
       const k = rut ? packed * 0.7 : packed;

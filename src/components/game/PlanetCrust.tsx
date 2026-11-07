@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type { MapId } from "@/game/types";
+import { BevelBox } from "./bevel";
+import { SURFACE_KEY, SURFACE_PATCH } from "./surface";
 
 /**
  * The scar of Aegis, in world XZ. Tissue sits on the negative side, steel on
@@ -67,11 +69,29 @@ function sites(
 }
 
 function Flesh({ color, rough = 0.72, glow = 0 }: { color: string; rough?: number; glow?: number }) {
-  return <meshStandardMaterial color={color} roughness={rough} metalness={0.06} emissive={glow ? "#1f6a48" : "#000"} emissiveIntensity={glow} />;
+  return (
+    <meshStandardMaterial
+      color={color}
+      roughness={rough}
+      metalness={0.06}
+      emissive={glow ? "#1f6a48" : "#000"}
+      emissiveIntensity={glow}
+      onBeforeCompile={SURFACE_PATCH.organic}
+      customProgramCacheKey={SURFACE_KEY.organic}
+    />
+  );
 }
 
 function Steel({ color, rough = 0.38 }: { color: string; rough?: number }) {
-  return <meshStandardMaterial color={color} roughness={rough} metalness={0.82} />;
+  return (
+    <meshStandardMaterial
+      color={color}
+      roughness={rough}
+      metalness={0.82}
+      onBeforeCompile={SURFACE_PATCH.metal}
+      customProgramCacheKey={SURFACE_KEY.metal}
+    />
+  );
 }
 
 /** A living shelf: wet mound, overlapping caps, a marrow cleft, spore stalks. */
@@ -100,17 +120,17 @@ function MarrowGrove({ site }: { site: Site }) {
             <Flesh color={cap.c} rough={0.48} glow={0.18} />
           </mesh>
           <mesh position={[0, -cap.ry * 0.65, 0]} rotation={[0.2, 0, 0]}>
-            <boxGeometry args={[cap.rx * 1.15, 0.015, cap.rz * 0.18]} />
+            <BevelBox args={[cap.rx * 1.15, 0.015, cap.rz * 0.18]} />
             <meshStandardMaterial color="#102018" roughness={0.8} />
           </mesh>
           <mesh position={[0, -cap.ry * 0.65, 0.08]} rotation={[0.2, 0.4, 0]}>
-            <boxGeometry args={[cap.rx * 0.9, 0.012, cap.rz * 0.12]} />
+            <BevelBox args={[cap.rx * 0.9, 0.012, cap.rz * 0.12]} />
             <meshStandardMaterial color="#102018" roughness={0.8} />
           </mesh>
         </group>
       ))}
       <mesh position={[0.12, 0.18, -0.02]} rotation={[0.2, 0.5 + site.j * 0.2, 0.1]} castShadow>
-        <boxGeometry args={[0.07, 0.05, 0.72]} />
+        <BevelBox args={[0.07, 0.05, 0.72]} />
         <meshStandardMaterial color="#08140e" roughness={1} />
       </mesh>
       <mesh position={[0.12, 0.2, -0.02]} rotation={[0.2, 0.5 + site.j * 0.2, 0.1]}>
@@ -151,15 +171,15 @@ function PlateYard({ site }: { site: Site }) {
   return (
     <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={s}>
       <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.9, 0.08, 1.25]} />
+        <BevelBox args={[1.9, 0.08, 1.25]} />
         <Steel color="#2a2e32" />
       </mesh>
       <mesh position={[0.06, 0.09, -0.04]} rotation={[0, 0.06, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.35, 0.05, 0.82]} />
+        <BevelBox args={[1.35, 0.05, 0.82]} />
         <Steel color="#3a4046" rough={0.32} />
       </mesh>
       <mesh position={[0.78, 0.1, 0.42]} rotation={[0, 0.4, 0]} castShadow>
-        <boxGeometry args={[0.28, 0.06, 0.22]} />
+        <BevelBox args={[0.28, 0.06, 0.22]} />
         <Steel color="#4a4038" rough={0.46} />
       </mesh>
       {rivets.map(([x, z]) => (
@@ -177,11 +197,11 @@ function PlateYard({ site }: { site: Site }) {
         <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.9} roughness={0.4} />
       </mesh>
       <mesh position={[0.35, 0.13, -0.28]} castShadow>
-        <boxGeometry args={[0.55, 0.04, 0.06]} />
+        <BevelBox args={[0.55, 0.04, 0.06]} />
         <Steel color="#1c2024" rough={0.5} />
       </mesh>
       <mesh position={[0.35, 0.13, -0.16]} castShadow>
-        <boxGeometry args={[0.55, 0.04, 0.06]} />
+        <BevelBox args={[0.55, 0.04, 0.06]} />
         <Steel color="#1c2024" rough={0.5} />
       </mesh>
     </group>
@@ -204,11 +224,11 @@ function SlagHeap({ site }: { site: Site }) {
         </mesh>
       ))}
       <mesh position={[0.08, 0.2, 0.02]} rotation={[0.4, 0.2, 0.6]}>
-        <boxGeometry args={[0.04, 0.03, 0.42]} />
+        <BevelBox args={[0.04, 0.03, 0.42]} />
         <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.85} roughness={0.45} />
       </mesh>
       <mesh position={[-0.05, 0.16, 0.1]} rotation={[0.2, 1.1, 0.3]}>
-        <boxGeometry args={[0.03, 0.025, 0.28]} />
+        <BevelBox args={[0.03, 0.025, 0.28]} />
         <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.7} roughness={0.45} />
       </mesh>
       <mesh position={[0.22, 0.34, 0.08]}>
@@ -223,12 +243,12 @@ function CoolerBank({ site }: { site: Site }) {
   return (
     <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={1.6 + site.k * 0.35}>
       <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.7, 0.08, 0.7]} />
+        <BevelBox args={[1.7, 0.08, 0.7]} />
         <Steel color="#2c3136" />
       </mesh>
       {[-0.55, -0.28, 0, 0.28, 0.55].map((x) => (
         <mesh key={x} position={[x, 0.56, 0]} castShadow>
-          <boxGeometry args={[0.1, 0.95, 0.55]} />
+          <BevelBox args={[0.1, 0.95, 0.55]} />
           <Steel color={x === 0 ? "#4a4038" : "#3a4248"} rough={0.34} />
         </mesh>
       ))}
@@ -255,11 +275,11 @@ function WeldScar({ site }: { site: Site }) {
   return (
     <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={s}>
       <mesh position={[-0.28, 0.05, 0]} rotation={[0, 0.08, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.15, 0.08, 0.78]} />
+        <BevelBox args={[1.15, 0.08, 0.78]} />
         <Steel color="#3a4248" rough={0.36} />
       </mesh>
       <mesh position={[-0.72, 0.08, 0.22]} rotation={[0.2, 0.5, 0.4]} castShadow>
-        <boxGeometry args={[0.34, 0.05, 0.22]} />
+        <BevelBox args={[0.34, 0.05, 0.22]} />
         <Steel color="#2a3036" rough={0.5} />
       </mesh>
       <mesh position={[0.42, 0.16, 0.02]} scale={[0.72, 0.42, 0.62]} castShadow>
@@ -341,7 +361,7 @@ function ScarTrench({
               </mesh>
             ) : (
               <mesh position={[0, h * 0.35, 0]} rotation={[0.1, 0, 0.15]} castShadow>
-                <boxGeometry args={[0.42 + b.k * 0.3, h * 0.7, 0.28 + b.k * 0.15]} />
+                <BevelBox args={[0.42 + b.k * 0.3, h * 0.7, 0.28 + b.k * 0.15]} />
                 <meshStandardMaterial color="#343c44" metalness={0.78} roughness={0.4} />
               </mesh>
             )}
@@ -382,7 +402,7 @@ function FungalCrown({ site }: { site: Site }) {
       </mesh>
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <mesh key={i} position={[0, 1.55, 0]} rotation={[0.35, (i / 6) * Math.PI * 2, 0]} castShadow>
-          <boxGeometry args={[0.08, 0.04, 1.35]} />
+          <BevelBox args={[0.08, 0.04, 1.35]} />
           <meshStandardMaterial color="#102418" roughness={0.8} />
         </mesh>
       ))}
@@ -401,7 +421,7 @@ function FoundryStack({ site }: { site: Site }) {
   return (
     <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]}>
       <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.6, 0.16, 1.6]} />
+        <BevelBox args={[1.6, 0.16, 1.6]} />
         <Steel color="#2a2e32" />
       </mesh>
       <mesh position={[0, 1.15, 0]} castShadow>
@@ -419,7 +439,7 @@ function FoundryStack({ site }: { site: Site }) {
         <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={1} roughness={0.4} />
       </mesh>
       <mesh position={[0.55, 0.28, 0]} castShadow>
-        <boxGeometry args={[0.45, 0.28, 0.35]} />
+        <BevelBox args={[0.45, 0.28, 0.35]} />
         <Steel color="#241c18" rough={0.7} />
       </mesh>
     </group>
@@ -450,15 +470,15 @@ function RiftMonument({ site }: { site: Site }) {
   return (
     <group position={[site.x, 0, site.z]} rotation={[site.j * 0.15, site.a, 0.18]}>
       <mesh position={[0, 0.9, 0]} castShadow>
-        <boxGeometry args={[0.28, 1.8, 0.55]} />
+        <BevelBox args={[0.28, 1.8, 0.55]} />
         <Steel color="#3a444c" rough={0.36} />
       </mesh>
       <mesh position={[0.2, 1.55, 0]} rotation={[0, 0, 0.7]} castShadow>
-        <boxGeometry args={[0.16, 0.9, 0.4]} />
+        <BevelBox args={[0.16, 0.9, 0.4]} />
         <Steel color="#2a3238" rough={0.5} />
       </mesh>
       <mesh position={[0, 1.7, 0.22]}>
-        <boxGeometry args={[0.08, 0.08, 0.08]} />
+        <BevelBox args={[0.08, 0.08, 0.08]} />
         <meshStandardMaterial color="#d7f4f8" emissive="#9fd8de" emissiveIntensity={0.8} />
       </mesh>
     </group>

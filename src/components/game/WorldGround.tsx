@@ -16,6 +16,7 @@ import {
 } from "three";
 import { CELL } from "@/game/config";
 import type { MapId } from "@/game/types";
+import { PlanetCrust, scarSigned } from "./PlanetCrust";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
 
 const battleSkyFrag = /* glsl */ `
@@ -64,14 +65,17 @@ export function terrainElevation(x: number, z: number, arenaR: number, squash: n
     Math.sin(x * 0.06 + z * 0.045) * 1.2 +
     Math.sin(x * 0.73) * Math.cos(z * 0.61) * 0.14;
   if (style === "forge") {
-    n = Math.round(n * 1.45) / 1.45 + Math.sin(x * 0.31) * Math.sin(z * 0.27) * 0.22;
-    n += Math.max(0, Math.sin(x * 0.09 + z * 0.07) - 0.35) * 0.55;
+    n = Math.round(n * 2.15) / 2.15 + Math.sin(x * 0.31) * Math.sin(z * 0.27) * 0.16;
+    n += Math.max(0, Math.sin(x * 0.09 + z * 0.07) - 0.35) * 0.7;
   } else if (style === "aegis") {
-    const rift = Math.abs(x * 0.2 + z * 0.34);
-    n = Math.abs(n) * 1.2 - 0.18 + Math.max(0, 1.05 - rift) * 1.7;
+    const rift = Math.abs(scarSigned(x, z));
+    const lip = Math.max(0, 1.15 - rift);
+    const trench = Math.max(0, 0.42 - rift);
+    n = Math.abs(n) * 0.7 + lip * 2.15 - trench * 2.4;
   } else {
-    const bowl = Math.max(0, 0.62 - Math.abs(Math.sin(x * 0.17) * Math.cos(z * 0.19)));
-    n += Math.sin(x * 0.58 + z * 0.16) * Math.cos(z * 0.48) * 0.28 - bowl * 0.45;
+    const canyon = Math.abs(Math.sin(x * 0.09 + z * 0.045));
+    const cut = smooth(clamp((0.2 - canyon) / 0.2, 0, 1));
+    n += Math.sin(x * 0.22) * Math.cos(z * 0.18) * 0.55 - cut * 1.85;
   }
   const far = smooth(clamp((inset - 1.35) / 0.7, 0, 1));
   const amp = style === "forge" ? 2.05 : style === "aegis" ? 3.05 : 2.65;
@@ -111,7 +115,7 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
   return g;
 }
 
-function makeBowl(arenaR: number, _squash: number, style: MapId, res: number) {
+function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
   // Dense grid, not a triangle fan — the old circle only had rim verts, so the play
   // field interpolated to a flat wash.
   const g = new PlaneGeometry(arenaR * 2, arenaR * 2, res, res);
@@ -128,15 +132,40 @@ function makeBowl(arenaR: number, _squash: number, style: MapId, res: number) {
     const rim = smooth(clamp((r - 0.72) / 0.28, 0, 1));
     const speckle =
       style === "mycelion"
-        ? 0.88 + Math.sin(x * 1.7) * Math.cos(y * 1.4) * 0.08
+        ? 0.82 + Math.sin(x * 1.7) * Math.cos(y * 1.4) * 0.1
         : style === "forge"
-          ? 0.84 + ((Math.sin(x * 3.1) * Math.sin(y * 3.1) + 1) * 0.07)
-          : 0.86 + Math.abs(Math.sin(x * 0.9 + y * 1.2)) * 0.09;
-    const grain = Math.sin(x * 7.4) * Math.cos(y * 6.2) * 0.06 + Math.sin(x * 14.1 + y * 9.6) * 0.04;
-    const blotch = Math.sin(x * 0.36 + y * 0.29) * Math.cos(y * 0.24) * 0.1;
-    const crack = Math.max(0, 0.12 - Math.abs(Math.sin(x * 0.55) * Math.cos(y * 0.48))) * 0.35;
-    const k = clamp(speckle + grain + blotch - rim * 0.18 - crack, 0.52, 1.12);
-    const tint = style === "mycelion" ? [0.88, 1.12, 0.86] : style === "forge" ? [1.18, 0.9, 0.76] : [0.82, 0.96, 1.16];
+          ? 0.8 + ((Math.sin(x * 3.1) * Math.sin(y * 3.1) + 1) * 0.08)
+          : 0.84 + Math.abs(Math.sin(x * 0.9 + y * 1.2)) * 0.08;
+    const grain = Math.sin(x * 7.4) * Math.cos(y * 6.2) * 0.05 + Math.sin(x * 14.1 + y * 9.6) * 0.03;
+    const blotch = Math.sin(x * 0.36 + y * 0.29) * Math.cos(y * 0.24) * 0.08;
+    let tint = style === "mycelion" ? [0.72, 1.02, 0.7] : style === "forge" ? [1.12, 0.84, 0.68] : [0.78, 0.9, 1.05];
+    let k = clamp(speckle + grain + blotch - rim * 0.16, 0.5, 1.08);
+    if (style === "mycelion") {
+      const wave = Math.sin(x * 0.33) * 0.65 + Math.sin(y * 0.27 + 1.7) * 0.4;
+      const marrow = Math.pow(clamp(1 - Math.abs(wave) * 2.8, 0, 1), 1.2);
+      tint = [
+        tint[0] * (1 - marrow) + 0.45 * marrow,
+        tint[1] * (1 - marrow) + 1.45 * marrow,
+        tint[2] * (1 - marrow) + 0.85 * marrow,
+      ];
+    } else if (style === "forge") {
+      const fx = Math.abs(x / 3.9 - Math.round(x / 3.9));
+      const fy = Math.abs(y / 3.9 - Math.round(y / 3.9));
+      const seam = clamp((0.08 - Math.min(fx, fy)) * 9, 0, 1);
+      const ember = Math.pow(clamp(Math.sin(x * 1.7) * Math.sin(y * 1.3), 0, 1), 10);
+      k *= 1 - seam * 0.55;
+      tint = [tint[0] + ember * 0.55, tint[1] + ember * 0.22, tint[2]];
+    } else {
+      const signed = scarSigned(x, -y * squash);
+      const band = Math.exp(-signed * signed * 0.55);
+      const flesh = signed < 0;
+      const side = flesh ? [0.7, 1.02, 0.68] : [0.68, 0.76, 0.98];
+      tint = [
+        side[0] * (1 - band) + 1.15 * band,
+        side[1] * (1 - band) + 1.28 * band,
+        side[2] * (1 - band) + 1.35 * band,
+      ];
+    }
     cols[i * 3] = k * tint[0];
     cols[i * 3 + 1] = k * tint[1];
     cols[i * 3 + 2] = k * tint[2];
@@ -271,6 +300,7 @@ export function WorldGround({
         />
       </mesh>
       <GroundPebbles mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} count={quality === "high" ? 220 : 110} />
+      <PlanetCrust mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.02, 0]}>
         <ringGeometry args={[arenaR - 0.62, arenaR + 0.22, 96]} />
         <meshStandardMaterial

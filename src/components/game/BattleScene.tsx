@@ -27,6 +27,7 @@ import {
   ENEMIES,
   SKILL_TINT,
   SKILL_WIND,
+  CELL,
   telegraphLeft,
 } from "@/game/config";
 import { useGameStore } from "@/game/store";
@@ -52,7 +53,7 @@ import { PathLane } from "./PathLane";
 import { arenaMetrics, WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld, unionCells } from "@/game/maps";
-import type { MapDef, MapId, TowerId } from "@/game/types";
+import type { Cell, MapId, TowerId } from "@/game/types";
 
 const FACTION_MARK = {
   organic: "#3dcaa0",
@@ -171,6 +172,15 @@ export function BattleScene() {
   );
 }
 
+/** Distance that fits the whole field in a 40° view. */
+function frameDist(cols: number, rows: number, aspect: number) {
+  const halfW = (cols * CELL) / 2 + 1.6;
+  const halfD = (rows * CELL) / 2 + 1.6;
+  const half = Math.tan((40 * Math.PI) / 360);
+  const need = Math.max(halfD / half, halfW / (half * Math.max(0.35, aspect))) * 1.08;
+  return Math.min(86, Math.max(22, need));
+}
+
 /** Frames the whole field for the current viewport, then hands the camera to orbit. */
 function CameraRig() {
   const camera = useThree((s) => s.camera);
@@ -179,12 +189,8 @@ function CameraRig() {
 
   useEffect(() => {
     const map = engine.map;
-    const halfW = (map.cols * 1.7) / 2 + 1.4;
-    const halfD = (map.rows * 1.7) / 2 + 1.4;
-    const aspect = Math.max(0.35, size.width / Math.max(1, size.height));
-    const half = Math.tan((40 * Math.PI) / 360);
-    const need = Math.max(halfD / half, halfW / (half * aspect)) * 1.06;
-    const d = Math.min(46, Math.max(20, need));
+    const aspect = size.width / Math.max(1, size.height);
+    const d = frameDist(map.cols, map.rows, aspect);
     setDist(d);
     camera.position.set(0, d * 0.658, d * 0.753);
     camera.updateProjectionMatrix();
@@ -223,22 +229,36 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const phase = useGameStore((s) => s.hud.phase);
   const wave = useGameStore((s) => s.hud.wave);
   const combat = phase === "combat";
+  const layoutGen = engine.layoutGen;
+  const view = useThree((s) => s.size);
+  const dist = frameDist(map.cols, map.rows, view.width / Math.max(1, view.height));
   const skip = useMemo(() => {
-    const cells = unionCells(map.path, ...(map.branches ?? []));
+    void layoutGen;
+    const cells = unionCells(...engine.cellPaths);
     return new Set(cells.map((p) => `${p.c},${p.r}`));
-  }, [map]);
+  }, [layoutGen]);
   const end = engine.endWorld();
   const health = maxLives ? Math.min(1, lives / maxLives) : 1;
   const baseColor = BASES[baseClass].color;
-  const fieldProps = useMemo(() => freeCellProps(map), [map]);
-  const pathCount = useMemo(() => engine.activePathCount(), [wave, phase]);
+  const fieldProps = useMemo(() => {
+    void layoutGen;
+    return freeCellProps(map.cols, map.rows, engine.cellPaths, engine.padCells);
+  }, [layoutGen, map.cols, map.rows]);
+  const pathCount = useMemo(() => {
+    void wave;
+    void phase;
+    return engine.activePathCount();
+  }, [wave, phase]);
   const activePaths = engine.paths.slice(0, pathCount);
-  const keepClear = useMemo(() => engine.paths.flat(), [map]);
+  const keepClear = useMemo(() => {
+    void layoutGen;
+    return engine.paths.flat();
+  }, [layoutGen]);
 
   return (
     <>
       <color attach="background" args={[theme.sky]} />
-      <fog attach="fog" args={[theme.fog, tune.fogNear, tune.fogFar]} />
+      <fog attach="fog" args={[theme.fog, dist * 0.92, Math.max(tune.fogFar, dist * 2.55)]} />
       <ambientLight intensity={tune.ambient} color={theme.ambient} />
       <hemisphereLight args={[theme.hemiSky, theme.hemiGround, mapId === "forge" ? 0.72 : 1.05]} />
       <directionalLight
@@ -249,11 +269,11 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
         shadow-camera-near={2}
-        shadow-camera-far={42}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
+        shadow-camera-far={96}
+        shadow-camera-left={-34}
+        shadow-camera-right={34}
+        shadow-camera-top={34}
+        shadow-camera-bottom={-34}
       />
       <directionalLight position={[-10, 5, -8]} intensity={tune.fill} color={theme.hemiSky} />
       <pointLight position={[0, 3.4, -12]} intensity={tune.rimIntensity} distance={30} color={tune.rimLight} />
@@ -288,14 +308,14 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         combat={combat}
         keepClear={keepClear}
       />
-      <group position={[-11, 8.5, -22]} scale={1.05}>
+      <group position={[-(map.cols * CELL) / 5, 12, -(map.rows * CELL) / 2 - 14]} scale={1.2}>
         <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
       </group>
       <OverclockWash color={theme.padEmi} on={overclock} />
       <HexField cols={map.cols} rows={map.rows} color={theme.pad} accent={theme.padEmi} skip={skip} />
-      {activePaths.map((pts, i) => (
+      {engine.paths.map((pts, i) => (
         <PathLane
-          key={`${map.id}-lane-${i}`}
+          key={`${map.id}-lane-${layoutGen}-${i}`}
           points={pts}
           mapId={mapId}
           ground={art.ground}
@@ -337,10 +357,10 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       <DecorField id={mapId} spots={fieldProps} />
       {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 16 : 22} /> : null}
       {quality === "high" ? (
-        <Sparkles count={18} scale={[28, 4, 22]} size={1.4} speed={0.18} color={theme.padEmi} opacity={0.18} />
+        <Sparkles count={22} scale={[map.cols * CELL * 0.72, 4, map.rows * CELL * 0.72]} size={1.4} speed={0.18} color={theme.padEmi} opacity={0.18} />
       ) : null}
       {quality === "high" ? (
-        <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={36} blur={2.2} far={9} />
+        <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={Math.max(map.cols, map.rows) * CELL} blur={2.2} far={12} />
       ) : null}
     </>
   );
@@ -360,31 +380,31 @@ function OverclockWash({ color, on }: { color: string; on: boolean }) {
   });
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]} visible={false}>
-      <ringGeometry args={[2.6, 12, 64]} />
+      <ringGeometry args={[4, 18, 64]} />
       <meshBasicMaterial color={color} transparent opacity={0.08} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
     </mesh>
   );
 }
 
 /** Cells that hold neither path nor pad, thinned out so props never crowd the lanes. */
-function freeCellProps(map: MapDef) {
+function freeCellProps(cols: number, rows: number, paths: Cell[][], pads: Cell[]) {
   const taken = new Set<string>();
-  for (const p of unionCells(map.path, ...(map.branches ?? []))) taken.add(`${p.c},${p.r}`);
-  for (const p of map.pads) taken.add(`${p.c},${p.r}`);
+  for (const p of unionCells(...paths)) taken.add(`${p.c},${p.r}`);
+  for (const p of pads) taken.add(`${p.c},${p.r}`);
   const out: FieldSpot[] = [];
   let s = 7;
   const rand = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 0xffffffff;
   };
-  for (let r = 0; r < map.rows; r++) {
-    for (let c = 0; c < map.cols; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       if (taken.has(`${c},${r}`)) continue;
       const roll = rand();
       const k = rand();
       const a = rand() * Math.PI * 2;
-      if (roll > 0.38) continue;
-      const w = cellToWorld(c, r, map.cols, map.rows);
+      if (roll > 0.28) continue;
+      const w = cellToWorld(c, r, cols, rows);
       out.push({ x: w.x + (k - 0.5) * 1.5, z: w.z + (k - 0.5) * 1.5, k, a });
     }
   }

@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, DoubleSide, InstancedMesh, Object3D, type Group, type Mesh, type Side } from "three";
 import type { BaseClass, EnemyId, MapId, TowerId } from "@/game/types";
 import { BASES, BASE_GUN_REACH, BASE_SNARE_REACH, TOWERS } from "@/game/config";
-import { cellToWorld } from "@/game/maps";
+import { FIELD_COLS, FIELD_ROWS, cellToWorld } from "@/game/maps";
 import { arenaMetrics, terrainElevation } from "./WorldGround";
 
 /** Set while rendering a placement preview so every material renders as a hologram. */
@@ -3732,7 +3732,7 @@ function scatter(seed: number, n: number, style: MapId): Scatter[] {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 0xffffffff;
   };
-  const { arenaR, squash } = arenaMetrics(16, 11);
+  const { arenaR, squash } = arenaMetrics(FIELD_COLS, FIELD_ROWS);
   for (let i = 0; i < n; i++) {
     const a = rand() * Math.PI * 2;
     const r = 1.06 + rand() * 0.38;
@@ -3753,7 +3753,7 @@ export function Motes({ color, count = 40 }: { color: string; count?: number }) 
   const pts = useMemo(() => {
     const a: Vec[] = [];
     for (let i = 0; i < count; i++) {
-      a.push([(Math.random() - 0.5) * 28, 0.4 + Math.random() * 4, (Math.random() - 0.5) * 22]);
+      a.push([(Math.random() - 0.5) * 46, 0.4 + Math.random() * 4, (Math.random() - 0.5) * 42]);
     }
     return a;
   }, [count]);

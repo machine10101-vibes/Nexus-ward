@@ -63,75 +63,177 @@ export function cellToWorld(c: number, r: number, cols: number, rows: number) {
   };
 }
 
-const COLS = 16;
-const ROWS = 11;
+/** Odd counts so the heart cell sits on the world origin. */
+export const FIELD_COLS = 25;
+export const FIELD_ROWS = 23;
+export const ROUTE_COUNT = 4;
 
-const mycelionPath = stitch([
-  [0, 1],
-  [6, 1],
-  [6, 4],
-  [2, 4],
-  [2, 8],
-  [8, 8],
-  [8, 3],
-  [13, 3],
-  [13, 7],
-  [10, 7],
-  [10, 9],
-  [15, 9],
-]);
+type Side = "w" | "e" | "n" | "s";
+type Rng = () => number;
 
-const mycelionBranch = stitch([
-  [0, 8],
-  [2, 8],
-  [8, 8],
-  [8, 3],
-  [13, 3],
-  [13, 7],
-  [10, 7],
-  [10, 9],
-  [15, 9],
-]);
+function mulberry32(seed: number): Rng {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-const forgePath = stitch([
-  [0, 2],
-  [12, 2],
-  [12, 5],
-  [3, 5],
-  [3, 8],
-  [14, 8],
-  [14, 5],
-  [15, 5],
-]);
+function clamp(v: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, v));
+}
 
-const forgeBranch = stitch([
-  [0, 8],
-  [3, 8],
-  [14, 8],
-  [14, 5],
-  [15, 5],
-]);
+function heartCell(cols: number, rows: number): Cell {
+  return { c: (cols - 1) / 2, r: (rows - 1) / 2 };
+}
 
-const aegisPath = stitch([
-  [0, 8],
-  [4, 8],
-  [4, 2],
-  [9, 2],
-  [9, 9],
-  [13, 9],
-  [13, 4],
-  [15, 4],
-]);
+function entryFor(side: Side, heart: Cell): Cell {
+  if (side === "w") return { c: heart.c - 1, r: heart.r };
+  if (side === "e") return { c: heart.c + 1, r: heart.r };
+  if (side === "n") return { c: heart.c, r: heart.r - 1 };
+  return { c: heart.c, r: heart.r + 1 };
+}
 
-const aegisBranch = stitch([
-  [0, 2],
-  [4, 2],
-  [9, 2],
-  [9, 9],
-  [13, 9],
-  [13, 4],
-  [15, 4],
-]);
+function startFor(side: Side, cols: number, rows: number, rng: Rng): Cell {
+  if (side === "w" || side === "e") {
+    return { c: side === "w" ? 0 : cols - 1, r: 3 + Math.floor(rng() * (rows - 6)) };
+  }
+  return { c: 3 + Math.floor(rng() * (cols - 6)), r: side === "n" ? 0 : rows - 1 };
+}
+
+function shuffleSides(rng: Rng): Side[] {
+  const sides: Side[] = ["w", "e", "n", "s"];
+  for (let i = sides.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const swap = sides[i];
+    sides[i] = sides[j];
+    sides[j] = swap;
+  }
+  return sides;
+}
+
+/** Keep a bend off the keep so a lane cannot walk through the heart and back out. */
+function pullOut(c: number, r: number, heart: Cell, min: number, cols: number, rows: number): [number, number] {
+  const cc = clamp(Math.round(c), 1, cols - 2);
+  const rr = clamp(Math.round(r), 1, rows - 2);
+  const dc = cc - heart.c;
+  const dr = rr - heart.r;
+  const cheb = Math.max(Math.abs(dc), Math.abs(dr));
+  if (cheb >= min) return [cc, rr];
+  if (dc === 0 && dr === 0) return [clamp(heart.c + min, 1, cols - 2), heart.r];
+  const scale = min / Math.max(1, cheb);
+  return [clamp(Math.round(heart.c + dc * scale), 1, cols - 2), clamp(Math.round(heart.r + dr * scale), 1, rows - 2)];
+}
+
+function hasLoop(path: Cell[]) {
+  const seen = new Set<string>();
+  for (const p of path) {
+    const k = `${p.c},${p.r}`;
+    if (seen.has(k)) return true;
+    seen.add(k);
+  }
+  return false;
+}
+
+function wobbleFor(id: MapId) {
+  if (id === "forge") return 2.6;
+  if (id === "aegis") return 4.2;
+  return 5.4;
+}
+
+/**
+ * Rim start, a run along that edge, then inward cuts with a sideways jog.
+ * Every route finishes on its own side of the heart, then the heart itself.
+ */
+function meander(start: Cell, entry: Cell, heart: Cell, cols: number, rows: number, rng: Rng, wobble: number): Cell[] {
+  const points: [number, number][] = [[start.c, start.r]];
+  const alongC = start.r === 0 || start.r === rows - 1 ? 1 : 0;
+  const alongR = alongC === 0 ? 1 : 0;
+  const sign = rng() < 0.5 ? -1 : 1;
+  const run = 6 + Math.floor(rng() * 5);
+  let c = start.c;
+  let r = start.r;
+  for (let i = 0; i < run; i++) {
+    const nc = c + alongC * sign;
+    const nr = r + alongR * sign;
+    if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) break;
+    c = nc;
+    r = nr;
+  }
+  points.push([c, r]);
+  const rings = [0.7, 0.46, 0.28];
+  for (const t of rings) {
+    const inwardC = heart.c + (c - heart.c) * t;
+    const inwardR = heart.r + (r - heart.r) * t;
+    const dx = inwardC - heart.c;
+    const dy = inwardR - heart.r;
+    const len = Math.hypot(dx, dy) || 1;
+    const mag = (rng() * 2 - 1) * wobble * (0.85 + rng() * 0.5);
+    const jog = pullOut(inwardC + (-dy / len) * mag, inwardR + (dx / len) * mag, heart, 3, cols, rows);
+    points.push(jog);
+    c = jog[0];
+    r = jog[1];
+  }
+  points.push([entry.c, entry.r], [heart.c, heart.r]);
+  const cleaned: [number, number][] = [];
+  for (const p of points) {
+    const prev = cleaned[cleaned.length - 1];
+    if (prev && prev[0] === p[0] && prev[1] === p[1]) continue;
+    cleaned.push(p);
+  }
+  return stitch(cleaned);
+}
+
+function fallbackRoute(start: Cell, entry: Cell, heart: Cell, cols: number, rows: number): Cell[] {
+  const mid = pullOut((start.c + entry.c) / 2 + 5, (start.r + entry.r) / 2 - 4, heart, 4, cols, rows);
+  const mid2 = pullOut((mid[0] + entry.c) / 2 - 4, (mid[1] + entry.r) / 2 + 5, heart, 3, cols, rows);
+  return stitch([
+    [start.c, start.r],
+    mid,
+    mid2,
+    [entry.c, entry.r],
+    [heart.c, heart.r],
+  ]);
+}
+
+export type FieldLayout = { paths: Cell[][]; pads: Cell[]; seed: number };
+
+/** Four lanes from the rim to the keep. The same seed rebuilds the same field. */
+export function rollField(cols: number, rows: number, seed: number, id: MapId): FieldLayout {
+  const rng = mulberry32(seed);
+  const heart = heartCell(cols, rows);
+  const wobble = wobbleFor(id);
+  const paths: Cell[][] = [];
+  for (const side of shuffleSides(rng)) {
+    const start = startFor(side, cols, rows, rng);
+    const entry = entryFor(side, heart);
+    let path = meander(start, entry, heart, cols, rows, rng, wobble);
+    let tries = 0;
+    while ((hasLoop(path) || path.length < 28 || path[path.length - 1].c !== heart.c) && tries < 8) {
+      path = meander(start, entry, heart, cols, rows, rng, wobble * (0.7 + tries * 0.08));
+      tries += 1;
+    }
+    if (hasLoop(path) || path.length < 28) path = fallbackRoute(start, entry, heart, cols, rows);
+    paths.push(path);
+  }
+  let pads = padsFromPath(unionCells(...paths), cols, rows, 36).filter(
+    (p) => Math.max(Math.abs(p.c - heart.c), Math.abs(p.r - heart.r)) > 2,
+  );
+  if (pads.length < 22) {
+    pads = padsFromPath(unionCells(...paths), cols, rows, 36).filter(
+      (p) => Math.max(Math.abs(p.c - heart.c), Math.abs(p.r - heart.r)) > 1,
+    );
+  }
+  return { paths, pads, seed };
+}
+
+const PREVIEWS: Record<MapId, FieldLayout> = {
+  mycelion: rollField(FIELD_COLS, FIELD_ROWS, 101, "mycelion"),
+  forge: rollField(FIELD_COLS, FIELD_ROWS, 202, "forge"),
+  aegis: rollField(FIELD_COLS, FIELD_ROWS, 303, "aegis"),
+};
 
 export function unionCells(...paths: Cell[][]): Cell[] {
   const seen = new Set<string>();
@@ -154,12 +256,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Organic world",
     faction: "organic",
     lore: "A living planet of fungal canyons and bioluminescent marrow. The swarm is not an invasion so much as the lattice reclaiming a core we planted in its heart.",
-    hint: "Ground packs hit first. Bring a lance before spores take the air. Incursion 4 holds husks until the spores are committed. Incursion 5 holds spores until the ground pack is out. Incursion 8 holds husks until that pack is out. Incursion 9 holds spores until the ground pack is out. Incursion 12 holds blooms and spores until the ground line is out. After the Titan, Myrmidons, Thorns, and Blooms keep coming. A second gate opens at incursion 11. Frost melts mites; rails crack husks and Myrmidons. Flak slows a spore flock. Bore cracks a ground line and ignores the sky. A pylon slows a ground patch.",
-    cols: COLS,
-    rows: ROWS,
-    path: mycelionPath,
-    branches: [mycelionBranch],
-    pads: padsFromPath(unionCells(mycelionPath, mycelionBranch), COLS, ROWS, 22),
+    hint: "Ground packs hit first. Bring a lance before spores take the air. Incursion 4 holds husks until the spores are committed. Incursion 5 holds spores until the ground pack is out. Incursion 8 holds husks until that pack is out. Incursion 9 holds spores until the ground pack is out. Incursion 12 holds blooms and spores until the ground line is out. After the Titan, Myrmidons, Thorns, and Blooms keep coming. The keep sits in the center. Four lanes roll in from the rim each drop-in. New gates open on incursions 6, 11, and 16. Frost melts mites; rails crack husks and Myrmidons. Flak slows a spore flock. Bore cracks a ground line and ignores the sky. A pylon slows a ground patch.",
+    cols: FIELD_COLS,
+    rows: FIELD_ROWS,
+    path: PREVIEWS.mycelion.paths[0],
+    branches: PREVIEWS.mycelion.paths.slice(1),
+    pads: PREVIEWS.mycelion.pads,
     startGold: 220,
     lives: 20,
     waves: [
@@ -314,12 +416,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Mechanical world",
     faction: "mech",
     lore: "An industrial planet that smelts warships for the outer fleets. The foundry AIs have recast the nexus as raw stock — and dispatched the line to reclaim it.",
-    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Incursion 4 holds siege armor until the sky is committed. Incursion 5 holds gunships until the ground pack is out. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds gunships until the ground pack is out. Incursion 12 holds razors until the ground line is out. Late waves bring Bulwarks, Sentries, and Razors. A second gate opens at incursion 11. Walkers shrug frost; tesla shreds drones and Razors. Flak opens Razors and Skiffs. Bore bores Walkers. A pylon slows a ground patch.",
-    cols: COLS,
-    rows: ROWS,
-    path: forgePath,
-    branches: [forgeBranch],
-    pads: padsFromPath(unionCells(forgePath, forgeBranch), COLS, ROWS, 20),
+    hint: "Armor is thick. Rails and tesla cut steel. Watch the gunships. Incursion 4 holds siege armor until the sky is committed. Incursion 5 holds gunships until the ground pack is out. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds gunships until the ground pack is out. Incursion 12 holds razors until the ground line is out. Late waves bring Bulwarks, Sentries, and Razors. The keep sits in the center. Four lanes roll in from the rim each drop-in. New gates open on incursions 6, 11, and 16. Walkers shrug frost; tesla shreds drones and Razors. Flak opens Razors and Skiffs. Bore bores Walkers. A pylon slows a ground patch.",
+    cols: FIELD_COLS,
+    rows: FIELD_ROWS,
+    path: PREVIEWS.forge.paths[0],
+    branches: PREVIEWS.forge.paths.slice(1),
+    pads: PREVIEWS.forge.pads,
     startGold: 240,
     lives: 18,
     waves: [
@@ -476,12 +578,12 @@ export const MAPS: Record<MapId, MapDef> = {
     subtitle: "Hybrid world",
     faction: "hybrid",
     lore: "A collision world — living tissue welded to machine along a scar of light. Nothing here agrees what it is. Everything agrees the core must fall.",
-    hint: "Both kingdoms come at once. Mix slow control with air cover. Incursion 3 holds wraiths until the ground pack is out. Incursion 4 holds husks until the sky is committed. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds wraiths until the ground pack is out. Incursion 12 holds specters and wraiths until the ground line is out. The second half fuses Amalgams, Relics, and Specters. A second gate opens at incursion 11. Each hybrid resists one plate and folds to another — mix the line. Flak holds Wraiths. Bore answers ground plate. A pylon slows a ground patch.",
-    cols: COLS,
-    rows: ROWS,
-    path: aegisPath,
-    branches: [aegisBranch],
-    pads: padsFromPath(unionCells(aegisPath, aegisBranch), COLS, ROWS, 22),
+    hint: "Both kingdoms come at once. Mix slow control with air cover. Incursion 3 holds wraiths until the ground pack is out. Incursion 4 holds husks until the sky is committed. Incursion 8 holds siege armor until that pack is out. Incursion 9 holds wraiths until the ground pack is out. Incursion 12 holds specters and wraiths until the ground line is out. The second half fuses Amalgams, Relics, and Specters. The keep sits in the center. Four lanes roll in from the rim each drop-in. New gates open on incursions 6, 11, and 16. Each hybrid resists one plate and folds to another — mix the line. Flak holds Wraiths. Bore answers ground plate. A pylon slows a ground patch.",
+    cols: FIELD_COLS,
+    rows: FIELD_ROWS,
+    path: PREVIEWS.aegis.paths[0],
+    branches: PREVIEWS.aegis.paths.slice(1),
+    pads: PREVIEWS.aegis.pads,
     startGold: 260,
     lives: 16,
     waves: [

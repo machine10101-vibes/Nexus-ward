@@ -43,7 +43,7 @@ import {
   upgradeCost,
 } from "./config";
 import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
-import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld } from "./maps";
+import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld, rollField } from "./maps";
 import type {
   BaseAddonId,
   BaseClass,
@@ -54,6 +54,7 @@ import type {
   DamageKind,
   Decal,
   DecalKind,
+  Cell,
   Enemy,
   EnemyId,
   Floater,
@@ -102,7 +103,7 @@ export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
 type SpawnEvent = { t: number; type: EnemyId; pathId: number; elite: boolean };
 
-const GATE_EVERY = 10;
+const GATE_EVERY = 5;
 
 function dist2(ax: number, ay: number, bx: number, by: number) {
   const dx = ax - bx;
@@ -135,6 +136,10 @@ export class GameEngine {
 
   waypoints: { x: number; y: number; z: number }[] = [];
   paths: { x: number; y: number; z: number }[][] = [];
+  cellPaths: Cell[][] = [];
+  padCells: Cell[] = [];
+  layoutGen = 0;
+  layoutSeed = 1;
   padWorld: { x: number; z: number }[] = [];
   occupied: number[] = [];
 
@@ -380,22 +385,26 @@ export class GameEngine {
     this.buildType = "pulse";
     this.hoverPad = null;
     this.towers = [];
-    this.occupied = Array(map.pads.length).fill(-1);
+    const rolled = rollField(map.cols, map.rows, (Math.floor(Math.random() * 0x7fffffff) ^ (Date.now() >>> 0)) >>> 0, id);
+    this.cellPaths = rolled.paths;
+    this.padCells = rolled.pads;
+    this.layoutSeed = rolled.seed;
+    this.layoutGen += 1;
+    this.occupied = Array(rolled.pads.length).fill(-1);
     this.nextTowerId = 1;
     this.spawnQueue = [];
     this.spawnI = 0;
     this.spawnT = 0;
     this.remainingInWave = 0;
     this.resetPools();
-    const cellPaths = [map.path, ...(map.branches ?? [])];
-    this.paths = cellPaths.map((cells) =>
+    this.paths = this.cellPaths.map((cells) =>
       cells.map((p) => {
         const w = cellToWorld(p.c, p.r, map.cols, map.rows);
         return { x: w.x, y: 0, z: w.z };
       }),
     );
     this.waypoints = this.paths[0] ?? [];
-    this.padWorld = map.pads.map((p) => cellToWorld(p.c, p.r, map.cols, map.rows));
+    this.padWorld = this.padCells.map((p) => cellToWorld(p.c, p.r, map.cols, map.rows));
     this.baseClass = baseClass ?? worldBase(id);
     this.basePlate = 0;
     this.baseSnare = 0;

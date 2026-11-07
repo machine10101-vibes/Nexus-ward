@@ -44,9 +44,10 @@ export const CROSS_COVER = 0.06;
 export const MARK_TAKEN = 0.1;
 export const MARK_TIME = 2.4;
 
-/** How far a keep's snare and spire reach from the end of the path. */
-export const BASE_SNARE_RANGE = 3.6;
-export const BASE_GUN_RANGE = 5.4;
+/** How far a keep's snare and spire reach, per rank. */
+export const BASE_SNARE_REACH = [3.6, 4.15, 4.7] as const;
+export const BASE_GUN_REACH = [5.4, 5.8, 6.2] as const;
+export const BASE_RANK_MAX = 3;
 
 export const BASES: Record<
   BaseClass,
@@ -78,24 +79,49 @@ export const BASES: Record<
   },
 };
 
-export const BASE_ADDONS: Record<BaseAddonId, { name: string; cost: number; blurb: string }> = {
-  plate: { name: "Plate", cost: 75, blurb: "Adds integrity to the keep." },
-  snare: { name: "Snare", cost: 110, blurb: "Slows hosts inside the keep." },
-  spire: { name: "Spire", cost: 140, blurb: "The keep fires down the last stretch." },
+export const BASE_ADDONS: Record<BaseAddonId, { name: string; costs: readonly [number, number, number]; blurb: string }> = {
+  plate: { name: "Plate", costs: [75, 90, 120], blurb: "Adds integrity. Each rank stacks another layer." },
+  snare: { name: "Snare", costs: [110, 140, 180], blurb: "Slows hosts inside the keep. Rank 3 also bites." },
+  spire: { name: "Spire", costs: [140, 170, 220], blurb: "The keep fires down the last stretch." },
+  mantle: { name: "Mantle", costs: [100, 140, 190], blurb: "Catches part of the first breach each wave." },
 };
 
-/** Integrity a plate adds. Hybrid holds one more point. */
-export const BASE_PLATE: Record<BaseClass, number> = { organic: 2, mech: 2, hybrid: 3 };
-/** Speed factor while the snare holds. Lower is slower. Biological grips hardest. */
-export const BASE_SNARE: Record<BaseClass, number> = { organic: 0.52, mech: 0.74, hybrid: 0.62 };
+/** Integrity added when that plate rank is bought. Hybrid starts ahead. */
+export const BASE_PLATE: Record<BaseClass, readonly [number, number, number]> = {
+  organic: [2, 2, 2],
+  mech: [2, 2, 3],
+  hybrid: [3, 2, 3],
+};
+/** Speed factor while the snare holds. Lower is slower. */
+export const BASE_SNARE: Record<BaseClass, readonly [number, number, number]> = {
+  organic: [0.52, 0.44, 0.36],
+  mech: [0.74, 0.64, 0.55],
+  hybrid: [0.62, 0.52, 0.44],
+};
+/** Damage a rank-3 snare deals on its pulse. */
+export const BASE_SNARE_CHIP: Record<BaseClass, number> = { organic: 3, mech: 2, hybrid: 2 };
 export const BASE_GUN: Record<
   BaseClass,
-  { damage: number; rate: number; slow: number; slowTime: number; mark: boolean }
+  readonly { damage: number; rate: number; slow: number; slowTime: number; mark: boolean; markTime: number }[]
 > = {
-  organic: { damage: 7, rate: 0.8, slow: 0.68, slowTime: 1, mark: false },
-  mech: { damage: 12, rate: 1.05, slow: 0, slowTime: 0, mark: false },
-  hybrid: { damage: 8, rate: 0.9, slow: 0, slowTime: 0, mark: true },
+  organic: [
+    { damage: 7, rate: 0.8, slow: 0.68, slowTime: 1, mark: false, markTime: 0 },
+    { damage: 9, rate: 0.92, slow: 0.58, slowTime: 1.15, mark: false, markTime: 0 },
+    { damage: 12, rate: 1.05, slow: 0.48, slowTime: 1.4, mark: false, markTime: 0 },
+  ],
+  mech: [
+    { damage: 12, rate: 1.05, slow: 0, slowTime: 0, mark: false, markTime: 0 },
+    { damage: 16, rate: 1.16, slow: 0, slowTime: 0, mark: false, markTime: 0 },
+    { damage: 20, rate: 1.28, slow: 0, slowTime: 0, mark: false, markTime: 0 },
+  ],
+  hybrid: [
+    { damage: 8, rate: 0.9, slow: 0, slowTime: 0, mark: true, markTime: 2.4 },
+    { damage: 11, rate: 1.02, slow: 0, slowTime: 0, mark: true, markTime: 3 },
+    { damage: 14, rate: 1.14, slow: 0, slowTime: 0, mark: true, markTime: 3.6 },
+  ],
 };
+/** How much of the first leak each wave a mantle rank swallows. */
+export const BASE_MANTLE = [1, 2, 4] as const;
 
 export function worldBase(id: MapId): BaseClass {
   if (id === "forge") return "mech";

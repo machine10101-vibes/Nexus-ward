@@ -22,8 +22,11 @@ import {
 import {
   BASE_ADDONS,
   BASE_GUN,
+  BASE_MANTLE,
   BASE_PLATE,
+  BASE_RANK_MAX,
   BASE_SNARE,
+  BASE_SNARE_CHIP,
   BASES,
   ENEMIES,
   enemyTraitTag,
@@ -218,9 +221,12 @@ export function Hud() {
         <WaveChips groups={preview} combat={hud.phase === "combat"} remaining={hud.remaining} />
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           {hud.coreHot ? <StatusChip alert>Base contact</StatusChip> : null}
-          {hud.phase !== "build" && hud.basePlate ? <StatusChip>Plate</StatusChip> : null}
-          {hud.phase !== "build" && hud.baseSnare ? <StatusChip>Snare</StatusChip> : null}
-          {hud.phase !== "build" && hud.baseGun ? <StatusChip>Spire</StatusChip> : null}
+          {hud.phase !== "build" && hud.basePlate > 0 ? <StatusChip>Plate {hud.basePlate}</StatusChip> : null}
+          {hud.phase !== "build" && hud.baseSnare > 0 ? <StatusChip>Snare {hud.baseSnare}</StatusChip> : null}
+          {hud.phase !== "build" && hud.baseGun > 0 ? <StatusChip>Spire {hud.baseGun}</StatusChip> : null}
+          {hud.baseMantle > 0 ? (
+            <StatusChip muted={!hud.mantleReady}>{hud.mantleReady ? "Mantle" : "Mantle open"}</StatusChip>
+          ) : null}
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
           {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
@@ -511,50 +517,62 @@ function CoreRing({ pct, lives, leak }: { pct: number; lives: number; leak: bool
   );
 }
 
-function addonNote(id: BaseAddonId, cls: BaseClass) {
-  if (id === "plate") return `+${BASE_PLATE[cls]} integrity`;
-  if (id === "snare") return `hosts move at ${Math.round(BASE_SNARE[cls] * 100)}% speed`;
-  const gun = BASE_GUN[cls];
+function addonNote(id: BaseAddonId, cls: BaseClass, rank: number) {
+  const i = rank - 1;
+  if (id === "plate") return `+${BASE_PLATE[cls][i]} integrity`;
+  if (id === "snare") {
+    const bite = rank >= 3 ? ` · bite ${BASE_SNARE_CHIP[cls]}` : "";
+    return `hosts move at ${Math.round(BASE_SNARE[cls][i] * 100)}% speed${bite}`;
+  }
+  if (id === "mantle") return `catches ${BASE_MANTLE[i]} from the first breach`;
+  const gun = BASE_GUN[cls][i];
   const bits = [`${gun.damage} damage`];
   if (gun.slow > 0) bits.push("thorn slow");
   if (gun.mark) bits.push("paints");
+  if (cls === "mech" && rank >= 3) bits.push("splash");
   return bits.join(" · ");
 }
 
 function BaseAddons() {
   const hud = useGameStore((s) => s.hud);
   const cls = hud.baseClass;
-  const owned: Record<BaseAddonId, boolean> = {
+  const ranks: Record<BaseAddonId, number> = {
     plate: hud.basePlate,
     snare: hud.baseSnare,
     spire: hud.baseGun,
+    mantle: hud.baseMantle,
   };
   return (
     <div className="pointer-events-auto mx-auto flex max-w-full flex-wrap items-center justify-center gap-1.5">
       <span className="font-display text-2xs uppercase tracking-label text-muted">Add-ons</span>
-      {(["plate", "snare", "spire"] as const).map((id) => {
+      {(["plate", "snare", "spire", "mantle"] as const).map((id) => {
         const spec = BASE_ADDONS[id];
-        const on = owned[id];
-        const afford = hud.gold >= spec.cost;
+        const rank = ranks[id];
+        const maxed = rank >= BASE_RANK_MAX;
+        const cost = maxed ? 0 : spec.costs[rank];
+        const afford = hud.gold >= cost;
         return (
           <button
             key={id}
             type="button"
-            title={`${spec.blurb} ${addonNote(id, cls)}`}
-            aria-pressed={on}
-            disabled={on}
+            title={maxed ? `${spec.name} rank 3` : `${spec.blurb} ${addonNote(id, cls, rank + 1)}`}
+            aria-pressed={rank > 0}
+            disabled={maxed}
             onClick={() => useGameStore.getState().buyAddon(id)}
             className={cn(
               "rounded-full border px-3 py-1 font-display text-2xs uppercase tracking-label transition-colors",
-              on
+              maxed
                 ? "border-accent text-accent"
-                : afford
-                  ? "border-border text-fg hover:border-fg/40"
-                  : "border-border text-muted",
+                : rank > 0
+                  ? "border-accent/70 text-fg"
+                  : afford
+                    ? "border-border text-fg hover:border-fg/40"
+                    : "border-border text-muted",
             )}
           >
             {spec.name}
-            {on ? " on" : ` · ${spec.cost}`}
+            {rank > 0 ? ` ${rank}` : ""}
+            {maxed ? "" : ` · ${cost}`}
           </button>
         );
       })}

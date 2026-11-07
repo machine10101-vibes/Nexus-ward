@@ -151,7 +151,8 @@ export const STUDIO_CATALOG: StudioEntry[] = [
     name: "Ward bases",
     group: "Worlds",
     kind: "world",
-    blurb: "Biological, mechanical, and hybrid keeps.",
+    blurb: "Biological, mechanical, and hybrid keeps. Fitted and overdrive show the add-on ranks.",
+    variants: ["Hull", "Fitted", "Overdrive"],
     world: "core",
   },
   {

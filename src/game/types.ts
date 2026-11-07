@@ -1,7 +1,7 @@
 export type Faction = "organic" | "mech" | "hybrid";
 /** The keep at the end of the path. Same three classes as the worlds. */
 export type BaseClass = Faction;
-export type BaseAddonId = "plate" | "snare" | "spire";
+export type BaseAddonId = "plate" | "snare" | "spire" | "mantle";
 export type MapId = "mycelion" | "forge" | "aegis";
 export type TowerId = "pulse" | "arc" | "frost" | "rail" | "tesla" | "flak" | "bore" | "lash" | "pylon" | "mark";
 export type EnemyId =

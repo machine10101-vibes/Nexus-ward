@@ -687,11 +687,12 @@ function Help() {
           <span className="text-fg">G</span> picks the warden up so you can drop them anywhere on the ward. They auto-attack hosts inside the agro ring.
         </li>
         <li>
-          <span className="text-fg">7. The base</span> sits at the end of the path. Pick Biological, Mechanical, or Hybrid
-          before you drop. During build, Plate, Snare, Spire, and Mantle each rank up to 3. Plate stacks integrity.
+          <span className="text-fg">7. The base</span> sits in the center of the field. Pick Biological, Mechanical, or Hybrid
+          before you drop. Each drop-in rolls four lanes in from the rim, and a new gate opens every 5 incursions.
+          During build, Plate, Snare, Spire, and Mantle each rank up to 3. Plate stacks integrity.
           Snare slows the last stretch and bites at rank 3. Spire fires harder as it ranks. Mantle catches part of the
           first breach each wave, then opens until the next one. Each class changes those add-ons and how the keep
-          looks. Extra gates open every 10 incursions. The base
+          looks. The base
           flashes and the HUD reads Base contact when a host is four steps from the keep. The leak burst still fires if
           they touch it.
         </li>

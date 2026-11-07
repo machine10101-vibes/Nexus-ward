@@ -149,7 +149,7 @@ export type MapDef = {
   cols: number;
   rows: number;
   path: Cell[];
-  /** Extra lanes that open every 10 incursions. */
+  /** Extra lanes. A new gate opens every 5 incursions, up to four. */
   branches?: Cell[][];
   pads: Cell[];
   startGold: number;

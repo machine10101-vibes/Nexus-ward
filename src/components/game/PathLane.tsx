@@ -61,8 +61,8 @@ export function PathLane({
           roughness={roughness}
           metalness={metalness}
           vertexColors
-          emissive="#000000"
-          emissiveIntensity={0}
+          emissive={mapId === "forge" ? "#3a2414" : mapId === "aegis" ? "#16343c" : "#123028"}
+          emissiveIntensity={0.45}
         />
       </mesh>
       <PathDots points={dots} color={DOT_COLOR[mapId]} />

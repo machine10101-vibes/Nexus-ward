@@ -1,11 +1,9 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { AdditiveBlending, Object3D, Quaternion, Vector3, type InstancedMesh, type MeshBasicMaterial } from "three";
+import { useMemo } from "react";
 import type { MapId } from "@/game/types";
 
 /**
  * The scar of Aegis, in world XZ. Tissue sits on the negative side, steel on
- * the positive. The offset keeps the bright line beside the keep, not through it.
+ * the positive. The offset keeps the trench beside the keep.
  * Direction is (0.8116, 0.5843); the perpendicular is (-0.5843, 0.8116).
  */
 export const SCAR_PX = -0.5843;
@@ -17,6 +15,7 @@ export function scarSigned(x: number, z: number) {
 }
 
 type Clear = { x: number; z: number };
+type Site = { x: number; z: number; a: number; k: number; j: number; n: number };
 
 function blocked(x: number, z: number, keep: Clear[], clear: number, center: number) {
   if (x * x + z * z < center * center) return true;
@@ -41,218 +40,258 @@ function rng(seed: number) {
   };
 }
 
-type Seg = { x: number; z: number; len: number; yaw: number; wide: number };
-
-function chainSegments(points: { x: number; z: number }[], wide: number, maxGap: number): Seg[] {
-  const out: Seg[] = [];
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    const dx = b.x - a.x;
-    const dz = b.z - a.z;
-    const len = Math.hypot(dx, dz);
-    if (len < 0.2 || len > maxGap) continue;
-    out.push({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, len, yaw: Math.atan2(dx, dz), wide });
+function sites(
+  seed: number,
+  count: number,
+  arenaR: number,
+  squash: number,
+  keep: Clear[],
+  clear: number,
+  center: number,
+): Site[] {
+  const rand = rng(seed);
+  const out: Site[] = [];
+  let guard = 0;
+  while (out.length < count && guard < 240) {
+    guard += 1;
+    const ang = rand() * Math.PI * 2;
+    const rad = (0.26 + rand() * 0.55) * arenaR;
+    const x = Math.cos(ang) * rad;
+    const z = Math.sin(ang) * rad * squash;
+    if (!inside(x, z, arenaR, squash, 0.8)) continue;
+    if (blocked(x, z, keep, clear, center)) continue;
+    if (out.some((o) => (o.x - x) ** 2 + (o.z - z) ** 2 < 42)) continue;
+    out.push({ x, z, a: rand() * Math.PI * 2, k: rand(), j: rand() * 2 - 1, n: out.length });
   }
   return out;
 }
 
-const TUBE_UP = new Vector3(0, 1, 0);
-const TUBE_DIR = new Vector3();
-const TUBE_QUAT = new Quaternion();
-
-function laySegments(mesh: InstancedMesh | null, segs: Seg[], y: number, thickness: number, tube = false) {
-  if (!mesh) return;
-  const dummy = new Object3D();
-  for (let i = 0; i < segs.length; i++) {
-    const s = segs[i];
-    dummy.position.set(s.x, y, s.z);
-    if (tube) {
-      TUBE_DIR.set(Math.sin(s.yaw), 0, Math.cos(s.yaw));
-      TUBE_QUAT.setFromUnitVectors(TUBE_UP, TUBE_DIR);
-      dummy.quaternion.copy(TUBE_QUAT);
-      dummy.scale.set(s.wide, s.len, s.wide);
-    } else {
-      dummy.rotation.set(0, s.yaw, 0);
-      dummy.scale.set(s.wide, thickness, s.len);
-    }
-    dummy.updateMatrix();
-    mesh.setMatrixAt(i, dummy.matrix);
-  }
-  mesh.count = segs.length;
-  mesh.instanceMatrix.needsUpdate = true;
+function Flesh({ color, rough = 0.72, glow = 0 }: { color: string; rough?: number; glow?: number }) {
+  return <meshStandardMaterial color={color} roughness={rough} metalness={0.06} emissive={glow ? "#1f6a48" : "#000"} emissiveIntensity={glow} />;
 }
 
-/** Mycelion: branching marrow veins and spore bowls in the living ground. */
-function MycelionCrust({
-  arenaR,
-  squash,
-  keepClear,
-}: {
-  arenaR: number;
-  squash: number;
-  keepClear: Clear[];
-}) {
-  const veins = useRef<InstancedMesh>(null);
-  const bowls = useRef<InstancedMesh>(null);
-  const segs = useMemo(() => {
-    const out: Seg[] = [];
-    for (let v = 0; v < 5; v++) {
-      const rand = rng(1100 + v * 97);
-      const ang = rand() * Math.PI * 2;
-      let x = Math.cos(ang) * arenaR * (0.55 + rand() * 0.28);
-      let z = Math.sin(ang) * arenaR * squash * (0.55 + rand() * 0.28);
-      let heading = Math.atan2(-z, -x) + (rand() - 0.5) * 1.4;
-      const pts: { x: number; z: number }[] = [];
-      for (let i = 0; i < 26; i++) {
-        heading += (rand() - 0.48) * 0.85;
-        x += Math.cos(heading) * 1.45;
-        z += Math.sin(heading) * 1.45;
-        if (!inside(x, z, arenaR, squash, 0.9)) break;
-        if (blocked(x, z, keepClear, 1.7, 3.4)) continue;
-        pts.push({ x, z });
-      }
-      out.push(...chainSegments(pts, 0.95 + rand() * 0.25, 2.3));
-    }
-    return out;
-  }, [arenaR, keepClear, squash]);
-  const pools = useMemo(() => {
-    const rand = rng(77);
-    const out: { x: number; z: number; s: number }[] = [];
-    let guard = 0;
-    while (out.length < 7 && guard < 80) {
-      guard += 1;
-      const ang = rand() * Math.PI * 2;
-      const rad = (0.22 + rand() * 0.62) * arenaR;
-      const x = Math.cos(ang) * rad;
-      const z = Math.sin(ang) * rad * squash;
-      if (!inside(x, z, arenaR, squash, 0.82)) continue;
-      if (blocked(x, z, keepClear, 3.1, 4.6)) continue;
-      out.push({ x, z, s: 0.85 + rand() * 0.7 });
-    }
-    return out;
-  }, [arenaR, keepClear, squash]);
-  useLayoutEffect(() => {
-    laySegments(veins.current, segs, 0.12, 1, true);
-    const mesh = bowls.current;
-    if (!mesh) return;
-    const dummy = new Object3D();
-    for (let i = 0; i < pools.length; i++) {
-      const p = pools[i];
-      dummy.position.set(p.x, 0.02, p.z);
-      dummy.rotation.set(-Math.PI / 2, 0, 0);
-      dummy.scale.set(p.s, p.s, 1);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.count = pools.length;
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [pools, segs]);
-  useFrame((s) => {
-    const mat = veins.current?.material as MeshBasicMaterial | undefined;
-    if (mat) mat.opacity = 0.42 + Math.sin(s.clock.elapsedTime * 1.3) * 0.1;
-  });
+function Steel({ color, rough = 0.38 }: { color: string; rough?: number }) {
+  return <meshStandardMaterial color={color} roughness={rough} metalness={0.82} />;
+}
+
+/** A living shelf: wet mound, overlapping caps, a marrow cleft, spore stalks. */
+function MarrowGrove({ site }: { site: Site }) {
+  const s = 1.85 + site.k * 0.45 + (site.n === 0 ? 0.4 : 0);
+  const caps = [
+    { x: -0.48, y: 0.34, z: 0.1, rx: 0.78, ry: 0.28, rz: 0.58, rot: 0.4, c: "#3d8a62" },
+    { x: 0.22, y: 0.46, z: -0.18, rx: 0.66, ry: 0.24, rz: 0.5, rot: -0.55, c: "#4e9a70" },
+    { x: 0.06, y: 0.58, z: 0.26, rx: 0.5, ry: 0.2, rz: 0.4, rot: 0.9, c: "#62b484" },
+    { x: -0.16, y: 0.26, z: -0.32, rx: 0.55, ry: 0.18, rz: 0.4, rot: 1.6, c: "#2a6848" },
+  ];
   return (
-    <group name="mycelion-crust">
-      <instancedMesh ref={veins} args={[undefined, undefined, Math.max(1, segs.length)]}>
-        <cylinderGeometry args={[0.5, 0.5, 1, 7]} />
-        <meshBasicMaterial color="#7cf0c4" transparent opacity={0.5} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={bowls} args={[undefined, undefined, Math.max(1, pools.length)]}>
-        <ringGeometry args={[0.62, 1, 20]} />
-        <meshBasicMaterial color="#3dcaa0" transparent opacity={0.55} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
-      </instancedMesh>
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={s}>
+      <mesh position={[0.02, 0.1, 0]} scale={[1.2, 0.32, 0.95]} castShadow receiveShadow>
+        <sphereGeometry args={[0.78, 18, 14]} />
+        <Flesh color="#173528" rough={0.9} />
+      </mesh>
+      <mesh position={[-0.35, 0.08, 0.2]} scale={[0.7, 0.24, 0.55]} castShadow>
+        <sphereGeometry args={[0.55, 14, 10]} />
+        <Flesh color="#12281e" rough={0.92} />
+      </mesh>
+      {caps.map((cap) => (
+        <group key={`${cap.x}-${cap.z}`} position={[cap.x, cap.y, cap.z]} rotation={[0.15, cap.rot, site.j * 0.08]}>
+          <mesh scale={[cap.rx, cap.ry, cap.rz]} castShadow>
+            <sphereGeometry args={[1, 16, 12]} />
+            <Flesh color={cap.c} rough={0.48} glow={0.18} />
+          </mesh>
+          <mesh position={[0, -cap.ry * 0.65, 0]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[cap.rx * 1.15, 0.015, cap.rz * 0.18]} />
+            <meshStandardMaterial color="#102018" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -cap.ry * 0.65, 0.08]} rotation={[0.2, 0.4, 0]}>
+            <boxGeometry args={[cap.rx * 0.9, 0.012, cap.rz * 0.12]} />
+            <meshStandardMaterial color="#102018" roughness={0.8} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0.12, 0.18, -0.02]} rotation={[0.2, 0.5 + site.j * 0.2, 0.1]} castShadow>
+        <boxGeometry args={[0.07, 0.05, 0.72]} />
+        <meshStandardMaterial color="#08140e" roughness={1} />
+      </mesh>
+      <mesh position={[0.12, 0.2, -0.02]} rotation={[0.2, 0.5 + site.j * 0.2, 0.1]}>
+        <capsuleGeometry args={[0.018, 0.42, 4, 6]} />
+        <meshStandardMaterial color="#b7f0d4" emissive="#7ddec0" emissiveIntensity={0.7} roughness={0.35} />
+      </mesh>
+      {[0, 1, 2, 3, 4].map((i) => {
+        const a = site.a * 0.2 + i * 1.25;
+        const rad = 0.55 + (i % 3) * 0.18;
+        const h = 0.55 + (i % 2) * 0.35;
+        return (
+          <group key={i} position={[Math.cos(a) * rad, 0, Math.sin(a) * rad * 0.8]}>
+            <mesh position={[0, h * 0.45, 0]} castShadow>
+              <cylinderGeometry args={[0.02, 0.035, h, 6]} />
+              <Flesh color="#1a3a2a" />
+            </mesh>
+            <mesh position={[0, h + 0.04, 0]} castShadow>
+              <sphereGeometry args={[0.055 + (i % 2) * 0.02, 10, 8]} />
+              <meshStandardMaterial color="#d8ffe8" emissive="#8ef0c4" emissiveIntensity={0.85} roughness={0.28} />
+            </mesh>
+          </group>
+        );
+      })}
     </group>
   );
 }
 
-/** Kron Forge: foundry plates and slag channels cut across the floor. */
-function ForgeCrust({
-  arenaR,
-  squash,
-  keepClear,
-}: {
-  arenaR: number;
-  squash: number;
-  keepClear: Clear[];
-}) {
-  const plates = useRef<InstancedMesh>(null);
-  const slag = useRef<InstancedMesh>(null);
-  const ember = useRef<InstancedMesh>(null);
-  const tiles = useMemo(() => {
-    const out: { x: number; z: number; yaw: number }[] = [];
-    const step = 3.9;
-    for (let x = -arenaR; x <= arenaR; x += step) {
-      for (let z = -arenaR * squash; z <= arenaR * squash; z += step) {
-        if (!inside(x, z, arenaR, squash, 0.86)) continue;
-        if (blocked(x, z, keepClear, 2.35, 4.4)) continue;
-        out.push({ x, z, yaw: ((Math.round(x) + Math.round(z)) % 5) * 0.04 });
-      }
-    }
-    return out;
-  }, [arenaR, keepClear, squash]);
-  const channels = useMemo(() => {
-    const dark: Seg[] = [];
-    const hot: Seg[] = [];
-    for (let c = 0; c < 3; c++) {
-      const ang = 0.5 + c * 2.05;
-      const dx = Math.cos(ang);
-      const dz = Math.sin(ang);
-      const pts: { x: number; z: number }[] = [];
-      for (let t = 5.2; t < arenaR * 0.88; t += 1.55) {
-        const x = dx * t;
-        const z = dz * t * 0.92;
-        if (!inside(x, z, arenaR, squash, 0.9)) break;
-        if (blocked(x, z, keepClear, 2.1, 4.2)) continue;
-        pts.push({ x, z });
-      }
-      dark.push(...chainSegments(pts, 0.95, 2.4));
-      hot.push(...chainSegments(pts, 0.34, 2.4));
-    }
-    return { dark, hot };
-  }, [arenaR, keepClear, squash]);
-  useLayoutEffect(() => {
-    const mesh = plates.current;
-    if (mesh) {
-      const dummy = new Object3D();
-      for (let i = 0; i < tiles.length; i++) {
-        const t = tiles[i];
-        dummy.position.set(t.x, 0.035, t.z);
-        dummy.rotation.set(0, t.yaw, 0);
-        dummy.scale.set(2.15, 1, 1.45);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.count = tiles.length;
-      mesh.instanceMatrix.needsUpdate = true;
-    }
-    laySegments(slag.current, channels.dark, 0.028, 1);
-    laySegments(ember.current, channels.hot, 0.05, 1);
-  }, [channels, tiles]);
-  useFrame((s) => {
-    const mat = ember.current?.material as MeshBasicMaterial | undefined;
-    if (mat) mat.opacity = 0.55 + Math.sin(s.clock.elapsedTime * 2.2) * 0.2;
-  });
+function PlateYard({ site }: { site: Site }) {
+  const s = 1.7 + site.k * 0.35;
+  const rivets = [
+    [-0.72, -0.42],
+    [0.72, -0.42],
+    [-0.72, 0.42],
+    [0.72, 0.42],
+    [0, -0.42],
+    [0, 0.42],
+  ];
   return (
-    <group name="forge-crust">
-      <instancedMesh ref={plates} args={[undefined, undefined, Math.max(1, tiles.length)]} receiveShadow>
-        <boxGeometry args={[1, 0.05, 1]} />
-        <meshStandardMaterial color="#2a2622" metalness={0.72} roughness={0.42} />
-      </instancedMesh>
-      <instancedMesh ref={slag} args={[undefined, undefined, Math.max(1, channels.dark.length)]}>
-        <boxGeometry args={[1, 0.03, 1]} />
-        <meshStandardMaterial color="#1a120e" metalness={0.35} roughness={0.86} />
-      </instancedMesh>
-      <instancedMesh ref={ember} args={[undefined, undefined, Math.max(1, channels.hot.length)]}>
-        <boxGeometry args={[1, 0.02, 1]} />
-        <meshBasicMaterial color="#e2661c" transparent opacity={0.7} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
-      </instancedMesh>
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={s}>
+      <mesh position={[0, 0.04, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.9, 0.08, 1.25]} />
+        <Steel color="#2a2e32" />
+      </mesh>
+      <mesh position={[0.06, 0.09, -0.04]} rotation={[0, 0.06, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.35, 0.05, 0.82]} />
+        <Steel color="#3a4046" rough={0.32} />
+      </mesh>
+      <mesh position={[0.78, 0.1, 0.42]} rotation={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[0.28, 0.06, 0.22]} />
+        <Steel color="#4a4038" rough={0.46} />
+      </mesh>
+      {rivets.map(([x, z]) => (
+        <mesh key={`${x}-${z}`} position={[x, 0.09, z]} castShadow>
+          <cylinderGeometry args={[0.055, 0.055, 0.04, 8]} />
+          <Steel color="#6a6258" rough={0.28} />
+        </mesh>
+      ))}
+      <mesh position={[-0.15, 0.14, 0.08]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.22, 0.045, 8, 16]} />
+        <Steel color="#241c18" rough={0.55} />
+      </mesh>
+      <mesh position={[-0.15, 0.15, 0.08]}>
+        <sphereGeometry args={[0.1, 12, 10]} />
+        <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.9} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.35, 0.13, -0.28]} castShadow>
+        <boxGeometry args={[0.55, 0.04, 0.06]} />
+        <Steel color="#1c2024" rough={0.5} />
+      </mesh>
+      <mesh position={[0.35, 0.13, -0.16]} castShadow>
+        <boxGeometry args={[0.55, 0.04, 0.06]} />
+        <Steel color="#1c2024" rough={0.5} />
+      </mesh>
     </group>
   );
 }
 
-/** Aegis: living tissue welded to machine along one scar of light. */
-function AegisCrust({
+function SlagHeap({ site }: { site: Site }) {
+  const cones = [
+    { x: 0, z: 0, r: 0.62, h: 0.85 },
+    { x: 0.42, z: 0.16, r: 0.4, h: 0.55 },
+    { x: -0.34, z: 0.12, r: 0.36, h: 0.48 },
+    { x: 0.08, z: -0.36, r: 0.32, h: 0.4 },
+  ];
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={1.65 + site.k * 0.4}>
+      {cones.map((c) => (
+        <mesh key={`${c.x}-${c.z}`} position={[c.x, c.h * 0.45, c.z]} castShadow>
+          <coneGeometry args={[c.r, c.h, 7]} />
+          <meshStandardMaterial color="#2a211c" roughness={0.94} metalness={0.18} />
+        </mesh>
+      ))}
+      <mesh position={[0.08, 0.2, 0.02]} rotation={[0.4, 0.2, 0.6]}>
+        <boxGeometry args={[0.04, 0.03, 0.42]} />
+        <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.85} roughness={0.45} />
+      </mesh>
+      <mesh position={[-0.05, 0.16, 0.1]} rotation={[0.2, 1.1, 0.3]}>
+        <boxGeometry args={[0.03, 0.025, 0.28]} />
+        <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={0.7} roughness={0.45} />
+      </mesh>
+      <mesh position={[0.22, 0.34, 0.08]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#ffd0a8" emissive="#ff8a3c" emissiveIntensity={1} />
+      </mesh>
+    </group>
+  );
+}
+
+function CoolerBank({ site }: { site: Site }) {
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={1.6 + site.k * 0.35}>
+      <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.7, 0.08, 0.7]} />
+        <Steel color="#2c3136" />
+      </mesh>
+      {[-0.55, -0.28, 0, 0.28, 0.55].map((x) => (
+        <mesh key={x} position={[x, 0.56, 0]} castShadow>
+          <boxGeometry args={[0.1, 0.95, 0.55]} />
+          <Steel color={x === 0 ? "#4a4038" : "#3a4248"} rough={0.34} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.18, 0.42]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, 1.45, 8]} />
+        <Steel color="#2a2622" rough={0.42} />
+      </mesh>
+      <mesh position={[0.62, 0.18, 0.42]} castShadow>
+        <cylinderGeometry args={[0.11, 0.11, 0.16, 8]} />
+        <Steel color="#3a322c" rough={0.4} />
+      </mesh>
+      <mesh position={[-0.72, 0.16, -0.22]}>
+        <sphereGeometry args={[0.05, 8, 8]} />
+        <meshStandardMaterial color="#ffb080" emissive="#e2661c" emissiveIntensity={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Steel torn open, tissue grown through the break, a short weld bead on the join. */
+function WeldScar({ site }: { site: Site }) {
+  const s = 1.65 + site.k * 0.4 + (site.n === 0 ? 0.3 : 0);
+  const beads = [-0.28, -0.14, 0, 0.14, 0.28];
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]} scale={s}>
+      <mesh position={[-0.28, 0.05, 0]} rotation={[0, 0.08, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.15, 0.08, 0.78]} />
+        <Steel color="#3a4248" rough={0.36} />
+      </mesh>
+      <mesh position={[-0.72, 0.08, 0.22]} rotation={[0.2, 0.5, 0.4]} castShadow>
+        <boxGeometry args={[0.34, 0.05, 0.22]} />
+        <Steel color="#2a3036" rough={0.5} />
+      </mesh>
+      <mesh position={[0.42, 0.16, 0.02]} scale={[0.72, 0.42, 0.62]} castShadow>
+        <sphereGeometry args={[0.55, 16, 12]} />
+        <meshStandardMaterial color="#4e6e58" roughness={0.58} metalness={0.08} emissive="#24543c" emissiveIntensity={0.2} />
+      </mesh>
+      <mesh position={[0.62, 0.28, -0.08]} rotation={[0.4, 0.2, 0.5]} castShadow>
+        <capsuleGeometry args={[0.06, 0.28, 4, 6]} />
+        <meshStandardMaterial color="#6d9a72" roughness={0.4} emissive="#2f6a48" emissiveIntensity={0.25} />
+      </mesh>
+      <mesh position={[0.22, 0.34, 0.16]} rotation={[0.3, 0, 0.2]} castShadow>
+        <coneGeometry args={[0.08, 0.36, 5]} />
+        <meshStandardMaterial color="#9fd4c4" emissive="#7ec8b0" emissiveIntensity={0.35} roughness={0.22} transparent opacity={0.85} />
+      </mesh>
+      {beads.map((z) => (
+        <mesh key={z} position={[0.05, 0.12, z]} castShadow>
+          <sphereGeometry args={[0.055, 8, 8]} />
+          <meshStandardMaterial color="#e7f6f8" emissive="#b7e4ea" emissiveIntensity={0.75} roughness={0.25} metalness={0.4} />
+        </mesh>
+      ))}
+      {[-0.55, -0.2, 0.05].map((z) => (
+        <mesh key={z} position={[-0.55, 0.1, z]} castShadow>
+          <cylinderGeometry args={[0.04, 0.04, 0.04, 6]} />
+          <Steel color="#8a8478" rough={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Two lips of broken ground along the rift, with a thin light in the crack. */
+function ScarTrench({
   arenaR,
   squash,
   keepClear,
@@ -261,110 +300,156 @@ function AegisCrust({
   squash: number;
   keepClear: Clear[];
 }) {
-  const scar = useRef<InstancedMesh>(null);
-  const weld = useRef<InstancedMesh>(null);
-  const flesh = useRef<InstancedMesh>(null);
-  const steel = useRef<InstancedMesh>(null);
-  const ribbon = useMemo(() => {
-    const pts: { x: number; z: number }[] = [];
+  const bits = useMemo(() => {
+    const out: { x: number; z: number; side: number; k: number; yaw: number }[] = [];
     const dx = 0.8116;
     const dz = 0.5843;
-    for (let t = -arenaR * 1.15; t <= arenaR * 1.15; t += 1.35) {
+    const rand = rng(909);
+    for (let t = -arenaR * 1.05; t <= arenaR * 1.05; t += 1.15) {
       const x = SCAR_PX * SCAR_OFFSET + dx * t;
       const z = SCAR_PZ * SCAR_OFFSET + dz * t;
-      if (!inside(x, z, arenaR, squash, 0.94)) continue;
-      if (x * x + z * z < 2.8 * 2.8) continue;
-      pts.push({ x, z });
+      if (!inside(x, z, arenaR, squash, 0.9)) continue;
+      if (blocked(x, z, keepClear, 1.8, 3.2)) continue;
+      const yaw = Math.atan2(dx, dz);
+      out.push({ x: x + SCAR_PX * -0.55, z: z + SCAR_PZ * -0.55, side: -1, k: rand(), yaw });
+      out.push({ x: x + SCAR_PX * 0.55, z: z + SCAR_PZ * 0.55, side: 1, k: rand(), yaw });
     }
-    return chainSegments(pts, 1.15, 2.2);
-  }, [arenaR, squash]);
-  const studs = useMemo(() => {
-    const rand = rng(303);
-    const tissue: { x: number; z: number; s: number }[] = [];
-    const plate: { x: number; z: number; yaw: number }[] = [];
-    let guard = 0;
-    while ((tissue.length < 8 || plate.length < 8) && guard < 120) {
-      guard += 1;
-      const ang = rand() * Math.PI * 2;
-      const rad = (0.28 + rand() * 0.55) * arenaR;
-      const x = Math.cos(ang) * rad;
-      const z = Math.sin(ang) * rad * squash;
-      if (!inside(x, z, arenaR, squash, 0.84)) continue;
-      if (blocked(x, z, keepClear, 2.6, 4.4)) continue;
-      const side = scarSigned(x, z);
-      if (side < -1.6 && tissue.length < 8) tissue.push({ x, z, s: 0.55 + rand() * 0.7 });
-      else if (side > 1.6 && plate.length < 8) plate.push({ x, z, yaw: rand() * Math.PI });
-    }
-    return { tissue, plate };
+    return out;
   }, [arenaR, keepClear, squash]);
-  useLayoutEffect(() => {
-    laySegments(scar.current, ribbon, 0.008, 1);
-    const mesh = weld.current;
-    if (mesh) {
-      const dummy = new Object3D();
-      for (let i = 0; i < ribbon.length; i += 1) {
-        const s = ribbon[i];
-        const side = i % 2 === 0 ? 1 : -1;
-        dummy.position.set(s.x + Math.cos(s.yaw) * 0.72 * side, 0.05, s.z - Math.sin(s.yaw) * 0.72 * side);
-        dummy.rotation.set(0, s.yaw, 0);
-        dummy.scale.set(0.28, 0.08, 0.28);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.count = ribbon.length;
-      mesh.instanceMatrix.needsUpdate = true;
-    }
-    const caps = flesh.current;
-    if (caps) {
-      const dummy = new Object3D();
-      for (let i = 0; i < studs.tissue.length; i++) {
-        const p = studs.tissue[i];
-        dummy.position.set(p.x, p.s * 0.45, p.z);
-        dummy.rotation.set(0.15, i, 0.1);
-        dummy.scale.set(p.s * 0.35, p.s, p.s * 0.35);
-        dummy.updateMatrix();
-        caps.setMatrixAt(i, dummy.matrix);
-      }
-      caps.count = studs.tissue.length;
-      caps.instanceMatrix.needsUpdate = true;
-    }
-    const bars = steel.current;
-    if (bars) {
-      const dummy = new Object3D();
-      for (let i = 0; i < studs.plate.length; i++) {
-        const p = studs.plate[i];
-        dummy.position.set(p.x, 0.08, p.z);
-        dummy.rotation.set(0, p.yaw, 0.2);
-        dummy.scale.set(1.1, 0.1, 0.55);
-        dummy.updateMatrix();
-        bars.setMatrixAt(i, dummy.matrix);
-      }
-      bars.count = studs.plate.length;
-      bars.instanceMatrix.needsUpdate = true;
-    }
-  }, [ribbon, studs]);
-  useFrame((s) => {
-    const mat = scar.current?.material as MeshBasicMaterial | undefined;
-    if (mat) mat.opacity = 0.5 + Math.sin(s.clock.elapsedTime * 1.6) * 0.14;
-  });
   return (
-    <group name="aegis-crust">
-      <instancedMesh ref={scar} args={[undefined, undefined, Math.max(1, ribbon.length)]}>
-        <boxGeometry args={[1, 0.02, 1]} />
-        <meshBasicMaterial color="#d7f4f8" transparent opacity={0.62} depthWrite={false} blending={AdditiveBlending} toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={weld} args={[undefined, undefined, Math.max(1, ribbon.length)]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#8a949c" metalness={0.8} roughness={0.32} />
-      </instancedMesh>
-      <instancedMesh ref={flesh} args={[undefined, undefined, Math.max(1, studs.tissue.length)]}>
-        <coneGeometry args={[1, 1, 5]} />
-        <meshStandardMaterial color="#6d9a78" emissive="#3dcaa0" emissiveIntensity={0.45} roughness={0.42} />
-      </instancedMesh>
-      <instancedMesh ref={steel} args={[undefined, undefined, Math.max(1, studs.plate.length)]} receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#3a444c" metalness={0.78} roughness={0.34} />
-      </instancedMesh>
+    <group>
+      {bits.map((b, i) => {
+        const flesh = b.side < 0;
+        const h = 0.42 + b.k * 0.55;
+        return (
+          <group key={i} position={[b.x, 0, b.z]} rotation={[0, b.yaw + b.k, 0]}>
+            {flesh ? (
+              <mesh position={[0, h * 0.4, 0]} scale={[0.55 + b.k * 0.35, h, 0.4 + b.k * 0.2]} castShadow>
+                <sphereGeometry args={[0.45, 10, 8]} />
+                <meshStandardMaterial color="#3d5c48" roughness={0.7} emissive="#1f4a34" emissiveIntensity={0.12} />
+              </mesh>
+            ) : (
+              <mesh position={[0, h * 0.35, 0]} rotation={[0.1, 0, 0.15]} castShadow>
+                <boxGeometry args={[0.42 + b.k * 0.3, h * 0.7, 0.28 + b.k * 0.15]} />
+                <meshStandardMaterial color="#343c44" metalness={0.78} roughness={0.4} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function rimSites(arenaR: number, squash: number, keep: Clear[]): Site[] {
+  const out: Site[] = [];
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2 + 0.35;
+    const x = Math.cos(ang) * arenaR * 0.86;
+    const z = Math.sin(ang) * arenaR * squash * 0.86;
+    if (blocked(x, z, keep, 3.6, 8)) continue;
+    out.push({ x, z, a: ang + Math.PI, k: (i % 3) / 3, j: i % 2 === 0 ? 1 : -1, n: out.length });
+  }
+  return out.slice(0, 4);
+}
+
+/** A canopy tall enough to read from orbit: stalk, cap, gills. */
+function FungalCrown({ site }: { site: Site }) {
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]}>
+      <mesh position={[0, 0.15, 0]} scale={[1.1, 0.2, 1.1]} receiveShadow>
+        <sphereGeometry args={[0.8, 14, 10]} />
+        <Flesh color="#14281c" rough={0.92} />
+      </mesh>
+      <mesh position={[0, 0.85, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.38, 1.5, 8]} />
+        <Flesh color="#1c4030" rough={0.75} />
+      </mesh>
+      <mesh position={[0, 1.85, 0]} scale={[1.85, 0.48, 1.85]} castShadow>
+        <sphereGeometry args={[1, 20, 14]} />
+        <Flesh color="#5aaa78" rough={0.4} glow={0.28} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <mesh key={i} position={[0, 1.55, 0]} rotation={[0.35, (i / 6) * Math.PI * 2, 0]} castShadow>
+          <boxGeometry args={[0.08, 0.04, 1.35]} />
+          <meshStandardMaterial color="#102418" roughness={0.8} />
+        </mesh>
+      ))}
+      {[0.7, -0.55].map((x) => (
+        <mesh key={x} position={[x, 2.05, 0.2]} castShadow>
+          <sphereGeometry args={[0.12, 10, 8]} />
+          <meshStandardMaterial color="#e7fff2" emissive="#8ef0c4" emissiveIntensity={0.9} roughness={0.3} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** A foundry stack: banded chimney, ember mouth, plate footing. */
+function FoundryStack({ site }: { site: Site }) {
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]}>
+      <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.6, 0.16, 1.6]} />
+        <Steel color="#2a2e32" />
+      </mesh>
+      <mesh position={[0, 1.15, 0]} castShadow>
+        <cylinderGeometry args={[0.32, 0.42, 2.1, 10]} />
+        <Steel color="#3a322c" rough={0.48} />
+      </mesh>
+      {[0.55, 1.15, 1.7].map((y) => (
+        <mesh key={y} position={[0, y, 0]} castShadow>
+          <cylinderGeometry args={[0.48, 0.48, 0.08, 10]} />
+          <Steel color="#4a4038" rough={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0, 2.28, 0]}>
+        <cylinderGeometry args={[0.22, 0.28, 0.16, 10]} />
+        <meshStandardMaterial color="#ffb080" emissive="#e25a1c" emissiveIntensity={1} roughness={0.4} />
+      </mesh>
+      <mesh position={[0.55, 0.28, 0]} castShadow>
+        <boxGeometry args={[0.45, 0.28, 0.35]} />
+        <Steel color="#241c18" rough={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/** One side of the rift grows, the other is torn plate. */
+function RiftMonument({ site }: { site: Site }) {
+  const flesh = scarSigned(site.x, site.z) < 0;
+  if (flesh) {
+    return (
+      <group position={[site.x, 0, site.z]} rotation={[0, site.a, 0]}>
+        <mesh position={[0, 0.45, 0]} scale={[0.7, 0.9, 0.6]} castShadow>
+          <sphereGeometry args={[0.55, 14, 12]} />
+          <meshStandardMaterial color="#4e6e58" roughness={0.6} emissive="#24543c" emissiveIntensity={0.2} />
+        </mesh>
+        <mesh position={[0.1, 1.25, 0]} scale={[0.45, 0.7, 0.4]} castShadow>
+          <sphereGeometry args={[0.5, 12, 10]} />
+          <meshStandardMaterial color="#6d9a72" roughness={0.45} emissive="#2f6a48" emissiveIntensity={0.25} />
+        </mesh>
+        <mesh position={[0.05, 1.85, 0]} rotation={[0.2, 0, 0.15]} castShadow>
+          <coneGeometry args={[0.16, 0.7, 5]} />
+          <meshStandardMaterial color="#b7e4d4" emissive="#7ec8b0" emissiveIntensity={0.4} roughness={0.2} transparent opacity={0.88} />
+        </mesh>
+      </group>
+    );
+  }
+  return (
+    <group position={[site.x, 0, site.z]} rotation={[site.j * 0.15, site.a, 0.18]}>
+      <mesh position={[0, 0.9, 0]} castShadow>
+        <boxGeometry args={[0.28, 1.8, 0.55]} />
+        <Steel color="#3a444c" rough={0.36} />
+      </mesh>
+      <mesh position={[0.2, 1.55, 0]} rotation={[0, 0, 0.7]} castShadow>
+        <boxGeometry args={[0.16, 0.9, 0.4]} />
+        <Steel color="#2a3238" rough={0.5} />
+      </mesh>
+      <mesh position={[0, 1.7, 0.22]}>
+        <boxGeometry args={[0.08, 0.08, 0.08]} />
+        <meshStandardMaterial color="#d7f4f8" emissive="#9fd8de" emissiveIntensity={0.8} />
+      </mesh>
     </group>
   );
 }
@@ -380,7 +465,50 @@ export function PlanetCrust({
   squash: number;
   keepClear: Clear[];
 }) {
-  if (mapId === "forge") return <ForgeCrust arenaR={arenaR} squash={squash} keepClear={keepClear} />;
-  if (mapId === "aegis") return <AegisCrust arenaR={arenaR} squash={squash} keepClear={keepClear} />;
-  return <MycelionCrust arenaR={arenaR} squash={squash} keepClear={keepClear} />;
+  const grown = useMemo(
+    () => sites(mapId === "forge" ? 220 : mapId === "aegis" ? 330 : 110, 5, arenaR, squash, keepClear, 5.4, 6.4),
+    [arenaR, keepClear, mapId, squash],
+  );
+  const rim = useMemo(() => rimSites(arenaR, squash, keepClear), [arenaR, keepClear, squash]);
+  if (mapId === "mycelion") {
+    return (
+      <group name="mycelion-crust">
+        {rim.map((site) => (
+          <FungalCrown key={`rim-${site.n}`} site={site} />
+        ))}
+        {grown.map((site) => (
+          <MarrowGrove key={`${site.x}-${site.z}`} site={site} />
+        ))}
+      </group>
+    );
+  }
+  if (mapId === "forge") {
+    return (
+      <group name="forge-crust">
+        {rim.map((site) => (
+          <FoundryStack key={`rim-${site.n}`} site={site} />
+        ))}
+        {grown.map((site) =>
+          site.n % 3 === 0 ? (
+            <PlateYard key={`${site.x}-${site.z}`} site={site} />
+          ) : site.n % 3 === 1 ? (
+            <SlagHeap key={`${site.x}-${site.z}`} site={site} />
+          ) : (
+            <CoolerBank key={`${site.x}-${site.z}`} site={site} />
+          ),
+        )}
+      </group>
+    );
+  }
+  return (
+    <group name="aegis-crust">
+      <ScarTrench arenaR={arenaR} squash={squash} keepClear={keepClear} />
+      {rim.map((site) => (
+        <RiftMonument key={`rim-${site.n}`} site={site} />
+      ))}
+      {grown.map((site) => (
+        <WeldScar key={`${site.x}-${site.z}`} site={site} />
+      ))}
+    </group>
+  );
 }

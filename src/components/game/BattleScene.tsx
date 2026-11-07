@@ -9,6 +9,7 @@ import {
   type Mesh,
   type MeshBasicMaterial,
   Object3D,
+  type PointLight,
   type Sprite,
   type SpriteMaterial,
 } from "three";
@@ -172,6 +173,7 @@ export function BattleScene() {
       <BeamLayer />
       <ArcLayer />
       <HostTrailLayer />
+      <ImpactLights />
       <BurstLayer />
       <DecalLayer />
       <FloaterLayer />
@@ -1646,6 +1648,53 @@ function HostTrailLayer() {
       <planeGeometry args={[1, 1]} />
       <meshBasicMaterial map={glow} transparent blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
     </instancedMesh>
+  );
+}
+
+const IMPACT_LIGHTS = 3;
+
+/** A few pooled point lights so blasts and kills flash the ground around them. */
+function ImpactLights() {
+  const refs = useRef<(PointLight | null)[]>(Array(IMPACT_LIGHTS).fill(null));
+  useFrame(() => {
+    const picks: { b: (typeof engine.bursts)[number]; w: number }[] = [];
+    for (const b of engine.bursts) {
+      if (!b.alive || b.size < 0.4) continue;
+      const w = (b.ttl / b.maxTtl) * b.size;
+      if (picks.length < IMPACT_LIGHTS) picks.push({ b, w });
+      else {
+        let lo = 0;
+        for (let i = 1; i < picks.length; i++) if (picks[i].w < picks[lo].w) lo = i;
+        if (w > picks[lo].w) picks[lo] = { b, w };
+      }
+    }
+    for (let i = 0; i < IMPACT_LIGHTS; i++) {
+      const l = refs.current[i];
+      if (!l) continue;
+      const pick = picks[i];
+      if (!pick) {
+        l.intensity = 0;
+        continue;
+      }
+      l.position.set(pick.b.x, pick.b.y + 0.7, pick.b.z);
+      l.color.set(pick.b.color);
+      l.intensity = pick.w * 5.5;
+      l.distance = 3.5 + pick.b.size * 2.4;
+    }
+  });
+  return (
+    <group>
+      {Array.from({ length: IMPACT_LIGHTS }, (_, i) => (
+        <pointLight
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          intensity={0}
+          decay={1.6}
+        />
+      ))}
+    </group>
   );
 }
 

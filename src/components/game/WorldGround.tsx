@@ -17,7 +17,11 @@ import {
 import { CELL } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetCrust, scarSigned } from "./PlanetCrust";
+import { GroundBeds, HillWilds, RimBelt } from "./PlanetWilds";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
+import { arenaMetrics, clamp, smooth, terrainElevation } from "./terrain";
+
+export { arenaMetrics, terrainElevation };
 
 const battleSkyFrag = /* glsl */ `
 uniform sampler2D sky;
@@ -45,51 +49,6 @@ void main() {
 }
 `;
 
-const RIM = 3.2;
-
-export function arenaMetrics(cols: number, rows: number) {
-  const arenaR = (cols * CELL) / 2 + RIM;
-  const squash = ((rows * CELL) / 2 + RIM) / arenaR;
-  return { arenaR, squash };
-}
-
-/** Height outside the play ellipse. Pads and path stay on y=0. */
-export function terrainElevation(x: number, z: number, arenaR: number, squash: number, style: MapId) {
-  const inset = Math.hypot(x / arenaR, z / (arenaR * squash));
-  const edge = smooth(clamp((inset - 1) / 0.62, 0, 1));
-  if (edge <= 0) return 0;
-  let n =
-    Math.sin(x * 0.1) * Math.cos(z * 0.08) * 0.95 +
-    Math.sin(x * 0.21 + z * 0.16) * 0.48 +
-    Math.sin(x * 0.44 - z * 0.29) * 0.22 +
-    Math.sin(x * 0.06 + z * 0.045) * 1.2 +
-    Math.sin(x * 0.73) * Math.cos(z * 0.61) * 0.14;
-  if (style === "forge") {
-    n = Math.round(n * 2.15) / 2.15 + Math.sin(x * 0.31) * Math.sin(z * 0.27) * 0.16;
-    n += Math.max(0, Math.sin(x * 0.09 + z * 0.07) - 0.35) * 0.7;
-  } else if (style === "aegis") {
-    const rift = Math.abs(scarSigned(x, z));
-    const lip = Math.max(0, 1.15 - rift);
-    const trench = Math.max(0, 0.42 - rift);
-    n = Math.abs(n) * 0.7 + lip * 2.15 - trench * 2.4;
-  } else {
-    const canyon = Math.abs(Math.sin(x * 0.09 + z * 0.045));
-    const cut = smooth(clamp((0.2 - canyon) / 0.2, 0, 1));
-    n += Math.sin(x * 0.22) * Math.cos(z * 0.18) * 0.55 - cut * 1.85;
-  }
-  const far = smooth(clamp((inset - 1.35) / 0.7, 0, 1));
-  const amp = style === "forge" ? 2.05 : style === "aegis" ? 3.05 : 2.65;
-  return n * edge * amp + edge * 0.7 + far * 1.35;
-}
-
-function clamp(v: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, v));
-}
-
-function smooth(t: number) {
-  return t * t * (3 - 2 * t);
-}
-
 function makeHills(w: number, d: number, arenaR: number, squash: number, style: MapId, res: number) {
   const g = new PlaneGeometry(w, d, res, Math.max(24, Math.round(res * (d / w))));
   g.rotateX(-Math.PI / 2);
@@ -103,9 +62,25 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
     pos.setY(i, y);
     const grain = Math.sin(x * 0.55) * Math.cos(z * 0.48) * 0.06 + Math.sin(x * 1.9 + z * 1.4) * 0.03;
     const shade = clamp(0.78 + y * 0.03 + grain, 0.62, 1.04);
-    if (style === "forge") ao.setRGB(shade * 1.05, shade * 0.96, shade * 0.88);
-    else if (style === "aegis") ao.setRGB(shade * 0.92, shade * 0.98, shade * 1.06);
-    else ao.setRGB(shade * 0.95, shade * 1.03, shade * 0.92);
+    if (style === "forge") {
+      const step = Math.abs(y * 1.7 - Math.round(y * 1.7));
+      const riser = 1 - clamp((0.18 - step) * 3.2, 0, 0.45);
+      const ember = y < 1.35 ? 0.16 : 0;
+      ao.setRGB(shade * 1.14 * riser + ember, shade * 0.74 * riser + ember * 0.35, shade * 0.52 * riser);
+    } else if (style === "aegis") {
+      const signed = scarSigned(x, z);
+      const rift = Math.exp(-signed * signed * 0.12);
+      if (signed < 0) ao.setRGB(shade * 0.62, shade * 0.98, shade * 0.66);
+      else ao.setRGB(shade * 0.58, shade * 0.7, shade * 1.02);
+      ao.r += rift * 0.22;
+      ao.g += rift * 0.28;
+      ao.b += rift * 0.34;
+    } else {
+      const canyon = Math.abs(Math.sin(x * 0.09 + z * 0.045));
+      const floor = canyon < 0.22 ? 0.72 : 1;
+      const cap = y > 3.4 ? 1.12 : 1;
+      ao.setRGB(shade * 0.7 * floor, shade * 1.08 * cap, shade * 0.74 * floor);
+    }
     cols[i * 3] = ao.r;
     cols[i * 3 + 1] = ao.g;
     cols[i * 3 + 2] = ao.b;
@@ -147,12 +122,12 @@ function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
       const fx = Math.abs(x / 4.2 - Math.round(x / 4.2));
       const fy = Math.abs(y / 4.2 - Math.round(y / 4.2));
       const seam = clamp((0.06 - Math.min(fx, fy)) * 8, 0, 1);
-      k *= 1 - seam * 0.18;
+      k *= 1 - seam * 0.32;
     } else {
       const signed = scarSigned(x, -y * squash);
       const flesh = signed < 0;
-      const side = flesh ? [0.74, 0.98, 0.72] : [0.7, 0.78, 0.96];
-      tint = side;
+      const side = flesh ? [0.58, 1.08, 0.66] : [0.58, 0.7, 1.12];
+      tint = [tint[0] * 0.35 + side[0] * 0.65, tint[1] * 0.35 + side[1] * 0.65, tint[2] * 0.35 + side[2] * 0.65];
     }
     cols[i * 3] = k * tint[0];
     cols[i * 3 + 1] = k * tint[1];
@@ -170,7 +145,7 @@ function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
   return g;
 }
 
-function glowPatch(shader: { fragmentShader: string }, strength: number) {
+function glowPatch(shader: { fragmentShader: string }, strength: number, biome: boolean) {
   shader.fragmentShader = shader.fragmentShader.replace(
     "#include <emissivemap_fragment>",
     /* glsl */ `
@@ -185,6 +160,13 @@ function glowPatch(shader: { fragmentShader: string }, strength: number) {
       float bump = dot(grit2 - grit, vec3(0.35, 0.45, 0.2));
       normal = normalize(normal + vec3(bump * 1.15, 0.0, -bump * 0.85));
     #endif
+    ${
+      biome
+        ? `float side = vColor.g - vColor.b;
+    vec3 biomeCol = side > 0.02 ? vec3(0.2, 0.46, 0.26) : vec3(0.24, 0.32, 0.48);
+    diffuseColor.rgb = mix(diffuseColor.rgb, biomeCol, 0.5);`
+        : ""
+    }
     diffuseColor.rgb = diffuseColor.rgb * 1.22 + 0.015;
     float teal = max(diffuseColor.b * 0.88 + diffuseColor.g * 0.32 - diffuseColor.r * 0.72 - 0.18, 0.0);
     float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
@@ -201,6 +183,7 @@ function GroundMat({
   emissive,
   glow,
   tint = "#f2f4f1",
+  biome = false,
 }: {
   map: Texture;
   roughness: number;
@@ -208,9 +191,11 @@ function GroundMat({
   emissive: string;
   glow: number;
   tint?: string;
+  biome?: boolean;
 }) {
   return (
     <meshStandardMaterial
+      key={biome ? "split" : "whole"}
       map={map}
       color={tint}
       roughness={roughness}
@@ -218,7 +203,8 @@ function GroundMat({
       emissive={emissive}
       emissiveIntensity={0.28}
       vertexColors
-      onBeforeCompile={(shader) => glowPatch(shader, glow)}
+      customProgramCacheKey={() => (biome ? "split" : "whole")}
+      onBeforeCompile={(shader) => glowPatch(shader, glow, biome)}
     />
   );
 }
@@ -275,7 +261,7 @@ export function WorldGround({
     <group>
       <SkyShell map={sky} fog={fog} accent={emissive} />
       <mesh geometry={hills} receiveShadow>
-        <GroundMat map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} glow={glow} />
+        <GroundMat map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} glow={glow} biome={mapId === "aegis"} />
       </mesh>
       <mesh geometry={bowl} rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} receiveShadow>
         <GroundMat
@@ -285,10 +271,13 @@ export function WorldGround({
           emissive={emissive}
           glow={glow * 0.42}
           tint="#e8e4dc"
+          biome={mapId === "aegis"}
         />
       </mesh>
       <GroundPebbles mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} count={quality === "high" ? 220 : 110} />
       <PlanetCrust mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} />
+      <GroundBeds mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} />
+      <HillWilds mapId={mapId} arenaR={arenaR} squash={squash} count={quality === "high" ? 16 : 8} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.02, 0]}>
         <ringGeometry args={[arenaR - 0.62, arenaR + 0.22, 96]} />
         <meshStandardMaterial
@@ -309,52 +298,10 @@ export function WorldGround({
           emissiveIntensity={0.04}
         />
       </mesh>
-      <ArenaLip mapId={mapId} arenaR={arenaR} squash={squash} emissive={emissive} />
+      <RimBelt mapId={mapId} arenaR={arenaR} squash={squash} />
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
     </group>
-  );
-}
-
-function ArenaLip({
-  mapId,
-  arenaR,
-  squash,
-  emissive,
-}: {
-  mapId: MapId;
-  arenaR: number;
-  squash: number;
-  emissive: string;
-}) {
-  const mesh = useRef<InstancedMesh>(null);
-  const count = 64;
-  useLayoutEffect(() => {
-    const m = mesh.current;
-    if (!m) return;
-    const dummy = new Object3D();
-    const r = arenaR + 0.72;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2;
-      dummy.position.set(Math.cos(a) * r, 0.1 + (i % 3) * 0.05, Math.sin(a) * r * squash);
-      dummy.rotation.set(0, -a, (i % 2) * 0.12);
-      dummy.scale.set(0.95 + (i % 4) * 0.16, 0.85 + (i % 3) * 0.28, 0.58);
-      dummy.updateMatrix();
-      m.setMatrixAt(i, dummy.matrix);
-    }
-    m.instanceMatrix.needsUpdate = true;
-  }, [arenaR, squash]);
-  return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
-      <boxGeometry args={[0.46, 0.28, 0.3]} />
-      <meshStandardMaterial
-        color={mapId === "forge" ? "#2a221c" : mapId === "aegis" ? "#1c242c" : "#1a221c"}
-        roughness={0.86}
-        metalness={0.14}
-        emissive={emissive}
-        emissiveIntensity={0.03}
-      />
-    </instancedMesh>
   );
 }
 
@@ -479,7 +426,7 @@ function OuterRidges({
   }, [arenaR, squash, mapId]);
   return (
     <mesh geometry={geo} receiveShadow castShadow>
-      <GroundMat map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} />
+      <GroundMat map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} biome={mapId === "aegis"} />
     </mesh>
   );
 }

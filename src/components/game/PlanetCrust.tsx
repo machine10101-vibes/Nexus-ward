@@ -301,7 +301,7 @@ function ScarTrench({
   keepClear: Clear[];
 }) {
   const bits = useMemo(() => {
-    const out: { x: number; z: number; side: number; k: number; yaw: number }[] = [];
+    const out: { x: number; z: number; side: number; k: number; yaw: number; crack: boolean }[] = [];
     const dx = 0.8116;
     const dz = 0.5843;
     const rand = rng(909);
@@ -311,18 +311,29 @@ function ScarTrench({
       if (!inside(x, z, arenaR, squash, 0.9)) continue;
       if (blocked(x, z, keepClear, 1.8, 3.2)) continue;
       const yaw = Math.atan2(dx, dz);
-      out.push({ x: x + SCAR_PX * -0.55, z: z + SCAR_PZ * -0.55, side: -1, k: rand(), yaw });
-      out.push({ x: x + SCAR_PX * 0.55, z: z + SCAR_PZ * 0.55, side: 1, k: rand(), yaw });
+      out.push({ x: x + SCAR_PX * -0.55, z: z + SCAR_PZ * -0.55, side: -1, k: rand(), yaw, crack: false });
+      out.push({ x, z, side: 0, k: 0, yaw, crack: true });
+      out.push({ x: x + SCAR_PX * 0.55, z: z + SCAR_PZ * 0.55, side: 1, k: rand(), yaw, crack: false });
     }
     return out;
   }, [arenaR, keepClear, squash]);
   return (
     <group>
       {bits.map((b, i) => {
+        if (b.crack) {
+          return (
+            <group key={i} position={[b.x, 0.04, b.z]} rotation={[0, b.yaw, 0]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.16, 0.85]} />
+                <meshBasicMaterial color="#8ec8d0" transparent opacity={0.34} depthWrite={false} />
+              </mesh>
+            </group>
+          );
+        }
         const flesh = b.side < 0;
         const h = 0.42 + b.k * 0.55;
         return (
-          <group key={i} position={[b.x, 0, b.z]} rotation={[0, b.yaw + b.k, 0]}>
+          <group key={i} position={[b.x, 0, b.z]} rotation={[0, b.yaw + b.k, 0]} scale={1.55}>
             {flesh ? (
               <mesh position={[0, h * 0.4, 0]} scale={[0.55 + b.k * 0.35, h, 0.4 + b.k * 0.2]} castShadow>
                 <sphereGeometry args={[0.45, 10, 8]} />

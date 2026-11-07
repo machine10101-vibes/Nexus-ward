@@ -40,7 +40,6 @@ import {
   EnemyModel,
   HexField,
   HexPad,
-  Motes,
   type FieldSpot,
   WardBase,
   RangeRing,
@@ -50,6 +49,7 @@ import {
 import { HeroModel } from "./HeroModel";
 import { PlanetGlobe } from "./Planet";
 import { PathLane } from "./PathLane";
+import { GateMouth, PlanetAir } from "./PlanetWilds";
 import { arenaMetrics, WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld, unionCells } from "@/game/maps";
@@ -344,6 +344,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         return (
           <group key={`${map.id}-gate-${i}`} position={[gate.x, 0, gate.z]}>
             <SpawnGate color={theme.pathEmissive} />
+            <GateMouth mapId={mapId} yaw={Math.atan2((pts[1]?.x ?? gate.x) - gate.x, (pts[1]?.z ?? gate.z) - gate.z)} />
           </group>
         );
       })}
@@ -355,7 +356,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         <DecorHybrid seed={33} count={quality === "high" ? 30 : 18} />
       )}
       <DecorField id={mapId} spots={fieldProps} />
-      {quality === "high" ? <Motes color={theme.pathEmissive} count={mapId === "forge" ? 16 : 22} /> : null}
+      {quality === "high" ? <PlanetAir mapId={mapId} count={mapId === "forge" ? 48 : 70} /> : null}
       {quality === "high" ? (
         <Sparkles count={22} scale={[map.cols * CELL * 0.72, 4, map.rows * CELL * 0.72]} size={1.4} speed={0.18} color={theme.padEmi} opacity={0.18} />
       ) : null}

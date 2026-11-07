@@ -676,7 +676,8 @@ function Help() {
           <span className="text-fg">5. Linked batteries</span> of the same type within range deal more damage and cycle faster.
           One neighbor is +15% damage and +6% cycle. A second is +27% and +10%. Three or more cap at +36% and +14%. A
           different battery in that same reach adds range instead:
-          +6%, +10%, or +14%. The lattice draws between same-type batteries. Each rank changes that
+          +6%, +10%, or +14%. The lattice draws between same-type batteries. A paler line marks a different
+          battery in that reach. Each rank changes that
           battery's silhouette. Rank 3 unlocks a unique overdrive.
         </li>
         <li>

@@ -157,6 +157,7 @@ export function BattleScene() {
       <HeroLayer />
       <TowersLayer />
       <SynergyLinks />
+      <MixLinks />
       <EnemyLayer />
       <SkillTelegraph />
       <BoltLayer />
@@ -315,6 +316,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
           approach={coreHot}
           showReach
         />
+        <KeepBeacon color={baseColor} ready={mantleReady} hot={coreHot} />
       </group>
       {activePaths.map((pts, i) => {
         const gate = pts[0];
@@ -799,6 +801,128 @@ function SynergyLinks() {
   );
 }
 
+/** A paler line between different batteries in link range — the reach bonus, not the damage lattice. */
+function MixLinks() {
+  const n = useGameStore((s) => s.hud.towers);
+  const mats = useRef<(MeshBasicMaterial | null)[]>([]);
+  const links: { key: string; ax: number; az: number; bx: number; bz: number }[] = [];
+  const r2 = SYN_RANGE * SYN_RANGE;
+  for (let i = 0; i < engine.towers.length; i++) {
+    for (let j = i + 1; j < engine.towers.length; j++) {
+      const a = engine.towers[i];
+      const b = engine.towers[j];
+      if (a.type === b.type) continue;
+      const dx = a.x - b.x;
+      const dz = a.z - b.z;
+      if (dx * dx + dz * dz > r2) continue;
+      links.push({ key: `${a.id}-${b.id}`, ax: a.x, az: a.z, bx: b.x, bz: b.z });
+    }
+  }
+  useFrame((s) => {
+    const pulse = 0.42 + (Math.sin(s.clock.elapsedTime * 1.4) + 1) * 0.08;
+    for (const m of mats.current) {
+      if (m) m.opacity = pulse;
+    }
+  });
+  void n;
+  return (
+    <group name="mix-links">
+      {links.map((l, i) => {
+        const mx = (l.ax + l.bx) / 2;
+        const mz = (l.az + l.bz) / 2;
+        const len = Math.hypot(l.bx - l.ax, l.bz - l.az) || 0.001;
+        const yaw = Math.atan2(l.bx - l.ax, l.bz - l.az);
+        return (
+          <mesh key={l.key} name="mix-link" position={[mx, 0.62, mz]} rotation={[0, yaw, 0]}>
+            <boxGeometry args={[0.07, 0.04, len]} />
+            <meshBasicMaterial
+              ref={(el) => {
+                mats.current[i] = el;
+              }}
+              color="#e7eef2"
+              transparent
+              opacity={0.22}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Orbital read of the keep: a class-colored column, brighter while the mantle is armed. */
+function KeepBeacon({ color, ready, hot }: { color: string; ready: boolean; hot: boolean }) {
+  const shaft = useRef<MeshBasicMaterial>(null);
+  const cap = useRef<MeshBasicMaterial>(null);
+  const seal = useRef<MeshBasicMaterial>(null);
+  const inner = useRef<MeshBasicMaterial>(null);
+  useFrame((s) => {
+    const t = s.clock.elapsedTime;
+    const beat = 0.82 + Math.sin(t * (hot ? 7 : 1.7)) * 0.18;
+    const tint = hot ? "#c45c5c" : color;
+    if (shaft.current) {
+      shaft.current.color.set(tint);
+      shaft.current.opacity = (hot ? 0.78 : ready ? 0.55 : 0.36) * beat;
+    }
+    if (cap.current) cap.current.color.set(tint);
+    if (seal.current) {
+      seal.current.color.set(tint);
+      seal.current.opacity = (hot ? 0.8 : ready ? 0.58 : 0.36) * beat;
+    }
+    if (inner.current) {
+      inner.current.color.set(tint);
+      inner.current.opacity = ready && !hot ? 0.7 * beat : 0;
+    }
+  });
+  return (
+    <group name="keep-beacon">
+      <mesh position={[0, 3.8, 0]}>
+        <cylinderGeometry args={[0.1, 0.36, 7.4, 12]} />
+        <meshBasicMaterial
+          ref={shaft}
+          color={color}
+          transparent
+          opacity={0.4}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh position={[0, 7.6, 0]}>
+        <sphereGeometry args={[0.26, 12, 10]} />
+        <meshBasicMaterial ref={cap} color={color} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+        <ringGeometry args={[1.9, 2.35, 40]} />
+        <meshBasicMaterial
+          ref={seal}
+          color={color}
+          transparent
+          opacity={0.4}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
+        <ringGeometry args={[1.45, 1.68, 28]} />
+        <meshBasicMaterial
+          ref={inner}
+          color={color}
+          transparent
+          opacity={ready ? 0.6 : 0}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function syncHeroCarry() {
   useGameStore.setState({ carryingHero: engine.carryingHero, buildType: engine.buildType });
   useGameStore.getState().syncHud();
@@ -1027,6 +1151,18 @@ function EnemyLayer() {
         );
       }
       const brand = g.children[2] as Mesh | undefined;
+      let tether: Mesh | undefined;
+      for (const child of g.children) {
+        if (child.name === "air-tether") tether = child as Mesh;
+      }
+      if (tether) {
+        tether.visible = e.flying;
+        if (e.flying) {
+          const h = Math.max(0.2, e.y);
+          tether.scale.y = h;
+          tether.position.y = -h * 0.5;
+        }
+      }
       if (brand && brand !== shadow) {
         const focus = engine.hero;
         const on = e.slot === focus.focusSlot && focus.focusHits > 0 && engine.time <= focus.focusUntil;
@@ -1065,6 +1201,17 @@ function EnemyLayer() {
               <meshBasicMaterial color="#f3e2b0" transparent opacity={0.85} depthWrite={false} toneMapped={false} />
             </mesh>
             <HpPip slot={e.slot} />
+            <mesh name="air-tether" visible={false} position={[0, -0.4, 0]}>
+              <cylinderGeometry args={[0.03, 0.03, 1, 6]} />
+              <meshBasicMaterial
+                color={FACTION_MARK[def.faction]}
+                transparent
+                opacity={0.72}
+                depthWrite={false}
+                blending={AdditiveBlending}
+                toneMapped={false}
+              />
+            </mesh>
           </group>
         );
       })}
@@ -1122,8 +1269,10 @@ function BoltLayer() {
         shown.current[i] = b.color;
         const core = (g.children[0] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
         const trail = (g.children[1] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
+        const wash = (g.children[2] as Mesh | undefined)?.material as MeshBasicMaterial | undefined;
         core?.color.set(b.color);
         trail?.color.set(b.color);
+        wash?.color.set(b.color);
       }
     }
   });
@@ -1138,15 +1287,26 @@ function BoltLayer() {
           visible={false}
         >
           <mesh>
-            <sphereGeometry args={[0.08, 8, 8]} />
+            <sphereGeometry args={[0.1, 8, 8]} />
             <meshBasicMaterial color={b.color} toneMapped={false} />
           </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.18]} scale={[0.55, 2.4, 0.55]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.26]} scale={[0.62, 3.4, 0.62]}>
             <coneGeometry args={[0.09, 0.42, 6]} />
             <meshBasicMaterial
               color={b.color}
               transparent
-              opacity={0.55}
+              opacity={0.72}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.38]} scale={[1.35, 5.1, 1.35]}>
+            <coneGeometry args={[0.09, 0.42, 6]} />
+            <meshBasicMaterial
+              color={b.color}
+              transparent
+              opacity={0.28}
               blending={AdditiveBlending}
               depthWrite={false}
               toneMapped={false}
@@ -1197,6 +1357,12 @@ function BeamLayer() {
         spark.scale.setScalar((0.3 + (1 - fade) * 0.5) / Math.max(0.001, len));
         spark.position.set(0, 0, -0.5);
       }
+      const hot = g.children[3] as Mesh | undefined;
+      if (hot) {
+        hot.scale.set(b.width * 0.18, 1, b.width * 0.18);
+        const hm2 = hot.material as MeshBasicMaterial;
+        hm2.opacity = fade * 0.85;
+      }
     }
   });
   return (
@@ -1220,6 +1386,10 @@ function BeamLayer() {
           <mesh visible={false}>
             <sphereGeometry args={[1, 10, 8]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.8} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[1, 1, 1, 5]} />
+            <meshBasicMaterial color="#f4f7fb" transparent opacity={0.85} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       ))}
@@ -1349,7 +1519,7 @@ function BurstLayer() {
             <meshBasicMaterial color={b.color} transparent opacity={0.7} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.42, 0.62, 24]} />
+            <ringGeometry args={[0.55, 0.98, 28]} />
             <meshBasicMaterial color={b.color} transparent opacity={0.85} blending={AdditiveBlending} depthWrite={false} toneMapped={false} />
           </mesh>
         </group>

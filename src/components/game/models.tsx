@@ -3747,28 +3747,3 @@ function scatter(seed: number, n: number, style: MapId): Scatter[] {
   }
   return out;
 }
-
-export function Motes({ color, count = 40 }: { color: string; count?: number }) {
-  const ref = useRef<Group>(null);
-  const pts = useMemo(() => {
-    const a: Vec[] = [];
-    for (let i = 0; i < count; i++) {
-      a.push([(Math.random() - 0.5) * 46, 0.4 + Math.random() * 4, (Math.random() - 0.5) * 42]);
-    }
-    return a;
-  }, [count]);
-  useFrame((_, dt) => {
-    if (!ref.current) return;
-    ref.current.position.y = (ref.current.position.y + dt * 0.12) % 2;
-  });
-  return (
-    <group ref={ref}>
-      {pts.map((p, i) => (
-        <mesh key={i} position={p}>
-          <sphereGeometry args={[0.035, 6, 6]} />
-          <meshBasicMaterial color={color} transparent opacity={0.55} />
-        </mesh>
-      ))}
-    </group>
-  );
-}

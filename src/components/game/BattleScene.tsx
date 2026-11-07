@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
+import { Html, OrbitControls, Sparkles, Stars } from "@react-three/drei";
 import {
   AdditiveBlending,
   type Group,
@@ -50,6 +50,8 @@ import { HeroModel } from "./HeroModel";
 import { PlanetGlobe } from "./Planet";
 import { PathLane } from "./PathLane";
 import { GateMouth, PlanetAir } from "./PlanetWilds";
+import { WorldEnv } from "./WorldEnv";
+import { softGlowTexture } from "./fx";
 import { arenaMetrics, WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld, unionCells } from "@/game/maps";
@@ -258,6 +260,7 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   return (
     <>
       <color attach="background" args={[theme.sky]} />
+      <WorldEnv id={mapId} intensity={0.62} />
       <fog attach="fog" args={[theme.fog, dist * 0.92, Math.max(tune.fogFar, dist * 2.55)]} />
       <ambientLight intensity={tune.ambient} color={theme.ambient} />
       <hemisphereLight args={[theme.hemiSky, theme.hemiGround, mapId === "forge" ? 0.72 : 1.05]} />
@@ -266,8 +269,8 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         intensity={tune.key}
         color={theme.dir}
         castShadow={quality === "high"}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
         shadow-camera-near={2}
         shadow-camera-far={96}
         shadow-camera-left={-34}
@@ -359,9 +362,6 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
       {quality === "high" ? <PlanetAir mapId={mapId} count={mapId === "forge" ? 48 : 70} /> : null}
       {quality === "high" ? (
         <Sparkles count={22} scale={[map.cols * CELL * 0.72, 4, map.rows * CELL * 0.72]} size={1.4} speed={0.18} color={theme.padEmi} opacity={0.18} />
-      ) : null}
-      {quality === "high" ? (
-        <ContactShadows position={[0, 0.02, 0]} opacity={0.48} scale={Math.max(map.cols, map.rows) * CELL} blur={2.2} far={12} />
       ) : null}
     </>
   );
@@ -1125,6 +1125,7 @@ function HeroLayer() {
 
 function EnemyLayer() {
   const gen = useGameStore((s) => s.hud.spawnGen);
+  const glowTex = useMemo(() => softGlowTexture(), []);
   const groups = useRef<(Group | null)[]>(Array(MAX_ENEMIES).fill(null));
   useFrame(() => {
     for (let i = 0; i < MAX_ENEMIES; i++) {
@@ -1175,6 +1176,7 @@ function EnemyLayer() {
       let tether: Mesh | undefined;
       for (const child of g.children) {
         if (child.name === "air-tether") tether = child as Mesh;
+        else if (child.name === "host-glow") child.position.y = -e.y + 0.045;
       }
       if (tether) {
         tether.visible = e.flying;
@@ -1222,6 +1224,20 @@ function EnemyLayer() {
               <meshBasicMaterial color="#f3e2b0" transparent opacity={0.85} depthWrite={false} toneMapped={false} />
             </mesh>
             <HpPip slot={e.slot} />
+            {glowTex ? (
+              <mesh name="host-glow" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
+                <circleGeometry args={[def.boss ? 1.7 : def.scale > 1.2 ? 1.1 : 0.78, 20]} />
+                <meshBasicMaterial
+                  map={glowTex}
+                  color={FACTION_MARK[def.faction]}
+                  transparent
+                  opacity={def.boss ? 0.5 : 0.36}
+                  depthWrite={false}
+                  blending={AdditiveBlending}
+                  toneMapped={false}
+                />
+              </mesh>
+            ) : null}
             <mesh name="air-tether" visible={false} position={[0, -0.4, 0]}>
               <cylinderGeometry args={[0.03, 0.03, 1, 6]} />
               <meshBasicMaterial

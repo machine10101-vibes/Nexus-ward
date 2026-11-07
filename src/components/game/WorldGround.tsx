@@ -17,7 +17,7 @@ import {
 import { CELL } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetCrust, scarSigned } from "./PlanetCrust";
-import { GroundBeds, HillWilds, RimBelt } from "./PlanetWilds";
+import { GroundBeds, GroundMist, HillWilds, RimBelt } from "./PlanetWilds";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
 import { arenaMetrics, clamp, smooth, terrainElevation } from "./terrain";
 
@@ -114,7 +114,10 @@ function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
     const grain = Math.sin(x * 7.4) * Math.cos(y * 6.2) * 0.05 + Math.sin(x * 14.1 + y * 9.6) * 0.03;
     const blotch = Math.sin(x * 0.36 + y * 0.29) * Math.cos(y * 0.24) * 0.08;
     let tint = style === "mycelion" ? [0.72, 1.02, 0.7] : style === "forge" ? [1.12, 0.84, 0.68] : [0.78, 0.9, 1.05];
-    let k = clamp(speckle + grain + blotch - rim * 0.16, 0.5, 1.08);
+    const macro = Math.sin(x * 0.13 + 1.3) * Math.sin(y * 0.11) * 0.5 + Math.sin(x * 0.31 - y * 0.27) * 0.25;
+    let k = clamp((speckle + grain + blotch) * (1 + macro * 0.24) - rim * 0.16, 0.46, 1.12);
+    if (style === "mycelion") tint = [tint[0] * (1 + macro * 0.26), tint[1], tint[2] * (1 - macro * 0.2)];
+    else if (style === "forge") tint = [tint[0], tint[1] * (1 + macro * 0.18), tint[2] * (1 - macro * 0.1)];
     if (style === "mycelion") {
       const mott = Math.pow(clamp(Math.sin(x * 0.62) * Math.cos(y * 0.48) * 0.5 + 0.5, 0, 1), 2) * 0.22;
       tint = [tint[0] * (1 - mott) + 0.55 * mott, tint[1] * (1 - mott) + 1.05 * mott, tint[2] * (1 - mott) + 0.72 * mott];
@@ -203,6 +206,7 @@ function GroundMat({
       emissive={emissive}
       emissiveIntensity={0.28}
       vertexColors
+      envMapIntensity={0.3}
       customProgramCacheKey={() => (biome ? "split" : "whole")}
       onBeforeCompile={(shader) => glowPatch(shader, glow, biome)}
     />
@@ -299,6 +303,7 @@ export function WorldGround({
         />
       </mesh>
       <RimBelt mapId={mapId} arenaR={arenaR} squash={squash} />
+      {quality === "high" ? <GroundMist mapId={mapId} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
       {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
     </group>

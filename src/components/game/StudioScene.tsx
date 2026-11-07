@@ -7,6 +7,7 @@ import { EnemyModel, HexPad, SpawnGate, TowerModel, WardBase } from "./models";
 import { HeroModel } from "./HeroModel";
 import { HEROES } from "@/game/heroes";
 import { studioEntry } from "./studioCatalog";
+import { WorldEnv } from "./WorldEnv";
 
 type StudioControls = {
   target: { set: (x: number, y: number, z: number) => void };
@@ -37,6 +38,7 @@ export function StudioScene() {
   return (
     <>
       <color attach="background" args={["#12141a"]} />
+      <WorldEnv id="studio" intensity={0.9} />
       <fog attach="fog" args={["#12141a", 14, 32]} />
       <hemisphereLight intensity={0.92} color="#f2f4f8" groundColor="#2a2e34" />
       <ambientLight intensity={0.34} />

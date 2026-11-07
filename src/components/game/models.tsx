@@ -5,6 +5,9 @@ import type { BaseClass, EnemyId, MapId, TowerId } from "@/game/types";
 import { BASES, BASE_GUN_REACH, BASE_SNARE_REACH, TOWERS } from "@/game/config";
 import { FIELD_COLS, FIELD_ROWS, cellToWorld } from "@/game/maps";
 import { arenaMetrics, terrainElevation } from "./WorldGround";
+import { SURFACE_KEY, SURFACE_PATCH, type SurfaceKind } from "./surface";
+import { BevelBox } from "./bevel";
+import { KeepDais } from "./KeepDais";
 
 /** Set while rendering a placement preview so every material renders as a hologram. */
 const GhostContext = createContext(false);
@@ -24,7 +27,7 @@ function Rotor({ position, width = 0.52 }: { position: Vec; width?: number }) {
   });
   return (
     <mesh ref={ref} position={position}>
-      <boxGeometry args={[width, 0.02, 0.055]} />
+      <BevelBox args={[width, 0.02, 0.055]} />
       <meshStandardMaterial color="#9aa4ac" metalness={0.7} roughness={0.28} />
     </mesh>
   );
@@ -48,8 +51,10 @@ function Mat({
   side?: Side;
 }) {
   const ghost = useContext(GhostContext);
+  const kind: SurfaceKind | null = ghost || eInt >= 0.6 ? null : metalness >= 0.38 ? "metal" : "organic";
   return (
     <meshStandardMaterial
+      key={kind ?? "plain"}
       color={color}
       metalness={metalness}
       roughness={roughness}
@@ -59,6 +64,8 @@ function Mat({
       transparent={ghost}
       opacity={ghost ? 0.34 : 1}
       depthWrite={!ghost}
+      onBeforeCompile={kind ? SURFACE_PATCH[kind] : undefined}
+      customProgramCacheKey={kind ? SURFACE_KEY[kind] : undefined}
     />
   );
 }
@@ -168,7 +175,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
         <BoltStuds count={6} radius={0.5} y={0.14} color="#1c2228" size={0.04} />
         {([-0.42, 0.42] as const).map((x) => (
           <mesh key={`vent-${x}`} position={[x, 0.2, -0.08]} castShadow>
-            <boxGeometry args={[0.1, 0.08, 0.28]} />
+            <BevelBox args={[0.1, 0.08, 0.28]} />
             <Mat color="#1a2026" metalness={0.55} roughness={0.4} />
           </mesh>
         ))}
@@ -178,20 +185,20 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
         </mesh>
         <group ref={yaw} position={[0, 0.46, 0]}>
           <mesh castShadow>
-            <boxGeometry args={[0.6, 0.22, 0.44]} />
+            <BevelBox args={[0.6, 0.22, 0.44]} />
             <Mat color="#5a6570" metalness={0.58} roughness={0.3} />
           </mesh>
           <mesh position={[0, 0.02, -0.24]} castShadow>
-            <boxGeometry args={[0.38, 0.3, 0.22]} />
+            <BevelBox args={[0.38, 0.3, 0.22]} />
             <Mat color="#3e4750" metalness={0.64} roughness={0.32} />
           </mesh>
           <mesh position={[0, 0.16, -0.18]} castShadow>
-            <boxGeometry args={[0.22, 0.1, 0.16]} />
+            <BevelBox args={[0.22, 0.1, 0.16]} />
             <Mat color="#2a323a" metalness={0.7} roughness={0.26} />
           </mesh>
           {([-0.14, 0.14] as const).map((x) => (
             <mesh key={`sink-${x}`} position={[x, 0.14, -0.32]} castShadow>
-              <boxGeometry args={[0.08, 0.16, 0.08]} />
+              <BevelBox args={[0.08, 0.16, 0.08]} />
               <Mat color="#1c2228" metalness={0.68} roughness={0.32} />
             </mesh>
           ))}
@@ -246,11 +253,11 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             ? ([-0.38, 0.38] as const).map((x) => (
                 <group key={`armor-${x}`}>
                   <mesh position={[x, 0.02, -0.02]} castShadow>
-                    <boxGeometry args={[0.12, 0.32, 0.46]} />
+                    <BevelBox args={[0.12, 0.32, 0.46]} />
                     <Mat color="#343c44" metalness={0.74} roughness={0.28} />
                   </mesh>
                   <mesh position={[x, 0.14, 0.08]}>
-                    <boxGeometry args={[0.04, 0.06, 0.16]} />
+                    <BevelBox args={[0.04, 0.06, 0.16]} />
                     <Mat color={def.color} eInt={0.7} />
                   </mesh>
                 </group>
@@ -263,7 +270,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             </mesh>
           ) : null}
           <mesh position={[0, 0.18, -0.02]}>
-            <boxGeometry args={[0.16, 0.07, 0.28]} />
+            <BevelBox args={[0.16, 0.07, 0.28]} />
             <Mat color={def.color} eInt={0.85 + level * 0.2} />
           </mesh>
           <mesh position={[0.22, -0.08, -0.18]} rotation={[0.4, 0, 0.6]} castShadow>
@@ -293,7 +300,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           const a = (i / 3) * Math.PI * 2 + 0.4;
           return (
             <mesh key={i} position={[Math.cos(a) * 0.28, 0.3, Math.sin(a) * 0.28]} rotation={[0, -a, 0.22]} castShadow>
-              <boxGeometry args={[0.07, 0.48, 0.07]} />
+              <BevelBox args={[0.07, 0.48, 0.07]} />
               <Mat color="#3a4a52" metalness={0.64} roughness={0.3} />
             </mesh>
           );
@@ -336,7 +343,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
               const a = (i / 3) * Math.PI * 2 + 1.1;
               return (
                 <mesh key={`fin-${i}`} position={[Math.cos(a) * 0.22, 0.54, Math.sin(a) * 0.22]} rotation={[0, -a, 0.48]} castShadow>
-                  <boxGeometry args={[0.05, 0.38, 0.05]} />
+                  <BevelBox args={[0.05, 0.38, 0.05]} />
                   <Mat color="#2e3e46" metalness={0.66} roughness={0.28} />
                 </mesh>
               );
@@ -403,7 +410,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           const a = (i / 3) * Math.PI * 2;
           return (
             <mesh key={i} position={[Math.cos(a) * 0.32, 0.3, Math.sin(a) * 0.32]} castShadow>
-              <boxGeometry args={[0.08, 0.28, 0.08]} />
+              <BevelBox args={[0.08, 0.28, 0.08]} />
               <Mat color="#44525e" metalness={0.64} roughness={0.28} />
             </mesh>
           );
@@ -445,7 +452,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
                 const a = (i / 3) * Math.PI * 2 + 0.55;
                 return (
                   <mesh key={`brace-${i}`} position={[Math.cos(a) * 0.42, 0.02, Math.sin(a) * 0.42]} rotation={[0.2, -a, 0.55]} castShadow>
-                    <boxGeometry args={[0.055, 0.24, 0.055]} />
+                    <BevelBox args={[0.055, 0.24, 0.055]} />
                     <Mat color="#6a7c8c" metalness={0.58} roughness={0.26} />
                   </mesh>
                 );
@@ -478,33 +485,33 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     return (
       <group>
         <mesh position={[0, 0.07, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.82, 0.14, 0.54]} />
+          <BevelBox args={[0.82, 0.14, 0.54]} />
           <Mat color="#2e2f34" metalness={0.8} roughness={0.26} />
         </mesh>
         {([-0.34, 0.34] as const).map((x) => (
           <mesh key={`foot-${x}`} position={[x, 0.04, 0.18]} castShadow>
-            <boxGeometry args={[0.16, 0.08, 0.22]} />
+            <BevelBox args={[0.16, 0.08, 0.22]} />
             <Mat color="#1c1d20" metalness={0.72} roughness={0.32} />
           </mesh>
         ))}
         <mesh position={[0, 0.22, -0.16]} castShadow>
-          <boxGeometry args={[0.54, 0.22, 0.36]} />
+          <BevelBox args={[0.54, 0.22, 0.36]} />
           <Mat color="#45464c" metalness={0.74} roughness={0.28} />
         </mesh>
         {([-0.38, 0.38] as const).map((x) => (
           <mesh key={`sled-${x}`} position={[x, 0.16, -0.04]} castShadow>
-            <boxGeometry args={[0.08, 0.1, 0.42]} />
+            <BevelBox args={[0.08, 0.1, 0.42]} />
             <Mat color="#2a2b30" metalness={0.78} roughness={0.26} />
           </mesh>
         ))}
         <group position={[0, 0.46, 0.1]}>
           <mesh castShadow>
-            <boxGeometry args={[0.22, 0.18, 1.54]} />
+            <BevelBox args={[0.22, 0.18, 1.54]} />
             <Mat color="#585960" metalness={0.76} roughness={0.22} />
           </mesh>
           {([-0.14, 0.14] as const).map((x) => (
             <mesh key={x} position={[x, 0.12, 0.16]} castShadow>
-              <boxGeometry args={[0.055, 0.065, 1.66]} />
+              <BevelBox args={[0.055, 0.065, 1.66]} />
               <Mat color={def.color} eInt={0.48 + level * 0.14} metalness={0.52} roughness={0.18} />
             </mesh>
           ))}
@@ -515,7 +522,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             </mesh>
           ))}
           <mesh position={[0, 0.04, 0.94]}>
-            <boxGeometry args={[0.28, 0.12, 0.12]} />
+            <BevelBox args={[0.28, 0.12, 0.12]} />
             <Mat color={def.color} eInt={1.05} />
           </mesh>
           <PulseLight position={[0, 0.04, 1.08]} r={0.05} color={def.color} base={1.2} amp={0.45} speed={3.4} />
@@ -529,7 +536,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             ? ([-0.4, 0.4] as const).map((x) => (
                 <group key={`cap-${x}`}>
                   <mesh position={[x, 0.04, -0.18]} castShadow>
-                    <boxGeometry args={[0.18, 0.22, 0.3]} />
+                    <BevelBox args={[0.18, 0.22, 0.3]} />
                     <Mat color="#2a2b30" metalness={0.82} roughness={0.22} />
                   </mesh>
                   <mesh position={[x, 0.16, -0.18]}>
@@ -541,22 +548,22 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
             : null}
           {level >= 2 ? (
             <mesh position={[0, 0.22, 0.1]} castShadow>
-              <boxGeometry args={[0.042, 0.052, 1.5]} />
+              <BevelBox args={[0.042, 0.052, 1.5]} />
               <Mat color={def.color} eInt={0.75} metalness={0.52} roughness={0.16} />
             </mesh>
           ) : null}
           {level >= 3 ? (
             <>
               <mesh position={[0, 0.3, 0.06]} castShadow>
-                <boxGeometry args={[0.036, 0.048, 1.38]} />
+                <BevelBox args={[0.036, 0.048, 1.38]} />
                 <Mat color={def.color} eInt={0.9} metalness={0.54} roughness={0.14} />
               </mesh>
               <mesh position={[0, 0.06, 1.04]} castShadow>
-                <boxGeometry args={[0.36, 0.22, 0.24]} />
+                <BevelBox args={[0.36, 0.22, 0.24]} />
                 <Mat color="#26272c" metalness={0.84} roughness={0.2} />
               </mesh>
               <mesh position={[0, 0.06, 1.18]}>
-                <boxGeometry args={[0.24, 0.13, 0.09]} />
+                <BevelBox args={[0.24, 0.13, 0.09]} />
                 <Mat color={def.color} eInt={1.25} />
               </mesh>
             </>
@@ -619,11 +626,11 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
     return (
       <group>
         <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.7, 0.12, 0.48]} />
+          <BevelBox args={[0.7, 0.12, 0.48]} />
           <Mat color="#3a2c28" metalness={0.72} roughness={0.32} />
         </mesh>
         <mesh position={[0, 0.22, -0.08]} castShadow>
-          <boxGeometry args={[0.36, 0.2, 0.28]} />
+          <BevelBox args={[0.36, 0.2, 0.28]} />
           <Mat color="#4e3a34" metalness={0.66} roughness={0.3} />
         </mesh>
         <group position={[0, 0.4, 0.16]}>
@@ -645,7 +652,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
           </mesh>
           {level >= 2 ? (
             <mesh position={[0, 0.16, -0.05]} castShadow>
-              <boxGeometry args={[0.46, 0.06, 0.16]} />
+              <BevelBox args={[0.46, 0.06, 0.16]} />
               <Mat color="#3a2c28" metalness={0.6} roughness={0.34} />
             </mesh>
           ) : null}
@@ -671,7 +678,7 @@ function TowerBody({ type, level }: { type: TowerId; level: number }) {
         </mesh>
         {([-0.16, 0.16] as const).map((x) => (
           <mesh key={x} position={[x, 0.22, -0.02]} castShadow>
-            <boxGeometry args={[0.06, 0.28, 0.06]} />
+            <BevelBox args={[0.06, 0.28, 0.06]} />
             <Mat color="#5a5044" metalness={0.6} roughness={0.3} />
           </mesh>
         ))}
@@ -961,7 +968,7 @@ function Scute({
 }) {
   return (
     <mesh position={position} rotation={rotation} castShadow>
-      <boxGeometry args={size} />
+      <BevelBox args={size} />
       <Mat color={color} roughness={0.46} metalness={0.12} />
     </mesh>
   );
@@ -987,7 +994,7 @@ function MechKnee({
         <Mat color={color} metalness={0.74} roughness={0.28} />
       </mesh>
       <mesh position={[0.05 * side, -len * 0.28, 0.01]} rotation={[0.2, 0, 0.18 * side]} castShadow>
-        <boxGeometry args={[0.07, len * 0.55, 0.08]} />
+        <BevelBox args={[0.07, len * 0.55, 0.08]} />
         <Mat color={color} metalness={0.72} roughness={0.3} />
       </mesh>
       <mesh position={[0.04 * side, -len * 0.52, 0.03]} rotation={[0.15, 0, 0]} castShadow>
@@ -995,11 +1002,11 @@ function MechKnee({
         <Mat color="#1c2026" metalness={0.8} roughness={0.24} />
       </mesh>
       <mesh position={[0.06 * side, -len * 0.72, 0.05]} rotation={[0.62, 0, 0.08 * side]} castShadow>
-        <boxGeometry args={[0.06, len * 0.5, 0.07]} />
+        <BevelBox args={[0.06, len * 0.5, 0.07]} />
         <Mat color={color} metalness={0.7} roughness={0.32} />
       </mesh>
       <mesh position={[0.06 * side, -len * 1.02, 0.1]} castShadow>
-        <boxGeometry args={[0.11, 0.04, 0.14]} />
+        <BevelBox args={[0.11, 0.04, 0.14]} />
         <Mat color="#1c2026" metalness={0.8} roughness={0.26} />
       </mesh>
     </group>
@@ -1089,7 +1096,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         <Scute position={[0, 0.38, 0.2]} rotation={[0.25, 0, 0]} size={[0.32, 0.07, 0.18]} color="#0e2018" />
         {([-0.24, 0.24] as const).map((x) => (
           <mesh key={x} position={[x, 0.36, 0]} rotation={[0.1, 0, x > 0 ? -0.5 : 0.5]} castShadow>
-            <boxGeometry args={[0.12, 0.28, 0.32]} />
+            <BevelBox args={[0.12, 0.28, 0.32]} />
             <Mat color="#163428" metalness={0.2} roughness={0.5} />
           </mesh>
         ))}
@@ -1100,7 +1107,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
         ))}
         <mesh position={[0.1, 0.44, 0.06]} rotation={[0.3, 0.4, 0.2]} castShadow>
-          <boxGeometry args={[0.1, 0.04, 0.22]} />
+          <BevelBox args={[0.1, 0.04, 0.22]} />
           <Mat color="#0a1812" roughness={0.62} />
         </mesh>
         <Mandibles color="#0e2018" y={0.18} z={0.36} spread={0.07} len={0.12} />
@@ -1392,12 +1399,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         <PulseLight position={[0, 0.16, 0]} r={0.045} color="#e08848" base={2.2} amp={0.5} speed={4.4} />
         {([-0.16, 0.16] as const).map((x) => (
           <mesh key={`fin-${x}`} position={[x, 0.02, -0.04]} castShadow>
-            <boxGeometry args={[0.06, 0.04, 0.16]} />
+            <BevelBox args={[0.06, 0.04, 0.16]} />
             <Mat color="#2a2e32" metalness={0.72} roughness={0.3} />
           </mesh>
         ))}
         <mesh position={[0, 0.02, 0.18]} castShadow>
-          <boxGeometry args={[0.12, 0.04, 0.1]} />
+          <BevelBox args={[0.12, 0.04, 0.1]} />
           <Mat color="#c46a3a" eInt={1.2} />
         </mesh>
         <mesh position={[0.02, 0.14, -0.08]} rotation={[0.3, 0, 0.2]} castShadow>
@@ -1409,7 +1416,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           return (
             <group key={i} position={[Math.cos(a) * 0.3, 0.05, Math.sin(a) * 0.3]} rotation={[0, -a, 0]}>
               <mesh position={[-0.08, 0, 0]} castShadow>
-                <boxGeometry args={[0.16, 0.03, 0.05]} />
+                <BevelBox args={[0.16, 0.03, 0.05]} />
                 <Mat color="#4a5058" metalness={0.7} roughness={0.3} />
               </mesh>
               <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -1428,30 +1435,30 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group>
         <mesh position={[0, 0.58, 0]} castShadow>
-          <boxGeometry args={[0.32, 0.22, 0.42]} />
+          <BevelBox args={[0.32, 0.22, 0.42]} />
           <Mat color="#5e666e" metalness={0.72} roughness={0.3} />
         </mesh>
         <mesh position={[0, 0.72, 0.08]} castShadow>
-          <boxGeometry args={[0.2, 0.16, 0.2]} />
+          <BevelBox args={[0.2, 0.16, 0.2]} />
           <Mat color="#3e464e" metalness={0.74} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.76, 0.2]}>
-          <boxGeometry args={[0.14, 0.04, 0.04]} />
+          <BevelBox args={[0.14, 0.04, 0.04]} />
           <Mat color="#e08848" eInt={2.7} />
         </mesh>
         <PulseLight position={[0, 0.76, 0.24]} r={0.028} color="#e08848" base={2.4} amp={0.45} speed={5.2} />
         {([-0.2, 0.2] as const).map((x) => (
           <mesh key={`brace-${x}`} position={[x, 0.62, 0.02]} rotation={[0.1, 0, x > 0 ? -0.4 : 0.4]} castShadow>
-            <boxGeometry args={[0.06, 0.18, 0.22]} />
+            <BevelBox args={[0.06, 0.18, 0.22]} />
             <Mat color="#8a929a" metalness={0.82} roughness={0.22} />
           </mesh>
         ))}
         <mesh position={[0, 0.58, 0.22]} castShadow>
-          <boxGeometry args={[0.24, 0.16, 0.045]} />
+          <BevelBox args={[0.24, 0.16, 0.045]} />
           <Mat color="#d5dee6" metalness={0.88} roughness={0.14} eInt={0.22} />
         </mesh>
         <mesh position={[0, 0.58, 0.25]}>
-          <boxGeometry args={[0.08, 0.04, 0.012]} />
+          <BevelBox args={[0.08, 0.04, 0.012]} />
           <Mat color="#e08848" eInt={1.4} />
         </mesh>
         <mesh position={[0, 0.88, -0.04]} rotation={[0.2, 0, 0]} castShadow>
@@ -1459,7 +1466,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2a2e32" metalness={0.72} />
         </mesh>
         <mesh position={[0, 0.56, -0.24]} castShadow>
-          <boxGeometry args={[0.16, 0.12, 0.1]} />
+          <BevelBox args={[0.16, 0.12, 0.1]} />
           <Mat color="#2a2e34" metalness={0.74} roughness={0.28} />
         </mesh>
         <WalkLegs>
@@ -1476,7 +1483,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.18}>
         <mesh position={[0, 0.38, 0]} castShadow>
-          <boxGeometry args={[0.52, 0.22, 0.62]} />
+          <BevelBox args={[0.52, 0.22, 0.62]} />
           <Mat color="#4e545c" metalness={0.74} roughness={0.28} />
         </mesh>
         <mesh position={[0, 0.52, -0.08]} castShadow>
@@ -1498,14 +1505,14 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         {([-0.12, 0.12] as const).map((x) => (
           <mesh key={`emitter-${x}`} position={[x, 0.5, 0.3]}>
-            <boxGeometry args={[0.03, 0.05, 0.03]} />
+            <BevelBox args={[0.03, 0.05, 0.03]} />
             <Mat color="#d7eef4" eInt={1.5} />
           </mesh>
         ))}
         {([-0.26, 0.26] as const).map((x) => (
           <group key={`track-${x}`}>
             <mesh position={[x, 0.12, 0]} castShadow>
-              <boxGeometry args={[0.12, 0.1, 0.58]} />
+              <BevelBox args={[0.12, 0.1, 0.58]} />
               <Mat color="#1c2026" metalness={0.78} roughness={0.32} />
             </mesh>
             {[-0.2, 0, 0.2].map((z) => (
@@ -1523,7 +1530,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
         ))}
         <mesh position={[0, 0.48, -0.34]} castShadow>
-          <boxGeometry args={[0.22, 0.12, 0.1]} />
+          <BevelBox args={[0.22, 0.12, 0.1]} />
           <Mat color="#2a2e32" metalness={0.65} roughness={0.36} />
         </mesh>
       </group>
@@ -1534,24 +1541,24 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.32}>
         <mesh position={[0, 0.5, -0.08]} castShadow>
-          <boxGeometry args={[0.34, 0.46, 0.26]} />
+          <BevelBox args={[0.34, 0.46, 0.26]} />
           <Mat color="#3a4048" metalness={0.8} roughness={0.24} />
         </mesh>
         <mesh position={[0, 0.84, -0.04]} castShadow>
-          <boxGeometry args={[0.24, 0.2, 0.22]} />
+          <BevelBox args={[0.24, 0.2, 0.22]} />
           <Mat color="#2a3038" metalness={0.78} roughness={0.24} />
         </mesh>
         <mesh position={[0, 0.88, 0.1]}>
-          <boxGeometry args={[0.16, 0.06, 0.04]} />
+          <BevelBox args={[0.16, 0.06, 0.04]} />
           <Mat color="#e08848" eInt={2.2} />
         </mesh>
         <PulseLight position={[0, 0.88, 0.14]} r={0.025} color="#e08848" base={2} amp={0.4} speed={3.4} />
         <mesh position={[0.22, 0.52, 0.02]} rotation={[0.15, 0, 0.35]} castShadow>
-          <boxGeometry args={[0.1, 0.22, 0.12]} />
+          <BevelBox args={[0.1, 0.22, 0.12]} />
           <Mat color="#4a5058" metalness={0.74} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.48, 0.24]} rotation={[-0.12, 0, 0]} castShadow>
-          <boxGeometry args={[0.68, 0.64, 0.08]} />
+          <BevelBox args={[0.68, 0.64, 0.08]} />
           <Mat color="#cbd5e1" metalness={0.88} roughness={0.16} />
         </mesh>
         <mesh position={[0, 0.56, 0.27]} castShadow>
@@ -1583,22 +1590,22 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.6}>
         <mesh position={[0, 0.52, 0.04]} castShadow>
-          <boxGeometry args={[0.48, 0.32, 0.72]} />
+          <BevelBox args={[0.48, 0.32, 0.72]} />
           <Mat color="#54595f" metalness={0.74} roughness={0.28} />
         </mesh>
         <mesh position={[0, 0.76, 0.1]} castShadow>
-          <boxGeometry args={[0.28, 0.2, 0.32]} />
+          <BevelBox args={[0.28, 0.2, 0.32]} />
           <Mat color="#3a4048" metalness={0.7} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.78, 0.28]}>
-          <boxGeometry args={[0.18, 0.05, 0.04]} />
+          <BevelBox args={[0.18, 0.05, 0.04]} />
           <Mat color="#e08848" eInt={2.2} />
         </mesh>
         <PulseLight position={[0, 0.78, 0.32]} r={0.024} color="#e08848" base={2} amp={0.4} speed={3} />
         {([-0.3, 0.3] as const).map((x) => (
           <group key={x} position={[x, 0.68, 0.16]}>
             <mesh rotation={[0, 0, x > 0 ? -0.2 : 0.2]} castShadow>
-              <boxGeometry args={[0.16, 0.18, 0.22]} />
+              <BevelBox args={[0.16, 0.18, 0.22]} />
               <Mat color="#3a4048" metalness={0.72} roughness={0.28} />
             </mesh>
             <mesh position={[0, 0.04, 0.22]} rotation={[1.15, 0, 0]} castShadow>
@@ -1613,12 +1620,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         {[-0.14, 0, 0.14].map((x) => (
           <mesh key={`stack-${x}`} position={[x, 0.92, -0.08]} castShadow>
-            <boxGeometry args={[0.06, 0.14, 0.06]} />
+            <BevelBox args={[0.06, 0.14, 0.06]} />
             <Mat color="#c46a3a" eInt={1.4} />
           </mesh>
         ))}
         <mesh position={[0, 0.48, -0.38]} castShadow>
-          <boxGeometry args={[0.28, 0.16, 0.16]} />
+          <BevelBox args={[0.28, 0.16, 0.16]} />
           <Mat color="#2a2e34" metalness={0.76} roughness={0.28} />
         </mesh>
         <WalkLegs>
@@ -1635,22 +1642,22 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.82}>
         <mesh position={[0, 0.52, 0.06]} castShadow>
-          <boxGeometry args={[0.62, 0.36, 0.88]} />
+          <BevelBox args={[0.62, 0.36, 0.88]} />
           <Mat color="#3e444c" metalness={0.78} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.8, 0.14]} castShadow>
-          <boxGeometry args={[0.36, 0.24, 0.4]} />
+          <BevelBox args={[0.36, 0.24, 0.4]} />
           <Mat color="#2a3038" metalness={0.8} roughness={0.22} />
         </mesh>
         <mesh position={[0, 0.82, 0.36]}>
-          <boxGeometry args={[0.24, 0.06, 0.05]} />
+          <BevelBox args={[0.24, 0.06, 0.05]} />
           <Mat color="#e08848" eInt={2.3} />
         </mesh>
         <PulseLight position={[0, 0.82, 0.4]} r={0.028} color="#e08848" base={2.1} amp={0.4} speed={2.8} />
         {([-0.34, 0.34] as const).map((x) => (
           <group key={`c${x}`} position={[x, 0.72, 0.28]}>
             <mesh castShadow>
-              <boxGeometry args={[0.18, 0.16, 0.24]} />
+              <BevelBox args={[0.18, 0.16, 0.24]} />
               <Mat color="#1f2328" metalness={0.82} roughness={0.22} />
             </mesh>
             <mesh position={[0, 0.04, 0.32]} rotation={[1.2, 0, 0]} castShadow>
@@ -1662,17 +1669,17 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         ))}
         {([-0.22, 0.22] as const).map((x) => (
           <mesh key={`pauldron-${x}`} position={[x, 0.62, -0.08]} rotation={[0, 0, x > 0 ? -0.25 : 0.25]} castShadow>
-            <boxGeometry args={[0.16, 0.22, 0.36]} />
+            <BevelBox args={[0.16, 0.22, 0.36]} />
             <Mat color="#4a5058" metalness={0.76} roughness={0.28} />
           </mesh>
         ))}
         <mesh position={[0, 0.46, -0.48]} castShadow>
-          <boxGeometry args={[0.36, 0.18, 0.2]} />
+          <BevelBox args={[0.36, 0.18, 0.2]} />
           <Mat color="#1f2328" metalness={0.82} roughness={0.22} />
         </mesh>
         {[-0.16, 0, 0.16].map((x) => (
           <mesh key={`stack-${x}`} position={[x, 0.98, -0.06]} castShadow>
-            <boxGeometry args={[0.07, 0.14, 0.07]} />
+            <BevelBox args={[0.07, 0.14, 0.07]} />
             <Mat color="#e08848" eInt={1.5} />
           </mesh>
         ))}
@@ -1716,7 +1723,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
           <PulseLight position={[0, 0.6, 0.46]} r={0.03} color="#e08848" base={2.1} amp={0.45} speed={3.8} />
           <mesh position={[0.08, 0.68, 0]} castShadow>
-            <boxGeometry args={[0.04, 0.12, 0.04]} />
+            <BevelBox args={[0.04, 0.12, 0.04]} />
             <Mat color="#c46a3a" eInt={1.5} />
           </mesh>
         </SentrySpin>
@@ -1741,11 +1748,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#8aa0a8" metalness={0.35} roughness={0.16} eInt={0.25} />
         </mesh>
         <mesh position={[0.32, 0, -0.02]} rotation={[0, 0.12, 0.22]} castShadow>
-          <boxGeometry args={[0.48, 0.03, 0.2]} />
+          <BevelBox args={[0.48, 0.03, 0.2]} />
           <Mat color="#3a4048" metalness={0.6} roughness={0.35} />
         </mesh>
         <mesh position={[-0.32, 0, -0.02]} rotation={[0, -0.12, -0.22]} castShadow>
-          <boxGeometry args={[0.48, 0.03, 0.2]} />
+          <BevelBox args={[0.48, 0.03, 0.2]} />
           <Mat color="#3a4048" metalness={0.6} roughness={0.35} />
         </mesh>
         <mesh position={[0, -0.06, 0.28]} rotation={[Math.PI / 2, 0, 0]} castShadow>
@@ -1754,7 +1761,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         <PulseLight position={[0, -0.06, 0.44]} r={0.025} color="#e08848" base={2.2} amp={0.5} speed={5.4} />
         <mesh position={[0, 0.02, -0.32]} castShadow>
-          <boxGeometry args={[0.08, 0.1, 0.18]} />
+          <BevelBox args={[0.08, 0.1, 0.18]} />
           <Mat color="#2a2e34" metalness={0.7} roughness={0.3} />
         </mesh>
         <Rotor position={[0.28, 0.08, 0.02]} width={0.38} />
@@ -1776,15 +1783,15 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         <PulseLight position={[0, 0, 0.56]} r={0.026} color="#e08848" base={2.3} amp={0.5} speed={6.2} />
         <mesh position={[0.2, 0, -0.08]} rotation={[0, 0.55, 0.35]} castShadow>
-          <boxGeometry args={[0.36, 0.015, 0.1]} />
+          <BevelBox args={[0.36, 0.015, 0.1]} />
           <Mat color="#3a3030" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[-0.2, 0, -0.08]} rotation={[0, -0.55, -0.35]} castShadow>
-          <boxGeometry args={[0.36, 0.015, 0.1]} />
+          <BevelBox args={[0.36, 0.015, 0.1]} />
           <Mat color="#3a3030" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[0, 0.02, -0.38]} castShadow>
-          <boxGeometry args={[0.06, 0.06, 0.14]} />
+          <BevelBox args={[0.06, 0.06, 0.14]} />
           <Mat color="#3a2828" metalness={0.7} roughness={0.28} />
         </mesh>
         <Rotor position={[0, 0.06, -0.22]} width={0.3} />
@@ -1864,11 +1871,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.7}>
         <mesh position={[0, 0.22, -0.06]} castShadow>
-          <boxGeometry args={[0.62, 0.16, 0.42]} />
+          <BevelBox args={[0.62, 0.16, 0.42]} />
           <Mat color="#3a4448" metalness={0.72} roughness={0.3} />
         </mesh>
         <mesh position={[0, 0.48, -0.18]} castShadow>
-          <boxGeometry args={[0.56, 0.42, 0.14]} />
+          <BevelBox args={[0.56, 0.42, 0.14]} />
           <Mat color="#5a686c" metalness={0.74} roughness={0.26} />
         </mesh>
         <mesh position={[-0.1, 0.52, 0.04]} scale={[1.05, 0.9, 1]} castShadow>
@@ -1876,7 +1883,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2a4a3c" roughness={0.48} metalness={0.12} />
         </mesh>
         <mesh position={[0.16, 0.54, 0.06]} castShadow>
-          <boxGeometry args={[0.22, 0.2, 0.22]} />
+          <BevelBox args={[0.22, 0.2, 0.22]} />
           <Mat color="#5a686c" metalness={0.76} roughness={0.24} />
         </mesh>
         <mesh position={[-0.1, 0.72, 0.02]} scale={[0.9, 0.8, 0.9]} castShadow>
@@ -1884,12 +1891,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a5a4c" roughness={0.44} />
         </mesh>
         <mesh position={[0.14, 0.74, 0.04]} castShadow>
-          <boxGeometry args={[0.14, 0.12, 0.14]} />
+          <BevelBox args={[0.14, 0.12, 0.14]} />
           <Mat color="#6a787c" metalness={0.78} roughness={0.22} />
         </mesh>
         <Mandibles color="#1e4a38" y={0.5} z={0.24} spread={0.08} len={0.14} />
         <mesh position={[0.14, 0.74, 0.12]}>
-          <boxGeometry args={[0.08, 0.03, 0.03]} />
+          <BevelBox args={[0.08, 0.03, 0.03]} />
           <Mat color="#8ec8d0" eInt={2} />
         </mesh>
         <mesh position={[-0.28, 0.86, 0]} rotation={[0.15, 0, 0.35]} castShadow>
@@ -1897,11 +1904,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3f8a72" emissive="#8ec8d0" eInt={0.7} roughness={0.4} />
         </mesh>
         <mesh position={[0.3, 0.88, 0]} rotation={[0.1, 0, -0.3]} castShadow>
-          <boxGeometry args={[0.07, 0.26, 0.12]} />
+          <BevelBox args={[0.07, 0.26, 0.12]} />
           <Mat color="#6a787c" metalness={0.74} roughness={0.24} />
         </mesh>
         <mesh position={[0, 0.94, -0.04]} castShadow>
-          <boxGeometry args={[0.18, 0.08, 0.1]} />
+          <BevelBox args={[0.18, 0.08, 0.1]} />
           <Mat color="#4a5858" metalness={0.7} />
         </mesh>
         <PulseLight position={[0.02, 0.6, 0.16]} r={0.07} color="#8ec8d0" base={2.2} amp={0.45} speed={2} />
@@ -1917,16 +1924,16 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={2.05}>
         <mesh position={[0, 0.2, -0.04]} castShadow>
-          <boxGeometry args={[0.72, 0.16, 0.5]} />
+          <BevelBox args={[0.72, 0.16, 0.5]} />
           <Mat color="#2e3a3e" metalness={0.76} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.5, -0.22]} castShadow>
-          <boxGeometry args={[0.64, 0.5, 0.16]} />
+          <BevelBox args={[0.64, 0.5, 0.16]} />
           <Mat color="#6a787c" metalness={0.78} roughness={0.22} />
         </mesh>
         {([-0.34, 0.34] as const).map((x) => (
           <mesh key={`arm-${x}`} position={[x, 0.42, -0.02]} castShadow>
-            <boxGeometry args={[0.12, 0.12, 0.36]} />
+            <BevelBox args={[0.12, 0.12, 0.36]} />
             <Mat color="#4a5858" metalness={0.7} roughness={0.28} />
           </mesh>
         ))}
@@ -1935,7 +1942,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2e4e4a" roughness={0.4} metalness={0.18} />
         </mesh>
         <mesh position={[0.18, 0.56, 0.08]} castShadow>
-          <boxGeometry args={[0.26, 0.24, 0.26]} />
+          <BevelBox args={[0.26, 0.24, 0.26]} />
           <Mat color="#6a787c" metalness={0.8} roughness={0.2} />
         </mesh>
         <mesh position={[-0.12, 0.78, 0.04]} scale={[0.95, 0.85, 0.95]} castShadow>
@@ -1943,12 +1950,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a5a4c" roughness={0.42} />
         </mesh>
         <mesh position={[0.16, 0.8, 0.06]} castShadow>
-          <boxGeometry args={[0.16, 0.14, 0.16]} />
+          <BevelBox args={[0.16, 0.14, 0.16]} />
           <Mat color="#7a888c" metalness={0.8} roughness={0.2} />
         </mesh>
         <Mandibles color="#1e4a38" y={0.54} z={0.28} spread={0.09} len={0.16} />
         <mesh position={[0.16, 0.8, 0.16]}>
-          <boxGeometry args={[0.1, 0.035, 0.035]} />
+          <BevelBox args={[0.1, 0.035, 0.035]} />
           <Mat color="#8ec8d0" eInt={2.2} />
         </mesh>
         {[-0.2, -0.36].map((x) => (
@@ -1959,17 +1966,17 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         ))}
         {[0.2, 0.38].map((x) => (
           <mesh key={`fin-${x}`} position={[x, 0.98, 0]} rotation={[0.08, 0, -0.28]} castShadow>
-            <boxGeometry args={[0.08, 0.3, 0.12]} />
+            <BevelBox args={[0.08, 0.3, 0.12]} />
             <Mat color="#7a888c" metalness={0.78} roughness={0.2} />
           </mesh>
         ))}
         <mesh position={[0, 1.04, -0.04]} castShadow>
-          <boxGeometry args={[0.2, 0.1, 0.12]} />
+          <BevelBox args={[0.2, 0.1, 0.12]} />
           <Mat color="#8ec8d0" eInt={1.1} />
         </mesh>
         {([-0.16, 0.16] as const).map((x) => (
           <mesh key={`seam-${x}`} position={[x, 0.48, 0.24]} castShadow>
-            <boxGeometry args={[0.05, 0.14, 0.04]} />
+            <BevelBox args={[0.05, 0.14, 0.04]} />
             <Mat color="#8ec8d0" eInt={0.85} />
           </mesh>
         ))}
@@ -1992,11 +1999,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a5a4c" roughness={0.46} metalness={0.16} />
         </mesh>
         <mesh position={[0.18, 0.44, 0.08]} rotation={[0.15, 0.2, 0.25]} castShadow>
-          <boxGeometry args={[0.28, 0.22, 0.26]} />
+          <BevelBox args={[0.28, 0.22, 0.26]} />
           <Mat color="#5a686c" metalness={0.76} roughness={0.24} />
         </mesh>
         <mesh position={[0.02, 0.56, -0.12]} rotation={[-0.4, 0.3, 0.2]} castShadow>
-          <boxGeometry args={[0.16, 0.1, 0.2]} />
+          <BevelBox args={[0.16, 0.1, 0.2]} />
           <Mat color="#4a5858" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[-0.22, 0.58, 0.1]} rotation={[-0.35, 0.2, 0.45]} castShadow>
@@ -2012,7 +2019,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2a4a3c" roughness={0.5} />
         </mesh>
         <mesh position={[0.22, 0.28, -0.16]} rotation={[0.3, 0.4, 0.5]} castShadow>
-          <boxGeometry args={[0.08, 0.16, 0.08]} />
+          <BevelBox args={[0.08, 0.16, 0.08]} />
           <Mat color="#2a3238" metalness={0.68} />
         </mesh>
         <Mandibles color="#1e4a38" y={0.36} z={0.22} spread={0.1} len={0.14} />
@@ -2035,11 +2042,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#3a5a4c" roughness={0.48} metalness={0.1} />
         </mesh>
         <mesh position={[0.14, 0.32, 0]} castShadow>
-          <boxGeometry args={[0.24, 0.26, 0.32]} />
+          <BevelBox args={[0.24, 0.26, 0.32]} />
           <Mat color="#5a686c" metalness={0.76} roughness={0.24} />
         </mesh>
         <mesh position={[0.02, 0.34, 0]} rotation={[0, 0, 0.15]}>
-          <boxGeometry args={[0.03, 0.3, 0.34]} />
+          <BevelBox args={[0.03, 0.3, 0.34]} />
           <Mat color="#8ec8d0" eInt={0.9} />
         </mesh>
         <mesh position={[-0.16, 0.44, 0.2]} scale={[0.95, 0.8, 1]} castShadow>
@@ -2047,7 +2054,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#2a4a3c" roughness={0.5} />
         </mesh>
         <mesh position={[0.16, 0.46, 0.18]} castShadow>
-          <boxGeometry args={[0.16, 0.12, 0.16]} />
+          <BevelBox args={[0.16, 0.12, 0.16]} />
           <Mat color="#6a787c" metalness={0.78} roughness={0.22} />
         </mesh>
         <Scute position={[-0.1, 0.44, -0.04]} rotation={[0.2, 0, 0]} size={[0.18, 0.05, 0.2]} color="#245844" />
@@ -2055,7 +2062,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         <Antennae color="#1e4a38" y={0.52} z={0.2} spread={0.04} />
         <PulseLight position={[-0.16, 0.48, 0.28]} r={0.03} color="#6ad4a0" base={2.4} amp={0.45} speed={3.8} />
         <mesh position={[0.16, 0.48, 0.28]}>
-          <boxGeometry args={[0.1, 0.03, 0.03]} />
+          <BevelBox args={[0.1, 0.03, 0.03]} />
           <Mat color="#8ec8d0" eInt={2.6} />
         </mesh>
         <mesh position={[0.24, 0.4, 0.22]} rotation={[1.1, 0, 0]} castShadow>
@@ -2076,7 +2083,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.14}>
         <mesh position={[0, 0.28, 0]} castShadow>
-          <boxGeometry args={[0.42, 0.22, 0.36]} />
+          <BevelBox args={[0.42, 0.22, 0.36]} />
           <Mat color="#5a686c" metalness={0.8} roughness={0.2} />
         </mesh>
         {([-0.16, 0.16] as const).map((x) =>
@@ -2105,7 +2112,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           );
         })}
         <mesh position={[0, 0.18, 0.2]} castShadow>
-          <boxGeometry args={[0.16, 0.08, 0.06]} />
+          <BevelBox args={[0.16, 0.08, 0.06]} />
           <Mat color="#2a3238" metalness={0.78} />
         </mesh>
         <PulseLight position={[0, 0.58, 0]} r={0.06} color="#cfeaf0" base={2.3} amp={0.45} speed={2.2} />
@@ -2178,11 +2185,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <HoverFloat amp={0.05}>
         <mesh position={[0, 0.16, 0.02]} castShadow>
-          <boxGeometry args={[0.2, 0.08, 0.64]} />
+          <BevelBox args={[0.2, 0.08, 0.64]} />
           <Mat color="#5a646c" metalness={0.8} roughness={0.22} />
         </mesh>
         <mesh position={[0, 0.18, 0.28]} rotation={[-0.12, 0, 0]} castShadow>
-          <boxGeometry args={[0.12, 0.055, 0.2]} />
+          <BevelBox args={[0.12, 0.055, 0.2]} />
           <Mat color="#3a444c" metalness={0.74} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.2, 0.42]} rotation={[0.25, 0, 0]} castShadow>
@@ -2192,7 +2199,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         {([-1, 1] as const).map((s) => (
           <group key={`wing-${s}`}>
             <mesh position={[0.26 * s, 0.16, -0.02]} rotation={[0, 0, -0.16 * s]} castShadow>
-              <boxGeometry args={[0.3, 0.022, 0.16]} />
+              <BevelBox args={[0.3, 0.022, 0.16]} />
               <Mat color="#4a545c" metalness={0.78} roughness={0.24} />
             </mesh>
             <mesh position={[0.4 * s, 0.2, -0.02]} rotation={[Math.PI / 2, 0, 0]}>
@@ -2203,11 +2210,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </group>
         ))}
         <mesh position={[0, 0.22, 0.06]} castShadow>
-          <boxGeometry args={[0.13, 0.06, 0.16]} />
+          <BevelBox args={[0.13, 0.06, 0.16]} />
           <Mat color="#2a3238" metalness={0.7} roughness={0.28} />
         </mesh>
         <mesh position={[0, 0.24, 0.14]}>
-          <boxGeometry args={[0.07, 0.02, 0.035]} />
+          <BevelBox args={[0.07, 0.02, 0.035]} />
           <Mat color="#7ec8e8" eInt={1.8} />
         </mesh>
         {([-0.05, 0.05] as const).map((x) => (
@@ -2236,7 +2243,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           const a = (i / 4) * Math.PI * 2;
           return (
             <mesh key={`skirt-${i}`} position={[Math.cos(a) * 0.34, 0.22, Math.sin(a) * 0.34]} rotation={[0, -a, 0]} castShadow>
-              <boxGeometry args={[0.16, 0.16, 0.04]} />
+              <BevelBox args={[0.16, 0.16, 0.04]} />
               <Mat color="#6a7874" metalness={0.74} roughness={0.22} />
             </mesh>
           );
@@ -2258,16 +2265,16 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#8ec8c0" metalness={0.4} roughness={0.22} eInt={0.5} />
         </mesh>
         <mesh position={[0, 0.44, 0.2]} castShadow>
-          <boxGeometry args={[0.16, 0.09, 0.07]} />
+          <BevelBox args={[0.16, 0.09, 0.07]} />
           <Mat color="#1e2826" metalness={0.55} roughness={0.36} />
         </mesh>
         <mesh position={[0, 0.46, 0.25]}>
-          <boxGeometry args={[0.09, 0.022, 0.012]} />
+          <BevelBox args={[0.09, 0.022, 0.012]} />
           <Mat color="#e7f6f2" eInt={1.7} />
         </mesh>
         {([-0.2, 0.2] as const).map((x) => (
           <mesh key={`pauldron-${x}`} position={[x, 0.46, 0.02]} rotation={[0.08, 0, x > 0 ? -0.32 : 0.32]} castShadow>
-            <boxGeometry args={[0.09, 0.14, 0.1]} />
+            <BevelBox args={[0.09, 0.14, 0.1]} />
             <Mat color="#5c6a66" metalness={0.76} roughness={0.22} />
           </mesh>
         ))}
@@ -2295,7 +2302,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         {([-0.12, 0.12] as const).map((x) => (
           <mesh key={`fin-${x}`} position={[x, 0.32, -0.02]} rotation={[0.15, 0, x > 0 ? -0.85 : 0.85]} castShadow>
-            <boxGeometry args={[0.035, 0.24, 0.12]} />
+            <BevelBox args={[0.035, 0.24, 0.12]} />
             <Mat color="#3b3354" roughness={0.42} emissive="#8b7cc8" eInt={0.28} />
           </mesh>
         ))}
@@ -2319,11 +2326,11 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group scale={1.05}>
         <mesh position={[0, 0.36, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.28, 0.16]} />
+          <BevelBox args={[0.22, 0.28, 0.16]} />
           <Mat color="#4a5560" metalness={0.55} roughness={0.32} />
         </mesh>
         <mesh position={[0, 0.54, 0.02]} castShadow>
-          <boxGeometry args={[0.15, 0.12, 0.13]} />
+          <BevelBox args={[0.15, 0.12, 0.13]} />
           <Mat color="#2e343c" metalness={0.5} roughness={0.34} />
         </mesh>
         <mesh position={[0.02, 0.82, 0]} castShadow>
@@ -2331,20 +2338,20 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           <Mat color="#c4a574" metalness={0.62} roughness={0.26} eInt={0.25} />
         </mesh>
         <mesh position={[0.16, 0.98, 0]} castShadow>
-          <boxGeometry args={[0.24, 0.16, 0.018]} />
+          <BevelBox args={[0.24, 0.16, 0.018]} />
           <Mat color="#e7d39a" roughness={0.38} emissive="#c4a574" eInt={0.5} />
         </mesh>
         <mesh position={[0.16, 0.98, 0.012]}>
-          <boxGeometry args={[0.08, 0.06, 0.01]} />
+          <BevelBox args={[0.08, 0.06, 0.01]} />
           <Mat color="#fff6d8" eInt={1.2} />
         </mesh>
         <mesh position={[0, 0.48, 0.1]}>
-          <boxGeometry args={[0.08, 0.028, 0.016]} />
+          <BevelBox args={[0.08, 0.028, 0.016]} />
           <Mat color="#f3e6c0" eInt={1.35} />
         </mesh>
         {([-0.16, 0.16] as const).map((x) => (
           <mesh key={x} position={[x, 0.4, 0]} rotation={[0, 0, x > 0 ? -0.28 : 0.28]} castShadow>
-            <boxGeometry args={[0.07, 0.16, 0.08]} />
+            <BevelBox args={[0.07, 0.16, 0.08]} />
             <Mat color="#6a5a48" metalness={0.42} roughness={0.34} />
           </mesh>
         ))}
@@ -2363,7 +2370,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
     return (
       <group>
         <mesh position={[0, 0.32, 0]} castShadow>
-          <boxGeometry args={[0.36, 0.18, 0.22]} />
+          <BevelBox args={[0.36, 0.18, 0.22]} />
           <Mat color="#5c564c" metalness={0.72} roughness={0.26} />
         </mesh>
         <mesh position={[0, 0.46, -0.02]} castShadow>
@@ -2381,7 +2388,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
         ))}
         <mesh position={[0, 0.34, 0.13]}>
-          <boxGeometry args={[0.12, 0.04, 0.018]} />
+          <BevelBox args={[0.12, 0.04, 0.018]} />
           <Mat color="#f0d48a" eInt={1.7} />
         </mesh>
         <PulseLight position={[0, 0.58, 0.06]} r={0.032} color="#e7c27a" base={1.9} amp={0.6} speed={3.4} />
@@ -2417,7 +2424,7 @@ export function EnemyModel({ type }: { type: EnemyId }) {
           </mesh>
         ))}
         <mesh position={[0, 0.24, 0.22]}>
-          <boxGeometry args={[0.06, 0.06, 0.012]} />
+          <BevelBox args={[0.06, 0.06, 0.012]} />
           <Mat color="#d8ffe8" eInt={1.4} />
         </mesh>
         <PulseLight position={[0, 0.36, -0.08]} r={0.04} color="#7dffa8" base={1.8} amp={0.55} speed={2.4} />
@@ -2482,12 +2489,12 @@ export function EnemyModel({ type }: { type: EnemyId }) {
         </mesh>
         {([-0.08, 0.08] as const).map((x) => (
           <mesh key={`crack-${x}`} position={[x, 0.28, 0.14]} rotation={[0, 0, x]} castShadow>
-            <boxGeometry args={[0.02, 0.12, 0.012]} />
+            <BevelBox args={[0.02, 0.12, 0.012]} />
             <Mat color="#ffb088" eInt={1.5} />
           </mesh>
         ))}
         <mesh position={[0, 0.22, 0.16]}>
-          <boxGeometry args={[0.08, 0.03, 0.012]} />
+          <BevelBox args={[0.08, 0.03, 0.012]} />
           <Mat color="#ffd0b0" eInt={1.3} />
         </mesh>
         <PulseLight position={[0, 0.52, 0]} r={0.028} color="#e07a5a" base={2.1} amp={0.7} speed={4.2} />
@@ -2549,8 +2556,18 @@ export function HexPad({
           roughness={occupied ? 0.52 : 0.3}
           emissive={emissive}
           emissiveIntensity={glow}
+          onBeforeCompile={SURFACE_PATCH.metal}
+          customProgramCacheKey={SURFACE_KEY.metal}
         />
       </mesh>
+      {!occupied
+        ? [0, 1, 2].map((i) => (
+            <mesh key={`spoke-${i}`} rotation={[-Math.PI / 2, 0, (i * Math.PI) / 3]} position={[0, h + 0.012, 0]}>
+              <planeGeometry args={[0.8, 0.022]} />
+              <meshBasicMaterial color={emissive} transparent opacity={hover || selected ? 0.85 : 0.42} depthWrite={false} toneMapped={false} />
+            </mesh>
+          ))
+        : null}
       <mesh position={[0, 0.012, 0]} receiveShadow>
         <cylinderGeometry args={[0.68, 0.7, 0.024, 6]} />
         <meshStandardMaterial color="#2a3238" metalness={0.55} roughness={0.48} />
@@ -2725,7 +2742,7 @@ function MantleShell({ cls, rank, ready }: { cls: BaseClass; rank: number; ready
             {organic ? (
               <sphereGeometry args={[0.16 + rank * 0.03, 10, 8]} />
             ) : (
-              <boxGeometry args={[0.16, 0.55 + rank * 0.12, 0.08]} />
+              <BevelBox args={[0.16, 0.55 + rank * 0.12, 0.08]} />
             )}
             <Mat
               color={organic ? spec.flesh : spec.metal}
@@ -2869,11 +2886,11 @@ function MechKeep({ plate, snare, gun }: { plate: number; snare: number; gun: nu
         return (
           <group key={i} position={[Math.cos(a) * 1.48, 0, Math.sin(a) * 1.48]}>
             <mesh position={[0, 0.72, 0]} castShadow>
-              <boxGeometry args={[0.32, 1.2, 0.32]} />
+              <BevelBox args={[0.32, 1.2, 0.32]} />
               <Mat color="#4a4038" metalness={0.8} roughness={0.26} />
             </mesh>
             <mesh position={[0, 1.38, 0]} castShadow>
-              <boxGeometry args={[0.42, 0.12, 0.42]} />
+              <BevelBox args={[0.42, 0.12, 0.42]} />
               <Mat color="#6a5848" metalness={0.74} roughness={0.28} emissive={spec.color} eInt={0.2} />
             </mesh>
           </group>
@@ -2907,11 +2924,11 @@ function MechKeep({ plate, snare, gun }: { plate: number; snare: number; gun: nu
         </SpinY>
       ) : null}
       <mesh position={[1.2, 0.95, 0]} castShadow>
-        <boxGeometry args={[1.2, 0.1, 0.18]} />
+        <BevelBox args={[1.2, 0.1, 0.18]} />
         <Mat color="#5a4a3e" metalness={0.82} roughness={0.24} />
       </mesh>
       <mesh position={[1.72, 0.95, 0]} castShadow>
-        <boxGeometry args={[0.16, 0.28, 0.28]} />
+        <BevelBox args={[0.16, 0.28, 0.28]} />
         <Mat color="#3a322c" metalness={0.78} roughness={0.28} />
       </mesh>
       {plate > 0 ? (
@@ -2925,7 +2942,7 @@ function MechKeep({ plate, snare, gun }: { plate: number; snare: number; gun: nu
                 const a = (i / 4) * Math.PI * 2;
                 return (
                   <mesh key={i} position={[Math.cos(a) * 1.15, 0.48, Math.sin(a) * 1.15]} rotation={[0, -a, 0]}>
-                    <boxGeometry args={[0.5, 0.06, 0.12]} />
+                    <BevelBox args={[0.5, 0.06, 0.12]} />
                     <Mat color={spec.color} emissive={spec.color} eInt={0.45} metalness={0.5} roughness={0.3} />
                   </mesh>
                 );
@@ -2943,7 +2960,7 @@ function MechKeep({ plate, snare, gun }: { plate: number; snare: number; gun: nu
             const a = (i / (snare * 4)) * Math.PI * 2;
             return (
               <mesh key={i} position={[Math.cos(a) * 1.62, 0.16, Math.sin(a) * 1.62]}>
-                <boxGeometry args={[0.08, 0.1, 0.08]} />
+                <BevelBox args={[0.08, 0.1, 0.08]} />
                 <Mat color="#2a2018" metalness={0.7} roughness={0.3} emissive={spec.color} eInt={0.8} />
               </mesh>
             );
@@ -2953,7 +2970,7 @@ function MechKeep({ plate, snare, gun }: { plate: number; snare: number; gun: nu
       {gun > 0 ? (
         <group name="base-spire" position={[-0.15, 1.42, 0.1]}>
           <mesh castShadow>
-            <boxGeometry args={[0.32, 0.26, 0.32]} />
+            <BevelBox args={[0.32, 0.26, 0.32]} />
             <Mat color="#3a322c" metalness={0.82} roughness={0.26} />
           </mesh>
           <mesh position={[0, 0.06, 0.28 + gun * 0.08]} rotation={[Math.PI / 2, 0, 0]} castShadow>
@@ -2984,7 +3001,7 @@ function HybridKeep({ plate, snare, gun }: { plate: number; snare: number; gun: 
   return (
     <group name="keep-hybrid">
       <mesh position={[-0.62, 0.16, 0]} receiveShadow castShadow>
-        <boxGeometry args={[1.7, 0.3, 1.85]} />
+        <BevelBox args={[1.7, 0.3, 1.85]} />
         <Mat color={spec.metal} metalness={0.8} roughness={0.28} />
       </mesh>
       <mesh position={[0.78, 0.34, 0.05]} scale={[0.95, 0.42, 1.05]} castShadow>
@@ -2998,11 +3015,11 @@ function HybridKeep({ plate, snare, gun }: { plate: number; snare: number; gun: 
         </mesh>
       ))}
       <mesh position={[-1.15, 0.85, 0.4]} castShadow>
-        <boxGeometry args={[0.2, 1.2, 0.2]} />
+        <BevelBox args={[0.2, 1.2, 0.2]} />
         <Mat color="#5c6570" metalness={0.82} roughness={0.24} />
       </mesh>
       <mesh position={[-1.15, 1.5, 0.4]} castShadow>
-        <boxGeometry args={[0.32, 0.08, 0.32]} />
+        <BevelBox args={[0.32, 0.08, 0.32]} />
         <Mat color="#8a929c" metalness={0.7} roughness={0.28} emissive={spec.color} eInt={0.25} />
       </mesh>
       <mesh position={[1.05, 0.7, -0.4]} rotation={[0.75, 0.35, 0.15]} castShadow>
@@ -3024,7 +3041,7 @@ function HybridKeep({ plate, snare, gun }: { plate: number; snare: number; gun: 
         ? Array.from({ length: plate }, (_, layer) => (
             <group key={layer} name="base-plate">
               <mesh position={[0.15, 0.48 + layer * 0.12, 0]} rotation={[0, 0.15 + layer * 0.2, 0]} castShadow>
-                <boxGeometry args={[1.35 - layer * 0.1, 0.08, 0.16]} />
+                <BevelBox args={[1.35 - layer * 0.1, 0.08, 0.16]} />
                 <Mat color="#6e7680" metalness={0.84} roughness={0.22} />
               </mesh>
               {[-0.4, 0, 0.4].map((x) => (
@@ -3044,7 +3061,7 @@ function HybridKeep({ plate, snare, gun }: { plate: number; snare: number; gun: 
             const z = Math.sin(a) * 1.42;
             return i % 2 === 0 ? (
               <mesh key={i} name="base-snare" position={[x, 0.22, z]}>
-                <boxGeometry args={[0.12 + snare * 0.02, 0.12, 0.12]} />
+                <BevelBox args={[0.12 + snare * 0.02, 0.12, 0.12]} />
                 <Mat color={spec.metal} metalness={0.76} roughness={0.26} emissive={spec.color} eInt={0.45 + snare * 0.15} />
               </mesh>
             ) : (
@@ -3058,7 +3075,7 @@ function HybridKeep({ plate, snare, gun }: { plate: number; snare: number; gun: 
       {gun > 0 ? (
         <group name="base-spire" position={[-0.25, 1.25, 0.32]}>
           <mesh castShadow>
-            <boxGeometry args={[0.26, 0.22, 0.26]} />
+            <BevelBox args={[0.26, 0.22, 0.26]} />
             <Mat color={spec.metal} metalness={0.8} roughness={0.26} />
           </mesh>
           <mesh position={[0, 0.04, 0.32 + gun * 0.06]} rotation={[Math.PI / 2, 0, 0]} castShadow>
@@ -3117,6 +3134,7 @@ export function WardBase({
   return (
     <group name={`ward-base-${cls}`}>
       {showReach ? <ReachRings color={spec.color} snareReach={snareReach} gunReach={gunReach} /> : null}
+      <KeepDais cls={cls} color={spec.color} />
       <MantleShell cls={cls} rank={mantle} ready={mantleReady} />
       <BaseVitals color={spec.color} health={health} hitGen={hitGen} approach={approach} />
       {cls === "organic" ? <BioKeep plate={plate} snare={snare} gun={gun} /> : null}
@@ -3194,7 +3212,7 @@ export function NexusCore({
         const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
         return (
           <mesh key={i} position={[Math.cos(a) * 1.52, i % 2 === 0 ? 0.38 : 0.26, Math.sin(a) * 1.52]} rotation={[0, -a, 0]} castShadow>
-            <boxGeometry args={[0.2, i % 2 === 0 ? 0.58 : 0.34, 0.3]} />
+            <BevelBox args={[0.2, i % 2 === 0 ? 0.58 : 0.34, 0.3]} />
             <Mat color="#364048" metalness={0.74} roughness={0.3} />
           </mesh>
         );
@@ -3211,7 +3229,7 @@ export function NexusCore({
         const a = (i / 4) * Math.PI * 2;
         return (
           <mesh key={`inlay-${i}`} position={[Math.cos(a) * 0.58, 0.18, Math.sin(a) * 0.58]} rotation={[0, -a, 0]}>
-            <boxGeometry args={[0.08, 0.02, 0.42]} />
+            <BevelBox args={[0.08, 0.02, 0.42]} />
             <Mat color={hot} eInt={0.55} />
           </mesh>
         );
@@ -3273,11 +3291,11 @@ export function SpawnGate({ color }: { color: string }) {
         return (
           <group key={i} position={[Math.cos(a) * 0.78, 0.55, Math.sin(a) * 0.78]} rotation={[0, -a, 0]}>
             <mesh castShadow>
-              <boxGeometry args={[0.14, 1.1, 0.2]} />
+              <BevelBox args={[0.14, 1.1, 0.2]} />
               <Mat color="#2a3238" metalness={0.68} roughness={0.34} />
             </mesh>
             <mesh position={[0, 0.58, 0]}>
-              <boxGeometry args={[0.16, 0.08, 0.22]} />
+              <BevelBox args={[0.16, 0.08, 0.22]} />
               <Mat color={color} eInt={0.7} />
             </mesh>
           </group>
@@ -3516,7 +3534,7 @@ export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }
                   castShadow
                   receiveShadow
                 >
-                  <boxGeometry args={[1.15 - n * 0.2, 0.12, 0.8 - n * 0.14]} />
+                  <BevelBox args={[1.15 - n * 0.2, 0.12, 0.8 - n * 0.14]} />
                   <Mat color={n === 1 ? "#3a322c" : "#2a2e32"} metalness={0.8} roughness={0.34} />
                 </mesh>
               ))}
@@ -3600,7 +3618,7 @@ export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number
           return (
             <group key={i} position={it.pos} rotation={[0, it.a, 0]}>
               <mesh position={[0, 0.34, 0]} rotation={[0, 0, 0.42 + it.j * 0.3]} castShadow receiveShadow>
-                <boxGeometry args={[0.9 + it.k * 0.5, 0.1, 0.62]} />
+                <BevelBox args={[0.9 + it.k * 0.5, 0.1, 0.62]} />
                 <Mat color="#2d353c" metalness={0.78} roughness={0.36} />
               </mesh>
               <mesh position={[0.1, 0.12, 0.16]} rotation={[0, it.j, 0]} castShadow>
@@ -3683,12 +3701,12 @@ export function DecorField({ id, spots }: { id: MapId; spots: FieldSpot[] }) {
         ) : id === "forge" ? (
           <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.a, 0]}>
             <mesh position={[0, 0.025, 0]} castShadow receiveShadow>
-              <boxGeometry args={[0.34 + s.k * 0.7, 0.05, 0.26 + s.k * 0.4]} />
+              <BevelBox args={[0.34 + s.k * 0.7, 0.05, 0.26 + s.k * 0.4]} />
               <Mat color="#3a332c" metalness={0.8} roughness={0.4} />
             </mesh>
             {i % 3 === 0 ? (
               <mesh position={[0.04, 0.08, 0]} rotation={[0, s.a, 0.26]} castShadow>
-                <boxGeometry args={[0.2, 0.08, 0.18]} />
+                <BevelBox args={[0.2, 0.08, 0.18]} />
                 <Mat color="#4a4038" metalness={0.78} roughness={0.34} />
               </mesh>
             ) : i % 3 === 1 ? (
@@ -3714,7 +3732,7 @@ export function DecorField({ id, spots }: { id: MapId; spots: FieldSpot[] }) {
               </mesh>
             ) : (
               <mesh position={[0, 0.03, 0]} rotation={[0, 0, 0.2]} castShadow receiveShadow>
-                <boxGeometry args={[0.3 + s.k * 0.6, 0.055, 0.24 + s.k * 0.3]} />
+                <BevelBox args={[0.3 + s.k * 0.6, 0.055, 0.24 + s.k * 0.3]} />
                 <Mat color="#38424a" metalness={0.76} roughness={0.38} />
               </mesh>
             )}

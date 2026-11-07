@@ -2210,7 +2210,10 @@ export class GameEngine {
     this.kills += 1;
     if (this.lastShooter) this.lastShooter.kills += 1;
     this.hudDirty = true;
-    this.spawnBurst(e.x, e.y + 0.2, e.z, e.boss ? 1.6 : 0.55, e.boss ? "#e8dcc8" : "#9db4c4");
+    const dying = ENEMIES[e.type];
+    const deathTint = dying.faction === "organic" ? "#8dffb4" : dying.faction === "mech" ? "#ffa860" : "#a8e8f4";
+    this.spawnBurst(e.x, e.y + 0.2, e.z, e.boss ? 1.8 : 0.5 + dying.scale * 0.22, deathTint);
+    this.spawnBurst(e.x, e.y + 0.3, e.z, e.boss ? 1.1 : 0.3, "#fff4dc");
     this.spawnFloater(e.x, e.y + 0.8, e.z, extra ? `+${pay}` : `+${e.gold}`);
     this.sfx = "boom";
     if (e.boss) this.addTrauma(0.45);

@@ -13,10 +13,12 @@ import {
   type Mesh,
   type MeshStandardMaterial,
   type Texture,
+  type WebGLProgramParametersWithUniforms,
 } from "three";
 import { CELL } from "@/game/config";
 import type { MapId } from "@/game/types";
 import { PlanetCrust, scarSigned } from "./PlanetCrust";
+import { surfaceTime } from "./surface";
 import { GroundBeds, GroundMist, HillWilds, RimBelt } from "./PlanetWilds";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
 import { arenaMetrics, clamp, smooth, terrainElevation } from "./terrain";
@@ -148,7 +150,65 @@ function makeBowl(arenaR: number, squash: number, style: MapId, res: number) {
   return g;
 }
 
-function glowPatch(shader: { fragmentShader: string }, strength: number, biome: boolean) {
+const LIFE_COMMON = /* glsl */ `
+varying vec2 vWXZ;
+uniform float uSurfT;
+float lgh(vec2 p) { p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
+float lgn(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(lgh(i), lgh(i + vec2(1.0, 0.0)), f.x), mix(lgh(i + vec2(0.0, 1.0)), lgh(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float lridge(vec2 p) {
+  vec2 q = p + 0.9 * vec2(lgn(p * 0.7 + 4.0), lgn(p * 0.7 + 9.0));
+  return 1.0 - abs(2.0 * lgn(q) - 1.0);
+}
+`;
+
+const LIFE: Record<MapId, string> = {
+  mycelion: /* glsl */ `
+    float lr1 = lridge(vWXZ * 0.55);
+    float lr2 = lridge(vWXZ * 1.35 + 7.0);
+    float lw = fwidth(lr1) * 1.6;
+    float lline = smoothstep(0.972 - lw, 0.993, lr1) + 0.5 * smoothstep(0.982 - lw, 0.996, lr2);
+    float lpulse = 0.5 + 0.5 * sin(uSurfT * 0.9 + lgn(vWXZ * 0.3) * 12.0);
+    lline *= 1.0 - smoothstep(0.35, 1.2, lw);
+    totalEmissiveRadiance += vec3(0.16, 0.9, 0.58) * lline * (0.3 + lpulse * 0.7) * 0.7 * LIFE_K;
+    diffuseColor.rgb *= 1.0 - lline * 0.12 * LIFE_K;
+  `,
+  forge: /* glsl */ `
+    float lr1 = lridge(vWXZ * 0.4 + 3.0);
+    float lw = fwidth(lr1) * 1.6;
+    float lcrack = smoothstep(0.982 - lw, 0.996, lr1);
+    float lhalo = smoothstep(0.93, 0.995, lr1) * 0.2;
+    float lheat = 0.7 + 0.3 * sin(uSurfT * 1.7 + lgn(vWXZ * 0.45) * 9.0) * sin(uSurfT * 0.6 + vWXZ.x * 0.2);
+    float lfade = 1.0 - smoothstep(0.35, 1.2, lw);
+    totalEmissiveRadiance += vec3(1.0, 0.36, 0.07) * (lcrack * lheat * 1.2 + lhalo * 0.4) * lfade * LIFE_K;
+    diffuseColor.rgb *= 1.0 - lcrack * lfade * 0.4 * LIFE_K;
+  `,
+  aegis: /* glsl */ `
+    vec2 lsp = vWXZ * 6.0;
+    vec2 lid = floor(lsp);
+    float lh = lgh(lid);
+    float ltw = step(0.93, lh) * (0.45 + 0.55 * sin(uSurfT * 2.4 + lh * 60.0));
+    float ld = smoothstep(0.3, 0.0, length(fract(lsp) - 0.5));
+    float lfade = 1.0 - smoothstep(0.5, 1.4, fwidth(lsp.x));
+    totalEmissiveRadiance += vec3(0.75, 0.92, 1.0) * max(ltw, 0.0) * ld * lfade * 2.4 * LIFE_K;
+    float lcr = lridge(vWXZ * 0.28 + 11.0);
+    float lcw = fwidth(lcr) * 1.6;
+    float lcrev = smoothstep(0.978 - lcw, 0.995, lcr) * (1.0 - smoothstep(0.35, 1.2, lcw));
+    diffuseColor.rgb *= 1.0 - lcrev * 0.55 * LIFE_K;
+    totalEmissiveRadiance += vec3(0.1, 0.5, 0.65) * lcrev * 0.5 * LIFE_K;
+    float lband = sin(vWXZ.x * 0.12 + uSurfT * 0.18 + lgn(vWXZ * 0.07) * 6.0) * 0.5 + 0.5;
+    totalEmissiveRadiance += vec3(0.1, 0.4, 0.46) * lband * lband * 0.34 * LIFE_K;
+  `,
+};
+
+function glowPatch(shader: WebGLProgramParametersWithUniforms, strength: number, biome: boolean, style: MapId, life: number) {
+  shader.uniforms.uSurfT = surfaceTime;
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", "#include <common>\nvarying vec2 vWXZ;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;");
+  shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\n${LIFE_COMMON}`);
   shader.fragmentShader = shader.fragmentShader.replace(
     "#include <emissivemap_fragment>",
     /* glsl */ `
@@ -175,6 +235,7 @@ function glowPatch(shader: { fragmentShader: string }, strength: number, biome: 
     float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
     float vein = max(teal, ember);
     totalEmissiveRadiance += emissive * vein * ${strength.toFixed(2)};
+    ${LIFE[style].replaceAll("LIFE_K", life.toFixed(2))}
     `,
   );
 }
@@ -187,7 +248,11 @@ function GroundMat({
   glow,
   tint = "#f2f4f1",
   biome = false,
+  style,
+  life = 1,
 }: {
+  style: MapId;
+  life?: number;
   map: Texture;
   roughness: number;
   metalness: number;
@@ -198,7 +263,7 @@ function GroundMat({
 }) {
   return (
     <meshStandardMaterial
-      key={biome ? "split" : "whole"}
+      key={`${style}-${biome ? "split" : "whole"}-${life}`}
       map={map}
       color={tint}
       roughness={roughness}
@@ -207,8 +272,8 @@ function GroundMat({
       emissiveIntensity={0.28}
       vertexColors
       envMapIntensity={0.3}
-      customProgramCacheKey={() => (biome ? "split" : "whole")}
-      onBeforeCompile={(shader) => glowPatch(shader, glow, biome)}
+      customProgramCacheKey={() => `${style}-${biome ? "split" : "whole"}-${life}`}
+      onBeforeCompile={(shader) => glowPatch(shader, glow, biome, style, life)}
     />
   );
 }
@@ -265,16 +330,18 @@ export function WorldGround({
     <group>
       <SkyShell map={sky} fog={fog} accent={emissive} />
       <mesh geometry={hills} receiveShadow>
-        <GroundMat map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} glow={glow} biome={mapId === "aegis"} />
+        <GroundMat style={mapId} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} glow={glow} tint={mapId === "aegis" ? "#b4c0cc" : undefined} biome={mapId === "aegis"} />
       </mesh>
       <mesh geometry={bowl} rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} receiveShadow>
         <GroundMat
+          style={mapId}
+          life={0.45}
           map={ground}
           roughness={roughness * 0.92}
           metalness={metalness + 0.06}
           emissive={emissive}
           glow={glow * 0.42}
-          tint="#e8e4dc"
+          tint={mapId === "aegis" ? "#aab6c2" : "#e8e4dc"}
           biome={mapId === "aegis"}
         />
       </mesh>
@@ -431,7 +498,7 @@ function OuterRidges({
   }, [arenaR, squash, mapId]);
   return (
     <mesh geometry={geo} receiveShadow castShadow>
-      <GroundMat map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} biome={mapId === "aegis"} />
+      <GroundMat style={mapId} map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} biome={mapId === "aegis"} />
     </mesh>
   );
 }

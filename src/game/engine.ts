@@ -44,6 +44,7 @@ import {
 } from "./config";
 import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld, rollField } from "./maps";
+import { CHARTERS, CHARTER_ORDER, INTEGRITY_LIVES, RESERVE_GOLD, type CharterId } from "./charters";
 import { clampStage, gateEvery, stageOf } from "./stages";
 import type {
   BaseAddonId,
@@ -121,6 +122,11 @@ export class GameEngine {
   map: MapDef = MAPS.mycelion;
   /** Stratum on the current planet. 0 is the calmest ground. */
   stage = 0;
+  /** Base integrity for this stratum, before charter bonuses. */
+  lifeBase = 20;
+  charters: CharterId[] = [];
+  offer: CharterId[] | null = null;
+  charterGen = 0;
   phase: CombatPhase = "idle";
   gold = 0;
   lives = 0;
@@ -377,7 +383,10 @@ export class GameEngine {
     this.stage = clampStage(stage);
     this.phase = "build";
     this.gold = look.gold;
+    this.lifeBase = look.lives;
     this.lives = look.lives;
+    this.charters = [];
+    this.offer = null;
     this.wave = 0;
     this.kills = 0;
     this.leaked = 0;
@@ -457,6 +466,7 @@ export class GameEngine {
     this.carryingHero = false;
     this.heroGhost = null;
     this.placeHero(heroId, loadout);
+    this.maybeOffer();
   }
 
   placeHero(id: HeroId, loadout: HeroLoadout) {
@@ -597,6 +607,10 @@ export class GameEngine {
     this.addTrauma(0.18);
     this.sfx = "wave";
     this.autoT = 0;
+    if (this.offer) {
+      this.offer = null;
+      this.charterGen += 1;
+    }
     return true;
   }
 
@@ -1372,8 +1386,9 @@ export class GameEngine {
       const haste =
         (this.time < this.overclockUntil ? 1.55 : 1) *
         (this.time < this.lineUntil ? LINE_HASTE : 1) *
-        linkCycle(this.linkCount(t));
-      const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
+        linkCycle(this.linkCount(t)) *
+        (this.hasCharter("cycle") ? 1.08 : 1);
+      const reach = stats.range * mixRangeMultiplier(this.mixCount(t)) * this.sightMul();
       if (def.field) {
         t.aiming = false;
         if (t.cooldown > 0) continue;
@@ -1876,7 +1891,7 @@ export class GameEngine {
   laneHot(t: Tower) {
     const def = TOWERS[t.type];
     if (this.laneCommit(t, def) == null) return false;
-    const reach = towerStats(def, t.level).range * mixRangeMultiplier(this.mixCount(t));
+    const reach = towerStats(def, t.level).range * mixRangeMultiplier(this.mixCount(t)) * this.sightMul();
     return this.bothLanes(t.x, t.z, reach);
   }
 
@@ -1949,7 +1964,7 @@ export class GameEngine {
     const syn = linkMultiplier(this.linkCount(t));
     const rank = t.level >= 3 ? 1.12 : 1;
     const sap = this.time < t.sapUntil ? 0.62 : 1;
-    const reach = stats.range * mixRangeMultiplier(this.mixCount(t));
+    const reach = stats.range * mixRangeMultiplier(this.mixCount(t)) * this.sightMul();
     const press = this.lanePress(t, def, target.flying, reach);
     const dmg = stats.damage * syn * rank * sap * press;
     if (def.kind === "bolt" || def.kind === "shell") {
@@ -2024,8 +2039,9 @@ export class GameEngine {
       const len = Math.hypot(dx, dz) || 1;
       const ux = dx / len;
       const uz = dz / len;
-      const endX = t.x + ux * stats.range;
-      const endZ = t.z + uz * stats.range;
+      const railReach = stats.range * this.sightMul();
+      const endX = t.x + ux * railReach;
+      const endZ = t.z + uz * railReach;
       const width = t.level >= 3 ? 0.82 : 0.55;
       this.spawnBeam(t.x, muzzleY, t.z, endX, muzzleY, endZ, def.color, 0.18, width * 0.34, "rail");
       for (const e of this.enemies) {
@@ -2034,7 +2050,7 @@ export class GameEngine {
         const px = e.x - t.x;
         const pz = e.z - t.z;
         const along = px * ux + pz * uz;
-        if (along < 0 || along > stats.range) continue;
+        if (along < 0 || along > stats.range * this.sightMul()) continue;
         const cx = t.x + ux * along;
         const cz = t.z + uz * along;
         if (dist2(cx, cz, e.x, e.z) < width * width) this.hurt(e, dmg, "rail");
@@ -2145,6 +2161,7 @@ export class GameEngine {
     if (kind === "rail" || kind === "chain") armor *= 0.35;
     const resist = def.resist?.[kind as DamageKind] ?? 1;
     let dmg = Math.max(1, (raw - armor) * resist);
+    dmg *= this.charterHit(e.flying);
     if (this.time < e.markUntil) dmg *= 1 + MARK_TAKEN;
     if (e.shieldHp > 0) {
       const absorb = Math.min(e.shieldHp, dmg);
@@ -2217,7 +2234,7 @@ export class GameEngine {
     else this.combo = 1;
     this.comboUntil = this.time + 1.4;
     const extra = this.combo > 1 ? this.combo - 1 : 0;
-    const pay = e.gold + extra;
+    const pay = Math.round((e.gold + extra) * (this.hasCharter("bounty") ? 1.18 : 1));
     this.gold += pay;
     this.goldEarned += pay;
     this.kills += 1;
@@ -2227,7 +2244,7 @@ export class GameEngine {
     const deathTint = dying.faction === "organic" ? "#8dffb4" : dying.faction === "mech" ? "#ffa860" : "#a8e8f4";
     this.spawnBurst(e.x, e.y + 0.2, e.z, e.boss ? 1.8 : 0.5 + dying.scale * 0.22, deathTint);
     this.spawnBurst(e.x, e.y + 0.3, e.z, e.boss ? 1.1 : 0.3, "#fff4dc");
-    this.spawnFloater(e.x, e.y + 0.8, e.z, extra ? `+${pay}` : `+${e.gold}`);
+    this.spawnFloater(e.x, e.y + 0.8, e.z, `+${pay}`);
     this.sfx = "boom";
     if (e.boss) this.addTrauma(0.45);
     else this.addTrauma(0.06);
@@ -2333,6 +2350,7 @@ export class GameEngine {
     this.phase = "build";
     this.buildClock = 0;
     this.autoT = 0;
+    this.maybeOffer();
     this.hudDirty = true;
     const breachN = this.wave - this.map.waves.length;
     this.lastEvent = this.breach
@@ -2420,7 +2438,64 @@ export class GameEngine {
   }
 
   maxLives() {
-    return this.map.lives + this.bonusLives;
+    return this.lifeBase + this.bonusLives;
+  }
+
+  hasCharter(id: CharterId) {
+    return this.charters.includes(id);
+  }
+
+  /** Opening build, and the build before each new gate. One offer at a time. */
+  maybeOffer() {
+    if (this.phase !== "build" || this.breach || this.offer) return;
+    const every = gateEvery(stageOf(this.map.id, this.stage));
+    if (this.wave > 0 && this.wave % every !== 0) return;
+    const pool = CHARTER_ORDER.filter((id) => !this.charters.includes(id));
+    if (pool.length === 0) return;
+    let s = (this.layoutSeed ^ (this.wave + 1) * 97 ^ 0x9e3779b9) >>> 0;
+    const rnd = () => {
+      s = Math.imul(s, 1664525) + 1013904223;
+      s >>>= 0;
+      return s / 0xffffffff;
+    };
+    const bag = [...pool];
+    const pick: CharterId[] = [];
+    while (pick.length < 3 && bag.length > 0) {
+      pick.push(bag.splice(Math.floor(rnd() * bag.length), 1)[0]);
+    }
+    this.offer = pick;
+    this.charterGen += 1;
+    this.hudDirty = true;
+  }
+
+  pickCharter(id: CharterId) {
+    if (!this.offer?.includes(id) || this.charters.includes(id)) return false;
+    this.charters.push(id);
+    if (id === "reserve") {
+      this.gold += RESERVE_GOLD;
+      this.goldEarned += RESERVE_GOLD;
+    }
+    if (id === "integrity") {
+      this.bonusLives += INTEGRITY_LIVES;
+      this.lives += INTEGRITY_LIVES;
+    }
+    this.offer = null;
+    this.charterGen += 1;
+    this.lastEvent = `Charter · ${CHARTERS[id].name}`;
+    this.hudDirty = true;
+    this.sfx = "ui";
+    return true;
+  }
+
+  charterHit(flying: boolean) {
+    let m = this.hasCharter("battery") ? 1.08 : 1;
+    if (flying && this.hasCharter("sky")) m *= 1.12;
+    if (!flying && this.hasCharter("ground")) m *= 1.12;
+    return m;
+  }
+
+  sightMul() {
+    return this.hasCharter("sight") ? 1.08 : 1;
   }
 
   baseRank(id: BaseAddonId) {

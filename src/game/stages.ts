@@ -215,4 +215,14 @@ export function gateEvery(stage: StageDef) {
   return Math.max(3, 5 - stage.gatePull);
 }
 
+/**
+ * Strata I and II are always open. III opens when II is held, IV when III is held.
+ * `clears` holds keys from `stageKey`.
+ */
+export function stageOpen(id: MapId, index: number, clears: readonly string[]) {
+  const i = clampStage(index);
+  if (i <= 1) return true;
+  return clears.includes(stageKey(id, i - 1));
+}
+
 export const STAGE_RANK = ["I", "II", "III", "IV"] as const;

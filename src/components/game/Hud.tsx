@@ -47,6 +47,7 @@ import { HEROES } from "@/game/heroes";
 import { formatKey } from "@/game/save";
 import { engine } from "@/game/engine";
 import { STAGE_RANK, stageOf } from "@/game/stages";
+import { CHARTERS, type CharterId } from "@/game/charters";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
 import type { BaseAddonId, BaseClass, HeroId, Targeting, TowerId } from "@/game/types";
@@ -234,6 +235,9 @@ export function Hud() {
           ) : null}
           {hud.threat ? <StatusChip>{hud.threat}</StatusChip> : null}
           {hud.hold ? <StatusChip>Hold · +18%</StatusChip> : hud.holdArmed ? <StatusChip>Hold armed</StatusChip> : null}
+          {engine.charters.length > 0 ? (
+            <StatusChip>{engine.charters.map((id) => CHARTERS[id].name).join(" · ")}</StatusChip>
+          ) : null}
           {hud.lineOn ? <StatusChip>Line ready</StatusChip> : null}
           {hud.painted > 0 ? <StatusChip>Painted {hud.painted}</StatusChip> : null}
           {hud.skyHeld ? <StatusChip>Sky held</StatusChip> : null}
@@ -249,6 +253,7 @@ export function Hud() {
       </div>
 
       <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2 sm:inset-x-5 sm:bottom-5">
+        {hud.phase === "build" && hud.charterGen >= 0 && engine.offer ? <CharterOffer options={engine.offer} /> : null}
         {hud.phase === "build" ? <BaseAddons /> : null}
         {selected ? (
           <div className="pointer-events-auto ml-auto w-[min(100%,21rem)]">
@@ -536,6 +541,36 @@ function addonNote(id: BaseAddonId, cls: BaseClass, rank: number) {
   if (gun.mark) bits.push("paints");
   if (cls === "mech" && rank >= 3) bits.push("splash");
   return bits.join(" · ");
+}
+
+function CharterOffer({ options }: { options: CharterId[] }) {
+  return (
+    <div className="pointer-events-auto mx-auto flex w-full max-w-3xl flex-col gap-1.5">
+      <p className="text-center font-display text-2xs uppercase tracking-label text-accent">
+        Charter · pick one, or deploy and let it lapse
+      </p>
+      <div className="grid gap-1.5 sm:grid-cols-3">
+        {options.map((id) => {
+          const spec = CHARTERS[id];
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                engine.pickCharter(id);
+                audio.ui();
+                useGameStore.getState().syncHud();
+              }}
+              className="rounded-xl border border-accent/40 bg-surface/95 px-3 py-2 text-left transition-colors hover:border-accent"
+            >
+              <span className="block font-display text-sm text-fg">{spec.name}</span>
+              <span className="mt-0.5 block text-xs text-muted">{spec.blurb}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function BaseAddons() {

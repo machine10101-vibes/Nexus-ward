@@ -3,6 +3,7 @@ import { AUTO_WAVE_DELAY, worldBase } from "./config";
 import { engine } from "./engine";
 import { ITEMS } from "./heroes";
 import { loadSave, recordResult, saveBase, saveHero, saveSettings, type HeroSave, type Settings } from "./save";
+import { stageOpen } from "./stages";
 import { audio } from "./audio";
 import type { BaseAddonId, BaseClass, HeroId, ItemId, ItemSlot, MapId, Screen, TowerId } from "./types";
 
@@ -54,6 +55,7 @@ export type HudSnap = {
   baseGun: number;
   baseMantle: number;
   mantleReady: boolean;
+  charterGen: number;
 };
 
 type GameStore = {
@@ -161,6 +163,7 @@ const emptyHud: HudSnap = {
   baseGun: 0,
   baseMantle: 0,
   mantleReady: false,
+  charterGen: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -286,8 +289,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const id = get().mapId;
     const heroId = get().heroId ?? get().heroSave.last;
     if (!id) return;
+    const stage = stageOpen(id, get().stage, get().stageClear) ? get().stage : 0;
     const base = get().baseClass ?? worldBase(id);
-    engine.load(id, heroId, get().heroSave.loadouts[heroId], base, get().stage);
+    engine.load(id, heroId, get().heroSave.loadouts[heroId], base, stage);
     audio.wave();
     set({
       screen: "playing",
@@ -364,6 +368,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       next.baseGun === cur.baseGun &&
       next.baseMantle === cur.baseMantle &&
       next.mantleReady === cur.mantleReady &&
+      next.charterGen === cur.charterGen &&
       next.heroArtCd.every((v, i) => Math.floor(v) === Math.floor(cur.heroArtCd[i])) &&
       Math.ceil(next.autoIn * 10) === Math.ceil(cur.autoIn * 10)
     ) {
@@ -453,6 +458,7 @@ function snapHud(): HudSnap {
     baseGun: engine.baseGun,
     baseMantle: engine.baseMantle,
     mantleReady: engine.mantleReady,
+    charterGen: engine.charterGen,
   };
 }
 

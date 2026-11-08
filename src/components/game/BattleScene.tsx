@@ -58,6 +58,7 @@ import { PathLane } from "./PathLane";
 import { GateMouth, PlanetAir } from "./PlanetWilds";
 import { WorldEnv } from "./WorldEnv";
 import { softGlowTexture } from "./fx";
+import { stageOf } from "@/game/stages";
 import { arenaMetrics, WorldGround } from "./WorldGround";
 import { useWorldArt } from "./worldArt";
 import { cellToWorld, unionCells } from "@/game/maps";
@@ -223,6 +224,8 @@ function CameraRig() {
 function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
   const theme = PLANET_THEME[mapId];
   const tune = WORLD_TUNE[mapId];
+  const look = stageOf(mapId, engine.stage);
+  const shape = useMemo(() => ({ relief: look.relief, phase: look.phase }), [look.relief, look.phase]);
   const map = engine.map;
   const art = useWorldArt(mapId);
   const lives = useGameStore((s) => s.hud.lives);
@@ -267,14 +270,14 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
 
   return (
     <>
-      <color attach="background" args={[theme.sky]} />
+      <color attach="background" args={[look.sky]} />
       <WorldEnv id={mapId} intensity={0.62} />
-      <fog attach="fog" args={[theme.fog, dist * 0.92, Math.max(tune.fogFar, dist * 2.55)]} />
-      <ambientLight intensity={tune.ambient} color={theme.ambient} />
+      <fog attach="fog" args={[look.fog, dist * 0.92 * look.fogMul, Math.max(tune.fogFar, dist * 2.55) * look.fogMul]} />
+      <ambientLight intensity={tune.ambient * look.ambient} color={theme.ambient} />
       <hemisphereLight args={[theme.hemiSky, theme.hemiGround, mapId === "forge" ? 0.72 : 1.05]} />
       <directionalLight
         position={[12, 18, 9]}
-        intensity={tune.key}
+        intensity={tune.key * look.key}
         color={theme.dir}
         castShadow={quality === "high"}
         shadow-mapSize-width={2048}
@@ -318,6 +321,13 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         metalness={tune.groundMetal}
         combat={combat}
         keepClear={keepClear}
+        shape={shape}
+        life={look.life}
+        vein={look.vein}
+        hillTint={look.hillTint}
+        groundTint={look.groundTint}
+        mist={look.mist}
+        mistColor={look.mistColor}
       />
       <group position={[-(map.cols * CELL) / 5, 12, -(map.rows * CELL) / 2 - 14]} scale={1.2}>
         <PlanetGlobe id={mapId} radius={5.4} spin={0.015} />
@@ -360,11 +370,11 @@ function World({ mapId, quality }: { mapId: MapId; quality: "high" | "low" }) {
         );
       })}
       {mapId === "mycelion" ? (
-        <DecorOrganic seed={11} count={quality === "high" ? 30 : 18} />
+        <DecorOrganic seed={11 + engine.stage * 19} count={Math.round((quality === "high" ? 30 : 18) * look.decor)} shape={shape} />
       ) : mapId === "forge" ? (
-        <DecorMech seed={22} count={quality === "high" ? 28 : 16} />
+        <DecorMech seed={22 + engine.stage * 19} count={Math.round((quality === "high" ? 28 : 16) * look.decor)} shape={shape} />
       ) : (
-        <DecorHybrid seed={33} count={quality === "high" ? 30 : 18} />
+        <DecorHybrid seed={33 + engine.stage * 19} count={Math.round((quality === "high" ? 30 : 18) * look.decor)} shape={shape} />
       )}
       <DecorField id={mapId} spots={fieldProps} />
       {quality === "high" ? <PlanetAir mapId={mapId} count={mapId === "forge" ? 48 : 70} /> : null}

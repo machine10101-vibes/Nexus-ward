@@ -59,6 +59,9 @@ export type HudSnap = {
 type GameStore = {
   screen: Screen;
   mapId: MapId | null;
+  /** Stratum chosen for the current planet. */
+  stage: number;
+  stageClear: string[];
   preview: MapId;
   heroId: HeroId | null;
   previewHero: HeroId;
@@ -89,6 +92,7 @@ type GameStore = {
   fitStudio: () => void;
   closeOverlay: () => void;
   startHeroSelect: (id: MapId) => void;
+  pickStage: (stage: number) => void;
   setPreviewHero: (id: HeroId) => void;
   confirmHero: (id: HeroId) => void;
   startBriefing: (id: MapId) => void;
@@ -162,6 +166,8 @@ const emptyHud: HudSnap = {
 export const useGameStore = create<GameStore>((set, get) => ({
   screen: "title",
   mapId: null,
+  stage: 0,
+  stageClear: save.stageClear,
   preview: "mycelion",
   heroId: save.hero.last,
   previewHero: save.hero.last,
@@ -213,7 +219,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   startHeroSelect: (id) => {
     audio.ui();
-    set({ mapId: id, preview: id, screen: "hero", previewHero: get().heroSave.last });
+    set({ mapId: id, preview: id, stage: 0, screen: "strata", previewHero: get().heroSave.last });
+  },
+  pickStage: (stage) => {
+    audio.ui();
+    set({ stage, screen: "hero" });
   },
   setPreviewHero: (previewHero) => {
     if (get().previewHero === previewHero) return;
@@ -277,7 +287,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const heroId = get().heroId ?? get().heroSave.last;
     if (!id) return;
     const base = get().baseClass ?? worldBase(id);
-    engine.load(id, heroId, get().heroSave.loadouts[heroId], base);
+    engine.load(id, heroId, get().heroSave.loadouts[heroId], base, get().stage);
     audio.wave();
     set({
       screen: "playing",
@@ -291,14 +301,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const id = get().mapId;
     let completed = get().completed;
     let heroSave = get().heroSave;
+    let stageClear = get().stageClear;
     if (id && engine.breach && engine.wave > 0) {
-      const s = recordResult(id, engine.wave, engine.lives, false);
+      const s = recordResult(id, engine.stage, engine.wave, engine.lives, false);
       completed = s.completed;
       heroSave = s.hero;
+      stageClear = s.stageClear;
     }
     engine.phase = "idle";
     engine.carryingHero = false;
-    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false, completed, heroSave });
+    set({ screen: "select", mapId: null, hud: emptyHud, carryingHero: false, completed, heroSave, stageClear });
   },
   pause: () => {
     if (get().screen === "playing") set({ screen: "paused" });
@@ -373,8 +385,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   noteResult: (won) => {
     const id = get().mapId;
     if (!id) return;
-    const s = recordResult(id, engine.wave, engine.lives, won);
-    set({ completed: s.completed, heroSave: s.hero });
+    const s = recordResult(id, engine.stage, engine.wave, engine.lives, won);
+    set({ completed: s.completed, heroSave: s.hero, stageClear: s.stageClear });
     if (won) audio.win();
     else audio.lose();
   },

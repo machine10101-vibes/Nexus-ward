@@ -201,10 +201,10 @@ function fallbackRoute(start: Cell, entry: Cell, heart: Cell, cols: number, rows
 export type FieldLayout = { paths: Cell[][]; pads: Cell[]; seed: number };
 
 /** Four lanes from the rim to the keep. The same seed rebuilds the same field. */
-export function rollField(cols: number, rows: number, seed: number, id: MapId): FieldLayout {
+export function rollField(cols: number, rows: number, seed: number, id: MapId, wobbleScale = 1): FieldLayout {
   const rng = mulberry32(seed);
   const heart = heartCell(cols, rows);
-  const wobble = wobbleFor(id);
+  const wobble = wobbleFor(id) * wobbleScale;
   const paths: Cell[][] = [];
   for (const side of shuffleSides(rng)) {
     const start = startFor(side, cols, rows, rng);

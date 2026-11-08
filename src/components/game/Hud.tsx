@@ -46,6 +46,7 @@ import {
 import { HEROES } from "@/game/heroes";
 import { formatKey } from "@/game/save";
 import { engine } from "@/game/engine";
+import { STAGE_RANK, stageOf } from "@/game/stages";
 import { useGameStore } from "@/game/store";
 import { audio } from "@/game/audio";
 import type { BaseAddonId, BaseClass, HeroId, Targeting, TowerId } from "@/game/types";
@@ -142,11 +143,15 @@ export function Hud() {
         </div>
 
         <div className="flex min-w-0 flex-1 justify-center">
-          <div className="hud-panel w-full max-w-44 px-2 py-2 text-center sm:min-w-40 sm:px-4">
+          <div className="hud-panel w-full max-w-56 px-2 py-2 text-center sm:min-w-40 sm:px-4">
             <div className="flex items-center justify-center gap-2">
               <span className="size-1.5 rounded-full" style={{ background: theme.core }} />
               <p className="hud-label">{engine.map.name}</p>
+              <p className="hud-label text-accent">{STAGE_RANK[engine.stage]}</p>
             </div>
+            <p className="mt-1 font-display text-2xs uppercase tracking-label text-fg/80">
+              {stageOf(engine.map.id, engine.stage).name}
+            </p>
             <div className="mt-1.5 flex items-center justify-center gap-1.5 whitespace-nowrap sm:gap-2">
               <span className={cn("phase-dot", hud.phase === "combat" && "phase-dot-hot")} />
               <p className="font-display text-2xs uppercase tracking-label text-muted">

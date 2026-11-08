@@ -81,6 +81,7 @@ export type Screen =
   | "won"
   | "lost"
   | "hero"
+  | "strata"
   | "loadout"
   | "help"
   | "settings"

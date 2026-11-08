@@ -6,7 +6,7 @@ import type { MapId } from "@/game/types";
 import { scarSigned } from "./PlanetCrust";
 import { BevelBox } from "./bevel";
 import { SURFACE_KEY, SURFACE_PATCH } from "./surface";
-import { terrainElevation } from "./terrain";
+import { terrainElevation, type TerrainShape } from "./terrain";
 
 type Clear = { x: number; z: number };
 type Spot = { x: number; y: number; z: number; a: number; k: number; n: number };
@@ -56,7 +56,7 @@ function Steel({ color, rough = 0.38 }: { color: string; rough?: number }) {
   );
 }
 
-function hillSpots(mapId: MapId, arenaR: number, squash: number, count: number): Spot[] {
+function hillSpots(mapId: MapId, arenaR: number, squash: number, count: number, shape?: TerrainShape): Spot[] {
   const rand = rng(mapId === "forge" ? 501 : mapId === "aegis" ? 808 : 303);
   const out: Spot[] = [];
   let guard = 0;
@@ -66,7 +66,7 @@ function hillSpots(mapId: MapId, arenaR: number, squash: number, count: number):
     const inset = 1.12 + rand() * 0.48;
     const x = Math.cos(ang) * arenaR * inset;
     const z = Math.sin(ang) * arenaR * squash * inset;
-    const y = terrainElevation(x, z, arenaR, squash, mapId);
+    const y = terrainElevation(x, z, arenaR, squash, mapId, shape);
     if (y < 0.35) continue;
     if (out.some((o) => (o.x - x) ** 2 + (o.z - z) ** 2 < 22)) continue;
     out.push({ x, y: y - 0.12, z, a: rand() * Math.PI * 2, k: rand(), n: out.length });
@@ -196,13 +196,18 @@ export function HillWilds({
   arenaR,
   squash,
   count,
+  shape,
 }: {
   mapId: MapId;
   arenaR: number;
   squash: number;
   count: number;
+  shape?: TerrainShape;
 }) {
-  const spots = useMemo(() => hillSpots(mapId, arenaR, squash, count), [arenaR, count, mapId, squash]);
+  const spots = useMemo(
+    () => hillSpots(mapId, arenaR, squash, count, shape),
+    [arenaR, count, mapId, squash, shape?.relief, shape?.phase],
+  );
   return (
     <group name="hill-wilds">
       {spots.map((spot) => {
@@ -513,7 +518,21 @@ const MIST: Record<MapId, { color: string; add: boolean; opacity: number; rise: 
 };
 
 /** Low drifting banks that give the field depth. They sit under the hosts, never over the lanes' read. */
-export function GroundMist({ mapId, arenaR, squash, count = 14 }: { mapId: MapId; arenaR: number; squash: number; count?: number }) {
+export function GroundMist({
+  mapId,
+  arenaR,
+  squash,
+  count = 14,
+  strength = 1,
+  color,
+}: {
+  mapId: MapId;
+  arenaR: number;
+  squash: number;
+  count?: number;
+  strength?: number;
+  color?: string;
+}) {
   const tex = useMemo(() => softGlowTexture(), []);
   const banks = useMemo(() => {
     const rand = rng(mapId === "forge" ? 91 : mapId === "aegis" ? 83 : 71);
@@ -542,7 +561,7 @@ export function GroundMist({ mapId, arenaR, squash, count = 14 }: { mapId: MapId
       m.rotation.z += dt * b.spin;
       m.position.x = b.x + Math.sin(s.clock.elapsedTime * 0.12 + b.phase) * 1.4 * (b.drift > 0 ? 1 : -1);
       const mat = m.material as MeshBasicMaterial;
-      mat.opacity = cfg.opacity * (0.72 + Math.sin(s.clock.elapsedTime * 0.3 + b.phase) * 0.28);
+      mat.opacity = cfg.opacity * strength * (0.72 + Math.sin(s.clock.elapsedTime * 0.3 + b.phase) * 0.28);
     }
   });
   if (!tex) return null;
@@ -562,9 +581,9 @@ export function GroundMist({ mapId, arenaR, squash, count = 14 }: { mapId: MapId
           <planeGeometry args={[1, 1]} />
           <meshBasicMaterial
             map={tex}
-            color={cfg.color}
+            color={color ?? cfg.color}
             transparent
-            opacity={cfg.opacity}
+            opacity={cfg.opacity * strength}
             depthWrite={false}
             blending={cfg.add ? AdditiveBlending : NormalBlending}
             toneMapped={false}

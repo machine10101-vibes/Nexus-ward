@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Crosshair, Settings2, Sparkles, Sword } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
-import { STAGE_COUNT, STAGE_RANK, STAGES, gateEvery, stageKey, stageOf } from "@/game/stages";
+import { STAGE_COUNT, STAGE_RANK, STAGES, gateEvery, stageKey, stageOf, stageOpen } from "@/game/stages";
 import { BASES, ENEMIES, inflateSpawnCount, PLANET_THEME, worldBase } from "@/game/config";
 import { HEROES, HERO_ORDER, ITEMS, heroStats, itemsForHero } from "@/game/heroes";
 import { useGameStore } from "@/game/store";
@@ -330,20 +330,26 @@ function Strata() {
       <p className="font-display text-2xs uppercase tracking-label text-accent">{m.subtitle}</p>
       <h2 className="mt-2 font-display text-3xl tracking-[-0.03em]">{m.name}</h2>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-        Four grounds on this planet. Each one is a different stretch of it, and each one hits harder than the one before:
-        more vitality, more pace, more plate, tighter packs, and gates that open sooner.
+        Four grounds on this planet. The first two are open. Holding one opens the next, and each stretch hits harder than
+        the one before: more vitality, more pace, more plate, tighter packs, and gates that open sooner.
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {STAGES[id].map((stage, i) => {
           const key = stageKey(id, i);
           const held = stageClear.includes(key);
+          const open = stageOpen(id, i, stageClear);
           const score = best[key];
+          const prior = i > 0 ? STAGES[id][i - 1].name : "";
           return (
             <button
               key={key}
               type="button"
+              disabled={!open}
               onClick={() => useGameStore.getState().pickStage(i)}
-              className="rounded-xl border border-border bg-surface/70 p-4 text-left transition-colors duration-[var(--motion-fast)] hover:border-accent"
+              className={cn(
+                "rounded-xl border p-4 text-left transition-colors duration-[var(--motion-fast)]",
+                open ? "border-border bg-surface/70 hover:border-accent" : "cursor-not-allowed border-border/60 bg-surface/40 text-muted",
+              )}
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="font-display text-2xs uppercase tracking-label text-accent">Stratum {STAGE_RANK[i]}</span>
@@ -351,7 +357,9 @@ function Strata() {
               </span>
               <span className="mt-1 block font-display text-xl tracking-[-0.03em] text-fg">{stage.name}</span>
               <span className="mt-1 block text-xs uppercase tracking-label text-muted">{stage.place}</span>
-              <span className="mt-2 block text-sm leading-relaxed text-muted">{stage.blurb}</span>
+              <span className="mt-2 block text-sm leading-relaxed text-muted">
+                {open ? stage.blurb : `Hold ${prior} to open this ground.`}
+              </span>
               <span className="mt-3 block font-mono text-2xs tabular-nums text-subtle">
                 ×{stage.hp.toFixed(2)} vitality · ×{stage.speed.toFixed(2)} pace · +{stage.armor} plate · gates /{gateEvery(stage)}
               </span>
@@ -768,9 +776,10 @@ function Help() {
         </li>
         <li>
           <span className="text-fg">7. The base</span> sits in the center of the field. Pick Biological, Mechanical, or Hybrid
-          before you drop. Each planet has four strata, and the ground changes with the stratum. Higher strata are a harder
-          stretch of the same planet: more vitality, more pace, more plate, and new gates sooner than every 5 incursions.
-          Each drop-in rolls four lanes in from the rim.
+          before you drop. Each planet has four strata. I and II are open. III opens when you hold II, and IV when you hold III.
+          Higher strata are a harder stretch of the same planet: more vitality, more pace, more plate, and new gates sooner
+          than every 5 incursions. Each drop-in rolls four lanes in from the rim. During build, a charter offers three
+          picks at the start and again before each new gate. Take one, or deploy and let it lapse. It lasts the drop.
           During build, Plate, Snare, Spire, and Mantle each rank up to 3. Plate stacks integrity.
           Snare slows the last stretch and bites at rank 3. Spire fires harder as it ranks. Mantle catches part of the
           first breach each wave, then opens until the next one. Each class changes those add-ons and how the keep

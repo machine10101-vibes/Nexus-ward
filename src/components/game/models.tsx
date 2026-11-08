@@ -5,6 +5,7 @@ import type { BaseClass, EnemyId, MapId, TowerId } from "@/game/types";
 import { BASES, BASE_GUN_REACH, BASE_SNARE_REACH, TOWERS } from "@/game/config";
 import { FIELD_COLS, FIELD_ROWS, cellToWorld } from "@/game/maps";
 import { arenaMetrics, terrainElevation } from "./WorldGround";
+import type { TerrainShape } from "./terrain";
 import { SURFACE_KEY, SURFACE_PATCH, type SurfaceKind } from "./surface";
 import { BevelBox } from "./bevel";
 import { KeepDais } from "./KeepDais";
@@ -3436,8 +3437,8 @@ export function HexField({
 type Scatter = { pos: Vec; a: number; k: number; j: number };
 
 /** Mycelion: wet moss beds and glowing spore stalks. Humid, soft, slow. */
-export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count, "mycelion"), [seed, count]);
+export function DecorOrganic({ seed, count = 30, shape }: { seed: number; count?: number; shape?: TerrainShape }) {
+  const items = useMemo(() => scatter(seed, count, "mycelion", shape), [seed, count, shape?.relief, shape?.phase]);
   return (
     <group>
       {items.map((it, i) => {
@@ -3517,8 +3518,8 @@ export function DecorOrganic({ seed, count = 30 }: { seed: number; count?: numbe
 }
 
 /** Kron Forge: plate stacks, slag heaps and cooling ember rails. */
-export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count, "forge"), [seed, count]);
+export function DecorMech({ seed, count = 28, shape }: { seed: number; count?: number; shape?: TerrainShape }) {
+  const items = useMemo(() => scatter(seed, count, "forge", shape), [seed, count, shape?.relief, shape?.phase]);
   return (
     <group>
       {items.map((it, i) => {
@@ -3589,8 +3590,8 @@ export function DecorMech({ seed, count = 28 }: { seed: number; count?: number }
 }
 
 /** Aegis Rift: ice shards fused to torn plate. Cold on one side, forged on the other. */
-export function DecorHybrid({ seed, count = 30 }: { seed: number; count?: number }) {
-  const items = useMemo(() => scatter(seed, count, "aegis"), [seed, count]);
+export function DecorHybrid({ seed, count = 30, shape }: { seed: number; count?: number; shape?: TerrainShape }) {
+  const items = useMemo(() => scatter(seed, count, "aegis", shape), [seed, count, shape?.relief, shape?.phase]);
   return (
     <group>
       {items.map((it, i) => {
@@ -3743,7 +3744,7 @@ export function DecorField({ id, spots }: { id: MapId; spots: FieldSpot[] }) {
   );
 }
 
-function scatter(seed: number, n: number, style: MapId): Scatter[] {
+function scatter(seed: number, n: number, style: MapId, shape?: TerrainShape): Scatter[] {
   const out: Scatter[] = [];
   let s = seed >>> 0;
   const rand = () => {
@@ -3757,7 +3758,7 @@ function scatter(seed: number, n: number, style: MapId): Scatter[] {
     const x = Math.cos(a) * r * arenaR;
     const z = Math.sin(a) * r * arenaR * squash;
     out.push({
-      pos: [x, terrainElevation(x, z, arenaR, squash, style), z],
+      pos: [x, terrainElevation(x, z, arenaR, squash, style, shape), z],
       a: rand() * Math.PI * 2,
       k: rand(),
       j: rand() * 2 - 1,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Crosshair, Settings2, Sparkles, Sword } from "lucide-react";
 import { MAPS, MAP_ORDER } from "@/game/maps";
+import { STAGE_COUNT, STAGE_RANK, STAGES, gateEvery, stageKey, stageOf } from "@/game/stages";
 import { BASES, ENEMIES, inflateSpawnCount, PLANET_THEME, worldBase } from "@/game/config";
 import { HEROES, HERO_ORDER, ITEMS, heroStats, itemsForHero } from "@/game/heroes";
 import { useGameStore } from "@/game/store";
@@ -20,6 +21,7 @@ export function Overlays() {
     <div className="absolute inset-0 z-20 overflow-y-auto">
       {screen === "title" && <Title />}
       {screen === "select" && <Select />}
+      {screen === "strata" && <Strata />}
       {screen === "hero" && <HeroSelect />}
       {screen === "briefing" && <Briefing />}
       {screen === "loadout" && <Loadout />}
@@ -114,8 +116,8 @@ function Title() {
 
 function Select() {
   const preview = useGameStore((s) => s.preview);
-  const completed = useGameStore((s) => s.completed);
-  const best = loadSave().best;
+  const stageClear = useGameStore((s) => s.stageClear);
+  const best = loadSave().stageBest;
   return (
     <Shell className="max-w-3xl">
       <button
@@ -132,7 +134,17 @@ function Select() {
         {MAP_ORDER.map((id) => {
           const m = MAPS[id];
           const on = preview === id;
-          const done = completed.includes(id);
+          const held = stageClear.filter((key) => key.startsWith(`${id}:`)).length;
+          const done = held >= STAGE_COUNT;
+          let bestWave = 0;
+          let bestName = "";
+          STAGES[id].forEach((stage, i) => {
+            const score = best[stageKey(id, i)];
+            if (score && score.wave >= bestWave) {
+              bestWave = score.wave;
+              bestName = stage.name;
+            }
+          });
           return (
             <button
               key={id}
@@ -154,13 +166,11 @@ function Select() {
                 <p className="text-xs uppercase tracking-label text-muted">{m.subtitle}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{m.hint}</p>
                 <p className="mt-3 font-mono text-2xs tabular-nums text-subtle">
-                  {m.lives} base · {m.startGold} cr · {m.waves.length} waves
+                  {held}/{STAGE_COUNT} strata held · {m.waves.length} incursions
                 </p>
-                {best[id] ? (
+                {bestWave > 0 ? (
                   <p className="mt-1 font-mono text-2xs tabular-nums text-subtle">
-                    {best[id]!.wave > m.waves.length
-                      ? `Breach ${best[id]!.wave - m.waves.length} past the line · cores ${best[id]!.cores}`
-                      : `Best wave ${best[id]!.wave} · cores ${best[id]!.cores}`}
+                    Best · {bestName} · wave {bestWave}
                   </p>
                 ) : (
                   <p className="mt-1 font-mono text-2xs text-subtle">Uncharted</p>
@@ -242,10 +252,10 @@ function HeroSelect() {
       <button
         type="button"
         className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition-colors duration-[var(--motion-quick)] hover:text-fg"
-        onClick={() => useGameStore.getState().setScreen("select")}
+        onClick={() => useGameStore.getState().setScreen("strata")}
       >
         <ArrowLeft className="size-4" />
-        Worlds
+        Strata
       </button>
       <p className="font-display text-2xs uppercase tracking-label text-accent">Select a warden</p>
       <h2 className="mt-2 font-display text-3xl tracking-[-0.03em]">Three who hold</h2>
@@ -300,17 +310,80 @@ function HeroSelect() {
   );
 }
 
+function Strata() {
+  const mapId = useGameStore((s) => s.mapId);
+  const preview = useGameStore((s) => s.preview);
+  const id = mapId ?? preview;
+  const stageClear = useGameStore((s) => s.stageClear);
+  const best = loadSave().stageBest;
+  const m = MAPS[id];
+  return (
+    <Shell className="max-w-3xl">
+      <button
+        type="button"
+        className="mb-5 inline-flex items-center gap-2 text-sm text-muted transition-colors duration-[var(--motion-quick)] hover:text-fg"
+        onClick={() => useGameStore.getState().setScreen("select")}
+      >
+        <ArrowLeft className="size-4" />
+        Worlds
+      </button>
+      <p className="font-display text-2xs uppercase tracking-label text-accent">{m.subtitle}</p>
+      <h2 className="mt-2 font-display text-3xl tracking-[-0.03em]">{m.name}</h2>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+        Four grounds on this planet. Each one is a different stretch of it, and each one hits harder than the one before:
+        more vitality, more pace, more plate, tighter packs, and gates that open sooner.
+      </p>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {STAGES[id].map((stage, i) => {
+          const key = stageKey(id, i);
+          const held = stageClear.includes(key);
+          const score = best[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => useGameStore.getState().pickStage(i)}
+              className="rounded-xl border border-border bg-surface/70 p-4 text-left transition-colors duration-[var(--motion-fast)] hover:border-accent"
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="font-display text-2xs uppercase tracking-label text-accent">Stratum {STAGE_RANK[i]}</span>
+                {held ? <Check className="size-4 text-ok" /> : null}
+              </span>
+              <span className="mt-1 block font-display text-xl tracking-[-0.03em] text-fg">{stage.name}</span>
+              <span className="mt-1 block text-xs uppercase tracking-label text-muted">{stage.place}</span>
+              <span className="mt-2 block text-sm leading-relaxed text-muted">{stage.blurb}</span>
+              <span className="mt-3 block font-mono text-2xs tabular-nums text-subtle">
+                ×{stage.hp.toFixed(2)} vitality · ×{stage.speed.toFixed(2)} pace · +{stage.armor} plate · gates /{gateEvery(stage)}
+              </span>
+              <span className="mt-1 block font-mono text-2xs tabular-nums text-subtle">
+                {stage.lives} base · {stage.gold} cr
+                {score ? ` · best wave ${score.wave}` : " · uncharted"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Shell>
+  );
+}
+
 function Briefing() {
   const id = useGameStore((s) => s.mapId) ?? "mycelion";
+  const stageIndex = useGameStore((s) => s.stage);
   const heroId = useGameStore((s) => s.heroId) ?? useGameStore((s) => s.heroSave.last);
   const loadout = useGameStore((s) => s.heroSave.loadouts[heroId]);
   const picked = useGameStore((s) => s.baseClass);
   const h = HEROES[heroId];
   const m = MAPS[id];
+  const stage = stageOf(id, stageIndex);
   const native = worldBase(id);
   const active = picked ?? native;
   const first = m.waves[0].groups
-    .map((g) => `${ENEMIES[g.enemy].name} ×${inflateSpawnCount(g.enemy, g.count, 0)}`)
+    .map((g) => {
+      const boss = !!ENEMIES[g.enemy].boss;
+      const count = boss ? g.count : Math.max(1, Math.round(inflateSpawnCount(g.enemy, g.count, 0) * stage.pack));
+      return `${ENEMIES[g.enemy].name} ×${count}`;
+    })
     .join(", ");
   return (
     <Shell>
@@ -322,17 +395,22 @@ function Briefing() {
         <ArrowLeft className="size-4" />
         Wardens
       </button>
-      <p className="font-display text-2xs uppercase tracking-label text-accent">{m.subtitle}</p>
-      <h2 className="mt-2 font-display text-4xl tracking-display">{m.name}</h2>
-      <p className="mt-4 text-base leading-relaxed text-muted">{m.lore}</p>
+      <p className="font-display text-2xs uppercase tracking-label text-accent">
+        {m.name} · stratum {STAGE_RANK[stageIndex]}
+      </p>
+      <h2 className="mt-2 font-display text-4xl tracking-display">{stage.name}</h2>
+      <p className="mt-4 text-base leading-relaxed text-muted">{stage.blurb}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted">{m.lore}</p>
       <div className="mt-5 rounded-xl border border-border p-2">
         <div className="rounded-lg bg-surface/60 p-3">
           <p className="font-display text-2xs uppercase tracking-label text-muted">Drop prep</p>
           <p className="mt-1.5 text-sm leading-relaxed text-fg">{m.hint}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-2xs tabular-nums text-subtle">
-            <span>{m.lives} base integrity</span>
-            <span>{m.startGold} opening credits</span>
+            <span>{stage.lives} base integrity</span>
+            <span>{stage.gold} opening credits</span>
             <span>{m.waves.length} incursions</span>
+            <span>gates every {gateEvery(stage)}</span>
+            <span>×{stage.hp.toFixed(2)} vitality · +{stage.armor} plate</span>
             <span>first contact · {first}</span>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
@@ -581,7 +659,9 @@ function Result({ won }: { won: boolean }) {
   ];
   return (
     <Modal>
-      <p className="font-display text-2xs uppercase tracking-label text-accent">{m.name}</p>
+      <p className="font-display text-2xs uppercase tracking-label text-accent">
+        {m.name} · {stageOf(m.id, engine.stage).name}
+      </p>
       <h2 className="mt-2 font-display text-3xl tracking-display">{won ? "The base holds" : "Base collapsed"}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted">
         {won
@@ -688,7 +768,9 @@ function Help() {
         </li>
         <li>
           <span className="text-fg">7. The base</span> sits in the center of the field. Pick Biological, Mechanical, or Hybrid
-          before you drop. Each drop-in rolls four lanes in from the rim, and a new gate opens every 5 incursions.
+          before you drop. Each planet has four strata, and the ground changes with the stratum. Higher strata are a harder
+          stretch of the same planet: more vitality, more pace, more plate, and new gates sooner than every 5 incursions.
+          Each drop-in rolls four lanes in from the rim.
           During build, Plate, Snare, Spire, and Mantle each rank up to 3. Plate stacks integrity.
           Snare slows the last stretch and bites at rank 3. Spire fires harder as it ranks. Mantle catches part of the
           first breach each wave, then opens until the next one. Each class changes those add-ons and how the keep

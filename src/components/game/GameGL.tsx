@@ -4,6 +4,7 @@ import { EffectComposer, Bloom, BrightnessContrast, HueSaturation, Vignette } fr
 import { ACESFilmicToneMapping, PCFShadowMap, SRGBColorSpace } from "three";
 import { useGameStore } from "@/game/store";
 import { engine } from "@/game/engine";
+import { stageOf } from "@/game/stages";
 import { MenuScene } from "./MenuScene";
 import { BattleScene } from "./BattleScene";
 import { StudioScene } from "./StudioScene";
@@ -20,9 +21,11 @@ export function GameGL() {
     screen !== "title" &&
     screen !== "select" &&
     screen !== "hero" &&
+    screen !== "strata" &&
     screen !== "briefing" &&
     screen !== "studio";
   const mode = inStudio ? "studio" : inBattle ? "battle" : "menu";
+  const grade = inBattle ? stageOf(engine.map.id, engine.stage) : null;
 
   return (
     <Canvas
@@ -61,8 +64,8 @@ export function GameGL() {
             luminanceThreshold={0.62}
             mipmapBlur
           />
-          <HueSaturation saturation={inBattle ? 0.14 : 0.08} />
-          <BrightnessContrast brightness={0.01} contrast={inBattle ? 0.14 : 0.08} />
+          <HueSaturation saturation={grade ? 0.14 + grade.gradeSat : 0.08} />
+          <BrightnessContrast brightness={0.01} contrast={grade ? grade.gradeContrast : 0.08} />
           <Vignette eskil={false} offset={0.16} darkness={0.68} />
         </EffectComposer>
       ) : null}

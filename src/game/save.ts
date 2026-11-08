@@ -1,8 +1,9 @@
 import { clearUnlocks, emptyLoadouts, starterOwned, type HeroLoadout } from "./heroes";
+import { STAGE_COUNT, stageKey } from "./stages";
 import type { BaseClass, HeroId, ItemId, MapId, Quality } from "./types";
 
 const KEY = "nexus-ward-save";
-const VERSION = 3;
+const VERSION = 4;
 
 export type ArtBind = "art1" | "art2" | "art3";
 
@@ -74,10 +75,16 @@ export type HeroSave = {
   owned: ItemId[];
 };
 
+export type StageScore = { wave: number; cores: number };
+
 export type SaveData = {
   version: number;
   completed: MapId[];
-  best: Partial<Record<MapId, { wave: number; cores: number }>>;
+  best: Partial<Record<MapId, StageScore>>;
+  /** Deepest run on one stratum, keyed `planet:index`. */
+  stageBest: Partial<Record<string, StageScore>>;
+  /** Strata whose scripted line was held, keyed `planet:index`. */
+  stageClear: string[];
   settings: Settings;
   hero: HeroSave;
   /** Null until the player picks a keep. A match then uses the world's own class. */
@@ -88,6 +95,8 @@ const defaults: SaveData = {
   version: VERSION,
   completed: [],
   best: {},
+  stageBest: {},
+  stageClear: [],
   settings: {
     master: 0.85,
     sfx: 0.8,
@@ -121,6 +130,15 @@ function migrate(raw: SaveData): SaveData {
     },
   };
   if (s.baseClass !== "organic" && s.baseClass !== "mech" && s.baseClass !== "hybrid") s.baseClass = null;
+  if (!s.stageBest || typeof s.stageBest !== "object") s.stageBest = {};
+  if (!Array.isArray(s.stageClear)) s.stageClear = [];
+  // A clear from before strata were a choice counts as the first ground of that planet.
+  for (const map of s.completed) {
+    const key = stageKey(map, 0);
+    if (!s.stageClear.includes(key)) s.stageClear.push(key);
+    const prev = s.best[map];
+    if (prev && !s.stageBest[key]) s.stageBest[key] = prev;
+  }
   s.version = VERSION;
   return s;
 }
@@ -144,13 +162,21 @@ export function writeSave(data: SaveData) {
   }
 }
 
-export function recordResult(map: MapId, wave: number, cores: number, won: boolean) {
+export function recordResult(map: MapId, stage: number, wave: number, cores: number, won: boolean) {
   const s = loadSave();
-  const prev = s.best[map];
+  const key = stageKey(map, stage);
+  const prev = s.stageBest[key];
   if (!prev || wave > prev.wave || (wave === prev.wave && cores > prev.cores)) {
-    s.best[map] = { wave, cores };
+    s.stageBest[key] = { wave, cores };
   }
-  if (won && !s.completed.includes(map)) s.completed.push(map);
+  const planet = s.best[map];
+  const here = s.stageBest[key]!;
+  if (!planet || here.wave > planet.wave || (here.wave === planet.wave && here.cores > planet.cores)) {
+    s.best[map] = here;
+  }
+  if (won && !s.stageClear.includes(key)) s.stageClear.push(key);
+  const heldAll = Array.from({ length: STAGE_COUNT }, (_, i) => stageKey(map, i)).every((k) => s.stageClear.includes(k));
+  if (won && heldAll && !s.completed.includes(map)) s.completed.push(map);
   if (won) {
     const extra = clearUnlocks().filter((id) => !s.hero.owned.includes(id));
     if (extra.length) s.hero.owned = [...s.hero.owned, ...extra];

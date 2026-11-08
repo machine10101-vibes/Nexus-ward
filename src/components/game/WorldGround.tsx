@@ -21,7 +21,7 @@ import { PlanetCrust, scarSigned } from "./PlanetCrust";
 import { surfaceTime } from "./surface";
 import { GroundBeds, GroundMist, HillWilds, RimBelt } from "./PlanetWilds";
 import { SPACE_VERT, STAR_GLSL } from "./spaceField";
-import { arenaMetrics, clamp, smooth, terrainElevation } from "./terrain";
+import { arenaMetrics, clamp, smooth, terrainElevation, type TerrainShape } from "./terrain";
 
 export { arenaMetrics, terrainElevation };
 
@@ -51,7 +51,7 @@ void main() {
 }
 `;
 
-function makeHills(w: number, d: number, arenaR: number, squash: number, style: MapId, res: number) {
+function makeHills(w: number, d: number, arenaR: number, squash: number, style: MapId, res: number, shape?: TerrainShape) {
   const g = new PlaneGeometry(w, d, res, Math.max(24, Math.round(res * (d / w))));
   g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position;
@@ -60,7 +60,7 @@ function makeHills(w: number, d: number, arenaR: number, squash: number, style: 
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
-    const y = terrainElevation(x, z, arenaR, squash, style);
+    const y = terrainElevation(x, z, arenaR, squash, style, shape);
     pos.setY(i, y);
     const grain = Math.sin(x * 0.55) * Math.cos(z * 0.48) * 0.06 + Math.sin(x * 1.9 + z * 1.4) * 0.03;
     const shade = clamp(0.78 + y * 0.03 + grain, 0.62, 1.04);
@@ -166,8 +166,8 @@ float lridge(vec2 p) {
 
 const LIFE: Record<MapId, string> = {
   mycelion: /* glsl */ `
-    float lr1 = lridge(vWXZ * 0.55);
-    float lr2 = lridge(vWXZ * 1.35 + 7.0);
+    float lr1 = lridge(vWXZ * (0.55 * VEIN));
+    float lr2 = lridge(vWXZ * (1.35 * VEIN) + 7.0);
     float lw = fwidth(lr1) * 1.6;
     float lline = smoothstep(0.972 - lw, 0.993, lr1) + 0.5 * smoothstep(0.982 - lw, 0.996, lr2);
     float lpulse = 0.5 + 0.5 * sin(uSurfT * 0.9 + lgn(vWXZ * 0.3) * 12.0);
@@ -176,7 +176,7 @@ const LIFE: Record<MapId, string> = {
     diffuseColor.rgb *= 1.0 - lline * 0.12 * LIFE_K;
   `,
   forge: /* glsl */ `
-    float lr1 = lridge(vWXZ * 0.4 + 3.0);
+    float lr1 = lridge(vWXZ * (0.4 * VEIN) + 3.0);
     float lw = fwidth(lr1) * 1.6;
     float lcrack = smoothstep(0.982 - lw, 0.996, lr1);
     float lhalo = smoothstep(0.93, 0.995, lr1) * 0.2;
@@ -186,14 +186,14 @@ const LIFE: Record<MapId, string> = {
     diffuseColor.rgb *= 1.0 - lcrack * lfade * 0.4 * LIFE_K;
   `,
   aegis: /* glsl */ `
-    vec2 lsp = vWXZ * 6.0;
+    vec2 lsp = vWXZ * (6.0 * VEIN);
     vec2 lid = floor(lsp);
     float lh = lgh(lid);
     float ltw = step(0.93, lh) * (0.45 + 0.55 * sin(uSurfT * 2.4 + lh * 60.0));
     float ld = smoothstep(0.3, 0.0, length(fract(lsp) - 0.5));
     float lfade = 1.0 - smoothstep(0.5, 1.4, fwidth(lsp.x));
     totalEmissiveRadiance += vec3(0.75, 0.92, 1.0) * max(ltw, 0.0) * ld * lfade * 2.4 * LIFE_K;
-    float lcr = lridge(vWXZ * 0.28 + 11.0);
+    float lcr = lridge(vWXZ * (0.28 * VEIN) + 11.0);
     float lcw = fwidth(lcr) * 1.6;
     float lcrev = smoothstep(0.978 - lcw, 0.995, lcr) * (1.0 - smoothstep(0.35, 1.2, lcw));
     diffuseColor.rgb *= 1.0 - lcrev * 0.55 * LIFE_K;
@@ -203,7 +203,7 @@ const LIFE: Record<MapId, string> = {
   `,
 };
 
-function glowPatch(shader: WebGLProgramParametersWithUniforms, strength: number, biome: boolean, style: MapId, life: number) {
+function glowPatch(shader: WebGLProgramParametersWithUniforms, strength: number, biome: boolean, style: MapId, life: number, vein: number) {
   shader.uniforms.uSurfT = surfaceTime;
   shader.vertexShader = shader.vertexShader
     .replace("#include <common>", "#include <common>\nvarying vec2 vWXZ;")
@@ -235,7 +235,7 @@ function glowPatch(shader: WebGLProgramParametersWithUniforms, strength: number,
     float ember = max(diffuseColor.r * 0.82 + diffuseColor.g * 0.26 - diffuseColor.b * 0.78 - 0.2, 0.0);
     float vein = max(teal, ember);
     totalEmissiveRadiance += emissive * vein * ${strength.toFixed(2)};
-    ${LIFE[style].replaceAll("LIFE_K", life.toFixed(2))}
+    ${LIFE[style].replaceAll("LIFE_K", life.toFixed(2)).replaceAll("VEIN", vein.toFixed(2))}
     `,
   );
 }
@@ -250,9 +250,11 @@ function GroundMat({
   biome = false,
   style,
   life = 1,
+  vein = 1,
 }: {
   style: MapId;
   life?: number;
+  vein?: number;
   map: Texture;
   roughness: number;
   metalness: number;
@@ -263,7 +265,7 @@ function GroundMat({
 }) {
   return (
     <meshStandardMaterial
-      key={`${style}-${biome ? "split" : "whole"}-${life}`}
+      key={`${style}-${biome ? "split" : "whole"}-${life}-${vein}`}
       map={map}
       color={tint}
       roughness={roughness}
@@ -272,8 +274,8 @@ function GroundMat({
       emissiveIntensity={0.28}
       vertexColors
       envMapIntensity={0.3}
-      customProgramCacheKey={() => `${style}-${biome ? "split" : "whole"}-${life}`}
-      onBeforeCompile={(shader) => glowPatch(shader, glow, biome, style, life)}
+      customProgramCacheKey={() => `${style}-${biome ? "split" : "whole"}-${life}-${vein}`}
+      onBeforeCompile={(shader) => glowPatch(shader, glow, biome, style, life, vein)}
     />
   );
 }
@@ -291,6 +293,13 @@ export function WorldGround({
   metalness,
   combat,
   keepClear = [],
+  shape,
+  life = 1,
+  vein = 1,
+  hillTint,
+  groundTint,
+  mist = 1,
+  mistColor,
 }: {
   mapId: MapId;
   cols: number;
@@ -304,13 +313,21 @@ export function WorldGround({
   metalness: number;
   combat: boolean;
   keepClear?: { x: number; z: number }[];
+  shape?: TerrainShape;
+  /** Hill life. The arena uses about half of this so the lanes stay readable. */
+  life?: number;
+  vein?: number;
+  hillTint?: string;
+  groundTint?: string;
+  mist?: number;
+  mistColor?: string;
 }) {
   const { arenaR, squash } = arenaMetrics(cols, rows);
   const groundW = cols * CELL + 26;
   const groundD = rows * CELL + 26;
   const hills = useMemo(
-    () => makeHills(groundW, groundD, arenaR, squash, mapId, quality === "high" ? 120 : 56),
-    [groundW, groundD, arenaR, squash, mapId, quality],
+    () => makeHills(groundW, groundD, arenaR, squash, mapId, quality === "high" ? 120 : 56, shape),
+    [groundW, groundD, arenaR, squash, mapId, quality, shape?.relief, shape?.phase],
   );
   const bowl = useMemo(
     () => makeBowl(arenaR, squash, mapId, quality === "high" ? 96 : 48),
@@ -330,25 +347,37 @@ export function WorldGround({
     <group>
       <SkyShell map={sky} fog={fog} accent={emissive} />
       <mesh geometry={hills} receiveShadow>
-        <GroundMat style={mapId} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} glow={glow} tint={mapId === "aegis" ? "#b4c0cc" : undefined} biome={mapId === "aegis"} />
+        <GroundMat
+          style={mapId}
+          map={hillMap}
+          roughness={roughness}
+          metalness={metalness}
+          emissive={emissive}
+          glow={glow}
+          tint={hillTint}
+          life={life}
+          vein={vein}
+          biome={mapId === "aegis"}
+        />
       </mesh>
       <mesh geometry={bowl} rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} receiveShadow>
         <GroundMat
           style={mapId}
-          life={0.45}
+          life={life * 0.45}
+          vein={vein}
           map={ground}
           roughness={roughness * 0.92}
           metalness={metalness + 0.06}
           emissive={emissive}
           glow={glow * 0.42}
-          tint={mapId === "aegis" ? "#aab6c2" : "#e8e4dc"}
+          tint={groundTint ?? (mapId === "aegis" ? "#aab6c2" : "#e8e4dc")}
           biome={mapId === "aegis"}
         />
       </mesh>
       <GroundPebbles mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} count={quality === "high" ? 220 : 110} />
       <PlanetCrust mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} />
       <GroundBeds mapId={mapId} arenaR={arenaR} squash={squash} keepClear={keepClear} />
-      <HillWilds mapId={mapId} arenaR={arenaR} squash={squash} count={quality === "high" ? 16 : 8} />
+      <HillWilds mapId={mapId} arenaR={arenaR} squash={squash} count={quality === "high" ? 16 : 8} shape={shape} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1, squash, 1]} position={[0, 0.02, 0]}>
         <ringGeometry args={[arenaR - 0.62, arenaR + 0.22, 96]} />
         <meshStandardMaterial
@@ -370,9 +399,22 @@ export function WorldGround({
         />
       </mesh>
       <RimBelt mapId={mapId} arenaR={arenaR} squash={squash} />
-      {quality === "high" ? <GroundMist mapId={mapId} arenaR={arenaR} squash={squash} /> : null}
+      {quality === "high" ? <GroundMist mapId={mapId} arenaR={arenaR} squash={squash} strength={mist} color={mistColor} /> : null}
       {quality === "high" ? <HorizonHaze color={fog} accent={emissive} arenaR={arenaR} squash={squash} /> : null}
-      {quality === "high" ? <OuterRidges mapId={mapId} arenaR={arenaR} squash={squash} map={hillMap} roughness={roughness} metalness={metalness} emissive={emissive} /> : null}
+      {quality === "high" ? (
+        <OuterRidges
+          mapId={mapId}
+          arenaR={arenaR}
+          squash={squash}
+          map={hillMap}
+          roughness={roughness}
+          metalness={metalness}
+          emissive={emissive}
+          shape={shape}
+          vein={vein}
+          tint={hillTint}
+        />
+      ) : null}
     </group>
   );
 }
@@ -471,6 +513,9 @@ function OuterRidges({
   roughness,
   metalness,
   emissive,
+  shape,
+  vein,
+  tint,
 }: {
   mapId: MapId;
   arenaR: number;
@@ -479,6 +524,9 @@ function OuterRidges({
   roughness: number;
   metalness: number;
   emissive: string;
+  shape?: TerrainShape;
+  vein: number;
+  tint?: string;
 }) {
   const geo = useMemo(() => {
     const g = new RingGeometry(arenaR * 1.58, arenaR * 2.12, 80, 10);
@@ -491,14 +539,14 @@ function OuterRidges({
       pos.setZ(i, z * squash);
       const r = Math.hypot(x / arenaR, (z * squash) / (arenaR * squash));
       const band = 1 - Math.min(1, Math.abs(r - 1.85) / 0.28);
-      pos.setY(i, terrainElevation(x, z * squash, arenaR, squash, mapId) + band * 1.65);
+      pos.setY(i, terrainElevation(x, z * squash, arenaR, squash, mapId, shape) + band * 1.65);
     }
     g.computeVertexNormals();
     return g;
-  }, [arenaR, squash, mapId]);
+  }, [arenaR, squash, mapId, shape?.relief, shape?.phase]);
   return (
     <mesh geometry={geo} receiveShadow castShadow>
-      <GroundMat style={mapId} map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} biome={mapId === "aegis"} />
+      <GroundMat style={mapId} map={map} roughness={roughness} metalness={metalness} emissive={emissive} glow={1.6} vein={vein} tint={tint} biome={mapId === "aegis"} />
     </mesh>
   );
 }

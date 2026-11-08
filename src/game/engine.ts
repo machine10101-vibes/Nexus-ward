@@ -44,6 +44,7 @@ import {
 } from "./config";
 import { HEROES, artCooldown, emptyLoadouts, heroStats, type HeroLoadout, type HeroStats } from "./heroes";
 import { BREACH_BUDGET, BREACH_CAP, MAPS, breachWave, cellToWorld, rollField } from "./maps";
+import { clampStage, gateEvery, stageOf } from "./stages";
 import type {
   BaseAddonId,
   BaseClass,
@@ -103,8 +104,6 @@ export type CombatPhase = "idle" | "build" | "combat" | "won" | "lost";
 
 type SpawnEvent = { t: number; type: EnemyId; pathId: number; elite: boolean };
 
-const GATE_EVERY = 5;
-
 function dist2(ax: number, ay: number, bx: number, by: number) {
   const dx = ax - bx;
   const dy = ay - by;
@@ -120,6 +119,8 @@ function lerpAngle(from: number, to: number, t: number) {
 
 export class GameEngine {
   map: MapDef = MAPS.mycelion;
+  /** Stratum on the current planet. 0 is the calmest ground. */
+  stage = 0;
   phase: CombatPhase = "idle";
   gold = 0;
   lives = 0;
@@ -368,12 +369,15 @@ export class GameEngine {
     heroId: HeroId = "fighter",
     loadout: HeroLoadout = emptyLoadouts()[heroId],
     baseClass?: BaseClass,
+    stage = 0,
   ) {
     const map = MAPS[id];
+    const look = stageOf(id, stage);
     this.map = map;
+    this.stage = clampStage(stage);
     this.phase = "build";
-    this.gold = map.startGold;
-    this.lives = map.lives;
+    this.gold = look.gold;
+    this.lives = look.lives;
     this.wave = 0;
     this.kills = 0;
     this.leaked = 0;
@@ -385,7 +389,13 @@ export class GameEngine {
     this.buildType = "pulse";
     this.hoverPad = null;
     this.towers = [];
-    const rolled = rollField(map.cols, map.rows, (Math.floor(Math.random() * 0x7fffffff) ^ (Date.now() >>> 0)) >>> 0, id);
+    const rolled = rollField(
+      map.cols,
+      map.rows,
+      (Math.floor(Math.random() * 0x7fffffff) ^ (Date.now() >>> 0) ^ look.seed) >>> 0,
+      id,
+      look.wobble,
+    );
     this.cellPaths = rolled.paths;
     this.padCells = rolled.pads;
     this.layoutSeed = rolled.seed;
@@ -544,18 +554,20 @@ export class GameEngine {
     const waveIndex = this.wave;
     const def = this.waveDef(waveIndex);
     if (!def) return false;
+    const look = stageOf(this.map.id, this.stage);
     const gates = this.pathCountForIndex(waveIndex);
+    const eliteFrom = this.stage >= 3 ? 1 : this.stage >= 2 ? 2 : 4;
     this.spawnQueue = [];
     let spawnN = 0;
     for (const g of def.groups) {
       const boss = !!ENEMIES[g.enemy].boss;
-      let count = inflateSpawnCount(g.enemy, g.count, waveIndex);
+      let count = this.scaledCount(g.enemy, g.count, waveIndex);
       if (this.breach && !boss) count = Math.min(count, BREACH_CAP);
-      const eliteAt = !boss && waveIndex >= 4 && count >= 4 ? count - 1 : -1;
+      const eliteAt = !boss && waveIndex >= eliteFrom && count >= 4 ? count - 1 : -1;
       for (let i = 0; i < count; i++) {
         if (this.breach && spawnN >= BREACH_BUDGET) break;
         this.spawnQueue.push({
-          t: g.delay + i * g.interval,
+          t: (g.delay + i * g.interval) * look.rush,
           type: g.enemy,
           pathId: spawnN % gates,
           elite: i === eliteAt,
@@ -571,7 +583,7 @@ export class GameEngine {
     this.phase = "combat";
     this.wave += 1;
     this.hudDirty = true;
-    const opened = waveIndex > 0 && waveIndex % GATE_EVERY === 0 && gates > 1;
+    const opened = waveIndex > 0 && waveIndex % gateEvery(look) === 0 && gates > 1;
     const breachN = this.wave - this.map.waves.length;
     this.lastEvent = this.breach
       ? bonus > 0
@@ -685,9 +697,9 @@ export class GameEngine {
     let last = -1;
     for (const g of def.groups) {
       if (ENEMIES[g.enemy].flying) continue;
-      const count = inflateSpawnCount(g.enemy, g.count, idx);
+      const count = this.scaledCount(g.enemy, g.count, idx);
       if (count <= 0) continue;
-      last = Math.max(last, g.delay + (count - 1) * g.interval);
+      last = Math.max(last, (g.delay + (count - 1) * g.interval) * stageOf(this.map.id, this.stage).rush);
     }
     return last;
   }
@@ -701,7 +713,7 @@ export class GameEngine {
     const out: { enemy: EnemyId; count: number; elite: boolean; held: boolean }[] = [];
     for (const g of def.groups) {
       const boss = !!ENEMIES[g.enemy].boss;
-      let count = inflateSpawnCount(g.enemy, g.count, idx);
+      let count = this.scaledCount(g.enemy, g.count, idx);
       if (this.breach && !boss) count = Math.min(count, BREACH_CAP);
       if (this.breach) count = Math.min(count, left);
       left -= count;
@@ -1049,14 +1061,15 @@ export class GameEngine {
     const ddx = next.x - start.x;
     const ddz = next.z - start.z;
     const dlen = Math.hypot(ddx, ddz) || 1;
-    const waveScale = 1 + (this.wave - 1) * 0.04;
+    const look = stageOf(this.map.id, this.stage);
+    const waveScale = (1 + (this.wave - 1) * 0.04) * look.hp;
     slot.alive = true;
     slot.type = type;
     slot.maxHp = Math.round(def.hp * waveScale);
     slot.hp = slot.maxHp;
-    slot.speed = def.speed;
-    slot.gold = at?.gold ?? def.gold;
-    slot.armor = def.armor;
+    slot.speed = def.speed * look.speed;
+    slot.gold = Math.round((at?.gold ?? def.gold) * look.pay);
+    slot.armor = def.armor + look.armor;
     slot.flying = def.flying;
     slot.leak = def.leak;
     slot.scale = def.scale;
@@ -1075,7 +1088,7 @@ export class GameEngine {
     slot.hitFlash = 0;
     slot.lane = at ? at.lane : ((slot.slot % 5) - 2) * 0.16;
     slot.skillT = 0;
-    slot.shieldHp = def.skill === "shield" ? (def.boss ? 90 : 32) : 0;
+    slot.shieldHp = def.skill === "shield" ? Math.round((def.boss ? 90 : 32) * look.hp) : 0;
     slot.hardenUntil = 0;
     slot.sprintUntil = 0;
     slot.phaseUntil = 0;
@@ -2380,8 +2393,16 @@ export class GameEngine {
     return null;
   }
 
+  /** Hosts in a group after wave inflation and the stratum's pack size. */
+  scaledCount(enemy: EnemyId, base: number, waveIndex: number) {
+    const n = inflateSpawnCount(enemy, base, waveIndex);
+    if (ENEMIES[enemy].boss) return n;
+    return Math.max(1, Math.round(n * stageOf(this.map.id, this.stage).pack));
+  }
+
   pathCountForIndex(waveIndex: number) {
-    return Math.min(this.paths.length, 1 + Math.floor(waveIndex / GATE_EVERY));
+    const every = gateEvery(stageOf(this.map.id, this.stage));
+    return Math.min(this.paths.length, 1 + Math.floor(Math.max(0, waveIndex) / every));
   }
 
   activePathCount() {
